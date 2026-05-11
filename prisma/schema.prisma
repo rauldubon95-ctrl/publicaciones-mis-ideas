@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Publicacion {
+  id          String    @id @default(cuid())
+  titulo      String
+  slug        String    @unique
+  resumen     String
+  contenido   String
+  publicado   Boolean   @default(false)
+  creadoAt    DateTime  @default(now())
+  actualizadoAt DateTime @updatedAt
+  publicadoAt DateTime?
+
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+
+  etiquetas   PublicacionEtiqueta[]
+  comentarios Comentario[]
+  reacciones  Reaccion[]
+}
+
+model Categoria {
+  id            String        @id @default(cuid())
+  nombre        String        @unique
+  slug          String        @unique
+  descripcion   String?
+  publicaciones Publicacion[]
+}
+
+model Etiqueta {
+  id            String                @id @default(cuid())
+  nombre        String                @unique
+  slug          String                @unique
+  publicaciones PublicacionEtiqueta[]
+}
+
+model PublicacionEtiqueta {
+  publicacionId String
+  etiquetaId    String
+  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  etiqueta      Etiqueta    @relation(fields: [etiquetaId], references: [id], onDelete: Cascade)
+
+  @@id([publicacionId, etiquetaId])
+}
+
+model Comentario {
+  id            String      @id @default(cuid())
+  contenido     String
+  autorNombre   String
+  publicacionId String
+  creadoAt      DateTime    @default(now())
+  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+}
+
+model Reaccion {
+  id            String      @id @default(cuid())
+  tipo          String      // "me_gusta" | "me_encanta" | "inspirador"
+  publicacionId String
+  sessionId     String
+  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+
+  @@unique([publicacionId, sessionId, tipo])
+}
