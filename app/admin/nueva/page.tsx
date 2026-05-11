@@ -3,6 +3,7 @@ import PublicacionForm from "@/components/PublicacionForm";
 import Link from "next/link";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nueva publicación | Admin" };
 
 export default async function NuevaPage() {
