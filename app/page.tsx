@@ -5,8 +5,10 @@ import PublicacionCard from "@/components/PublicacionCard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let publicaciones: Awaited<ReturnType<typeof prisma.publicacion.findMany>> = [];
-  let categorias: Awaited<ReturnType<typeof prisma.categoria.findMany>> = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let publicaciones: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let categorias: any[] = [];
 
   try {
     [publicaciones, categorias] = await Promise.all([
@@ -27,8 +29,8 @@ export default async function HomePage() {
   } catch (e) {
     console.error("[DB_QUERY_ERROR]", String(e));
     console.error("[DB_QUERY_STACK]", e instanceof Error ? e.stack : "no stack");
-    console.error("[ENV_DATABASE_URL]", process.env.DATABASE_URL ? "SET (length=" + process.env.DATABASE_URL.length + ")" : "NOT SET");
-    console.error("[ENV_DIRECT_URL]", process.env.DIRECT_URL ? "SET" : "NOT SET");
+    console.error("[ENV_DATABASE_URL]", process.env.DATABASE_URL ? "SET len=" + process.env.DATABASE_URL.length : "NOT_SET");
+    console.error("[ENV_DIRECT_URL]", process.env.DIRECT_URL ? "SET" : "NOT_SET");
     throw e;
   }
 
