@@ -2,12 +2,15 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-// Supabase direct DB (db.*.supabase.co:5432) is IPv6-only → unreachable from Vercel Lambda (IPv4).
-// Supabase pooler transaction mode (pooler.supabase.com:6543) is not active on this project.
-// Use Supabase pooler SESSION mode (pooler.supabase.com:5432) which uses IPv4 and is always active.
-function buildSessionUrl(): string | undefined {
+// Priority order for connection URL:
+// 1. POSTGRES_PRISMA_URL — injected automatically by Supabase-Vercel integration (optimal)
+// 2. Session mode pooler derived from DATABASE_URL (port 5432 on pooler host, IPv4)
+// Direct DB (db.*.supabase.co:5432) is IPv6-only and not reachable from Vercel Lambda.
+function buildConnectionUrl(): string | undefined {
+  if (process.env.POSTGRES_PRISMA_URL) return process.env.POSTGRES_PRISMA_URL;
   const base = process.env.DATABASE_URL;
   if (!base) return undefined;
+  // Transform transaction mode (port 6543) → session mode (port 5432) on pooler host
   return base
     .replace(":6543/", ":5432/")
     .replace("pgbouncer=true&", "")
@@ -16,14 +19,14 @@ function buildSessionUrl(): string | undefined {
     .replace("?pgbouncer=true", "");
 }
 
-const sessionUrl = buildSessionUrl();
+const connectionUrl = buildConnectionUrl();
 
 let client: PrismaClient;
 client =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error"] : [],
-    ...(sessionUrl && { datasources: { db: { url: sessionUrl } } }),
+    ...(connectionUrl && { datasources: { db: { url: connectionUrl } } }),
   });
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
 
