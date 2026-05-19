@@ -5,21 +5,32 @@ import PublicacionCard from "@/components/PublicacionCard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [publicaciones, categorias] = await Promise.all([
-    prisma.publicacion.findMany({
-      where: { publicado: true },
-      orderBy: { publicadoAt: "desc" },
-      take: 6,
-      include: {
-        categoria: true,
-        etiquetas: { include: { etiqueta: true } },
-        _count: { select: { comentarios: true, reacciones: true } },
-      },
-    }),
-    prisma.categoria.findMany({
-      include: { _count: { select: { publicaciones: { where: { publicado: true } } } } },
-    }),
-  ]);
+  let publicaciones: Awaited<ReturnType<typeof prisma.publicacion.findMany>> = [];
+  let categorias: Awaited<ReturnType<typeof prisma.categoria.findMany>> = [];
+
+  try {
+    [publicaciones, categorias] = await Promise.all([
+      prisma.publicacion.findMany({
+        where: { publicado: true },
+        orderBy: { publicadoAt: "desc" },
+        take: 6,
+        include: {
+          categoria: true,
+          etiquetas: { include: { etiqueta: true } },
+          _count: { select: { comentarios: true, reacciones: true } },
+        },
+      }),
+      prisma.categoria.findMany({
+        include: { _count: { select: { publicaciones: { where: { publicado: true } } } } },
+      }),
+    ]);
+  } catch (e) {
+    console.error("[DB_QUERY_ERROR]", String(e));
+    console.error("[DB_QUERY_STACK]", e instanceof Error ? e.stack : "no stack");
+    console.error("[ENV_DATABASE_URL]", process.env.DATABASE_URL ? "SET (length=" + process.env.DATABASE_URL.length + ")" : "NOT SET");
+    console.error("[ENV_DIRECT_URL]", process.env.DIRECT_URL ? "SET" : "NOT SET");
+    throw e;
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
