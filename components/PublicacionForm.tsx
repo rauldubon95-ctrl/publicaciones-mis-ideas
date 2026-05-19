@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toSlug } from "@/lib/utils";
 
@@ -34,6 +34,35 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   );
   const [estado, setEstado] = useState<"idle" | "guardando" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [subiendoWord, setSubiendoWord] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleWordUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendoWord(true);
+    setErrorMsg("");
+    try {
+      const form = new FormData();
+      form.append("archivo", file);
+      const res = await fetch("/api/admin/upload-docx", { method: "POST", body: form });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Error al procesar el archivo");
+      }
+      const data = await res.json();
+      setContenido(data.contenido);
+      if (!esEdicion && !titulo) {
+        setTitulo(data.titulo);
+        setSlug(toSlug(data.titulo));
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Error al procesar el Word");
+    } finally {
+      setSubiendoWord(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   function handleTituloChange(val: string) {
     setTitulo(val);
@@ -138,9 +167,40 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
         </div>
 
         <div className="sm:col-span-2">
-          <label className={labelClass}>
-            Contenido * <span className="text-zinc-300 normal-case tracking-normal font-normal">— Markdown</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={labelClass + " mb-0"}>
+              Contenido * <span className="text-zinc-300 normal-case tracking-normal font-normal">— Markdown</span>
+            </label>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx"
+                className="hidden"
+                onChange={handleWordUpload}
+              />
+              <button
+                type="button"
+                disabled={subiendoWord}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+              >
+                {subiendoWord ? (
+                  <>
+                    <span className="animate-spin inline-block w-3 h-3 border border-brand-400 border-t-transparent rounded-full" />
+                    Procesando…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Importar Word (.docx)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
           <textarea
             value={contenido}
             onChange={(e) => setContenido(e.target.value)}

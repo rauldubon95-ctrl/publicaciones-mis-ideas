@@ -38,74 +38,95 @@ export default async function PublicacionPage({ params }: Props) {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
       {/* Breadcrumb */}
-      <nav className="text-sm text-gray-400 mb-6 flex items-center gap-1">
-        <Link href="/" className="hover:text-gray-600">Inicio</Link>
+      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+        <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
-        <Link href="/publicaciones" className="hover:text-gray-600">Publicaciones</Link>
+        <Link href="/publicaciones" className="hover:text-zinc-600 transition-colors">Publicaciones</Link>
         <span>/</span>
-        <span className="text-gray-600 truncate">{publicacion.titulo}</span>
+        <span className="text-zinc-600 truncate">{publicacion.titulo}</span>
       </nav>
 
       {/* Header */}
-      <header className="mb-8">
-        <div className="flex flex-wrap gap-2 mb-4">
+      <header className="mb-10 border-b border-zinc-200 pb-8">
+        <div className="flex flex-wrap gap-2 mb-5">
           {publicacion.categoria && (
             <Link
               href={`/categorias/${publicacion.categoria.slug}`}
-              className="badge bg-brand-50 text-brand-700 hover:bg-brand-100"
+              className="badge bg-brand-50 text-brand-700 hover:bg-brand-100 uppercase tracking-wider"
             >
               {publicacion.categoria.nombre}
             </Link>
           )}
           {publicacion.etiquetas.map(({ etiqueta }) => (
-            <span key={etiqueta.slug} className="badge bg-gray-100 text-gray-600">
-              #{etiqueta.nombre}
+            <span key={etiqueta.slug} className="badge bg-zinc-100 text-zinc-500">
+              {etiqueta.nombre}
             </span>
           ))}
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">
+        <h1 className="text-4xl font-serif font-semibold text-zinc-900 mb-4 leading-tight">
           {publicacion.titulo}
         </h1>
-        <p className="text-gray-500 text-lg leading-relaxed mb-4">{publicacion.resumen}</p>
-        {publicacion.publicadoAt && (
-          <time className="text-sm text-gray-400">{formatFecha(publicacion.publicadoAt)}</time>
-        )}
+        <p className="font-serif italic text-zinc-500 text-lg leading-relaxed mb-5">
+          {publicacion.resumen}
+        </p>
+        <div className="flex items-center justify-between">
+          {publicacion.publicadoAt && (
+            <time className="text-xs text-zinc-400 tracking-wide">
+              {formatFecha(publicacion.publicadoAt)}
+            </time>
+          )}
+          <Link
+            href={`/publicaciones/${params.slug}/pdf`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-brand-700 border border-zinc-200 hover:border-brand-300 px-3 py-1.5 rounded transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Descargar PDF
+          </Link>
+        </div>
       </header>
 
       {/* Contenido */}
-      <div className="prose prose-gray max-w-none mb-10">
+      <div className="prose prose-zinc prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700 max-w-none mb-12">
         <ReactMarkdown>{publicacion.contenido}</ReactMarkdown>
       </div>
 
-      <hr className="border-gray-100 mb-8" />
+      <hr className="border-zinc-100 mb-10" />
 
       {/* Reacciones */}
-      <section className="mb-10">
-        <p className="text-sm font-medium text-gray-500 mb-3">¿Qué te pareció?</p>
+      <section className="mb-12">
+        <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-4">
+          ¿Qué te pareció?
+        </p>
         <ReaccionButtons publicacionId={publicacion.id} conteos={conteos} />
       </section>
 
       {/* Comentarios */}
       <section>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
-          Comentarios ({publicacion.comentarios.length})
+        <h2 className="text-xl font-serif font-semibold text-zinc-900 mb-6">
+          Comentarios
+          <span className="ml-2 text-sm font-sans font-normal text-zinc-400">
+            ({publicacion.comentarios.length})
+          </span>
         </h2>
 
         {publicacion.comentarios.length > 0 && (
           <div className="space-y-4 mb-8">
             {publicacion.comentarios.map((c) => (
-              <div key={c.id} className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-semibold text-sm text-gray-800">{c.autorNombre}</span>
-                  <span className="text-xs text-gray-400">{formatFecha(c.creadoAt)}</span>
+              <div key={c.id} className="border border-zinc-100 bg-zinc-50 p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-medium text-sm text-zinc-800">{c.autorNombre}</span>
+                  <span className="text-xs text-zinc-400">{formatFecha(c.creadoAt)}</span>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{c.contenido}</p>
+                <p className="text-zinc-600 text-sm leading-relaxed">{c.contenido}</p>
               </div>
             ))}
           </div>
         )}
 
-        <div className="bg-white border border-gray-100 rounded-xl p-6">
+        <div className="bg-white border border-zinc-200 p-6">
           <ComentarioForm publicacionId={publicacion.id} />
         </div>
       </section>
