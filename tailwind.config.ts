@@ -10,16 +10,19 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#f0f4ff",
-          100: "#dde7ff",
-          500: "#4f6ef7",
-          600: "#3d5cf5",
-          700: "#2d4ae0",
-          900: "#1a2a8a",
+          50:  "#f0f2f7",
+          100: "#dde2ee",
+          200: "#bcc5de",
+          500: "#4a5f8a",
+          600: "#2d4270",
+          700: "#1e2f52",
+          800: "#152240",
+          900: "#0d1628",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans:  ["Inter", "system-ui", "sans-serif"],
+        serif: ["Lora", "Georgia", "serif"],
       },
     },
   },

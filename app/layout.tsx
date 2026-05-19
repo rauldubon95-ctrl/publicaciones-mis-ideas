@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: { default: "Mis Ideas", template: "%s | Mis Ideas" },
-  description: "Sistema de divulgación de reflexiones e ideas",
+  description: "Espacio de divulgación de reflexiones, proyectos e ideas",
   openGraph: {
     type: "website",
     locale: "es_ES",

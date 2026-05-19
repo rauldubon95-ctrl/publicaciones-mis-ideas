@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Guardar un token derivado, nunca la clave directamente
-  const sessionToken = createSessionToken(secret);
+  const sessionToken = await createSessionToken(secret);
 
   const cookieStore = cookies();
   cookieStore.set("admin_auth", sessionToken, {

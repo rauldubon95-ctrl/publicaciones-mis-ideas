@@ -4,15 +4,16 @@ import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
 
-function isAuthorized(): boolean {
+async function isAuthorized(): Promise<boolean> {
   const cookieStore = cookies();
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
-  return !!secret && !!token && verifySessionToken(token, secret);
+  if (!secret || !token) return false;
+  return verifySessionToken(token, secret);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAuthorized()) {
+  if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -79,7 +80,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAuthorized()) {
+  if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

@@ -1,35 +1,42 @@
-import { createHmac, timingSafeEqual } from "crypto";
+// Web Crypto API — compatible con Edge Runtime (middleware) y Node.js 18+
 
-/**
- * Deriva un token de sesión a partir del secreto de admin.
- * Nunca se almacena el secreto directamente en la cookie.
- */
-export function createSessionToken(secret: string): string {
-  return createHmac("sha256", secret).update("admin-session-v1").digest("hex");
+async function hmacHex(secret: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-/**
- * Compara dos strings de forma segura contra timing attacks.
- */
-export function safeCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a, "utf8");
-    const bufB = Buffer.from(b, "utf8");
-    if (bufA.length !== bufB.length) {
-      // Comparación dummy para no filtrar longitud por tiempo
-      timingSafeEqual(bufA, bufA);
-      return false;
-    }
-    return timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
+export async function createSessionToken(secret: string): Promise<string> {
+  return hmacHex(secret, "admin-session-v1");
+}
+
+export async function verifySessionToken(
+  cookieValue: string,
+  secret: string
+): Promise<boolean> {
+  const expected = await createSessionToken(secret);
+  if (cookieValue.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
   }
+  return diff === 0;
 }
 
-/**
- * Verifica que el token de la cookie corresponde al secreto actual.
- */
-export function verifySessionToken(cookieValue: string, secret: string): boolean {
-  const expected = createSessionToken(secret);
-  return safeCompare(cookieValue, expected);
+export function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
