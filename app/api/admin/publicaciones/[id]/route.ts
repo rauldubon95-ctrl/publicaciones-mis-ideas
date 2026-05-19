@@ -16,8 +16,24 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } = body;
+  let body: unknown;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } =
+    body as Record<string, unknown>;
+
+  if (
+    typeof titulo !== "string" || titulo.trim().length === 0 || titulo.length > 200 ||
+    typeof slug !== "string" || slug.trim().length === 0 || slug.length > 200 ||
+    typeof resumen !== "string" || resumen.trim().length === 0 || resumen.length > 500 ||
+    typeof contenido !== "string" || contenido.trim().length === 0 || contenido.length > 100000
+  ) {
+    return NextResponse.json({ error: "Campos inválidos o demasiado largos" }, { status: 400 });
+  }
+  if (etiquetas !== undefined && !Array.isArray(etiquetas)) {
+    return NextResponse.json({ error: "Etiquetas debe ser un array" }, { status: 400 });
+  }
 
   const existente = await prisma.publicacion.findUnique({ where: { id: params.id } });
   if (!existente) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
