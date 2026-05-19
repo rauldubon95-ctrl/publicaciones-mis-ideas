@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
-import { cookies } from "next/headers";
 
 function isAuthorized(): boolean {
   const cookieStore = cookies();
   const secret = process.env.ADMIN_SECRET;
-  return !!secret && cookieStore.get("admin_auth")?.value === secret;
+  const token = cookieStore.get("admin_auth")?.value;
+  return !!secret && !!token && verifySessionToken(token, secret);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

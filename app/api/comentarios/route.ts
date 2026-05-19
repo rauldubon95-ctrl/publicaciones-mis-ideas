@@ -1,7 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Rate limiting simple: máx 3 comentarios por IP cada 10 minutos
+const comentarioLog = new Map<string, { count: number; resetAt: number }>();
+
+function checkComentarioRate(ip: string): boolean {
+  const now = Date.now();
+  const entry = comentarioLog.get(ip);
+  if (!entry || entry.resetAt < now) {
+    comentarioLog.set(ip, { count: 1, resetAt: now + 10 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= 3) return false;
+  entry.count++;
+  return true;
+}
+
+function sanitizar(texto: string): string {
+  return texto
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .trim();
+}
+
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (!checkComentarioRate(ip)) {
+    return NextResponse.json(
+      { error: "Demasiados comentarios. Espera unos minutos." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
   const { publicacionId, autorNombre, contenido } = body;
 
@@ -25,8 +59,8 @@ export async function POST(req: NextRequest) {
   const comentario = await prisma.comentario.create({
     data: {
       publicacionId,
-      autorNombre: autorNombre.trim(),
-      contenido: contenido.trim(),
+      autorNombre: sanitizar(autorNombre),
+      contenido: sanitizar(contenido),
     },
   });
 

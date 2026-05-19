@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySessionToken } from "@/lib/auth";
 
 export function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/admin")) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname === "/admin/login") {
     return NextResponse.next();
   }
 
@@ -12,11 +17,7 @@ export function middleware(request: NextRequest) {
     return new NextResponse("ADMIN_SECRET no configurado", { status: 500 });
   }
 
-  if (cookie === secret) {
-    return NextResponse.next();
-  }
-
-  if (request.nextUrl.pathname === "/admin/login") {
+  if (cookie && verifySessionToken(cookie, secret)) {
     return NextResponse.next();
   }
 

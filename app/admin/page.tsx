@@ -1,17 +1,46 @@
-import { prisma } from "@/lib/prisma";
+"use client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { formatFecha } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+interface Publicacion {
+  id: string;
+  titulo: string;
+  slug: string;
+  publicado: boolean;
+  creadoAt: string;
+  categoria: { nombre: string } | null;
+  _count: { comentarios: number; reacciones: number };
+}
 
-export default async function AdminPage() {
-  const publicaciones = await prisma.publicacion.findMany({
-    orderBy: { creadoAt: "desc" },
-    include: {
-      categoria: true,
-      _count: { select: { comentarios: true, reacciones: true } },
-    },
-  });
+export default function AdminPage() {
+  const router = useRouter();
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/publicaciones")
+      .then((r) => {
+        if (r.status === 401) { router.replace("/admin/login"); return null; }
+        return r.json();
+      })
+      .then((data) => { if (data) setPublicaciones(data); })
+      .finally(() => setCargando(false));
+  }, [router]);
+
+  async function handleLogout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.replace("/admin/login");
+  }
+
+  if (cargando) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400">Cargando…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
@@ -24,11 +53,9 @@ export default async function AdminPage() {
           <Link href="/admin/nueva" className="btn-primary">
             + Nueva publicación
           </Link>
-          <form action="/api/admin/logout" method="POST">
-            <button type="submit" className="btn-secondary text-sm">
-              Salir
-            </button>
-          </form>
+          <button onClick={handleLogout} className="btn-secondary text-sm">
+            Salir
+          </button>
         </div>
       </div>
 
@@ -37,9 +64,9 @@ export default async function AdminPage() {
           <div key={p.id} className="card p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span
-                  className={`badge ${p.publicado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}
-                >
+                <span className={`badge ${
+                  p.publicado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+                }`}>
                   {p.publicado ? "Publicado" : "Borrador"}
                 </span>
                 {p.categoria && (
