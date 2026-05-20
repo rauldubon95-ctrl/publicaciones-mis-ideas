@@ -13,6 +13,7 @@ export default function EditarComicPage() {
   const [comic, setComic] = useState<Comic | null>(null);
   const [paginas, setPaginas] = useState<Pagina[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [storageOk, setStorageOk] = useState<boolean | null>(null);
 
   // Edición del cómic
   const [titulo, setTitulo] = useState("");
@@ -29,6 +30,12 @@ export default function EditarComicPage() {
   const labelClass = "block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5";
 
   useEffect(() => {
+    // Verificar y configurar Storage automáticamente
+    fetch("/api/admin/setup-storage", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => setStorageOk(d.ok === true))
+      .catch(() => setStorageOk(false));
+
     Promise.all([
       fetch(`/api/admin/comics`).then((r) => r.json()),
       fetch(`/api/admin/comics/${id}/paginas`).then((r) => r.json()),
@@ -123,7 +130,20 @@ export default function EditarComicPage() {
 
       {/* Subir nueva página */}
       <section className="border border-zinc-200 bg-white p-6">
-        <h2 className="text-lg font-serif font-semibold text-zinc-900 mb-5">Añadir página</h2>
+        <h2 className="text-lg font-serif font-semibold text-zinc-900 mb-4">Añadir página</h2>
+
+        {/* Estado del Storage */}
+        {storageOk === false && (
+          <div className="mb-4 border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
+            <strong>Problema con el almacenamiento de imágenes.</strong> Asegúrate de que el bucket &quot;comics&quot; esté creado en Supabase y sea público.
+          </div>
+        )}
+        {storageOk === true && (
+          <div className="mb-4 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-2 text-xs rounded">
+            Almacenamiento listo
+          </div>
+        )}
+
         <div className="space-y-3">
           <div>
             <label className={labelClass}>Pie de imagen (opcional)</label>
