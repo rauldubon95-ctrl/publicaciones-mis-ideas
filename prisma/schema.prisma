@@ -10,15 +10,15 @@ datasource db {
 }
 
 model Publicacion {
-  id          String    @id @default(cuid())
-  titulo      String
-  slug        String    @unique
-  resumen     String
-  contenido   String
-  publicado   Boolean   @default(false)
-  creadoAt    DateTime  @default(now())
-  actualizadoAt DateTime @updatedAt
-  publicadoAt DateTime?
+  id            String    @id @default(cuid())
+  titulo        String
+  slug          String    @unique
+  resumen       String
+  contenido     String
+  publicado     Boolean   @default(false)
+  creadoAt      DateTime  @default(now())
+  actualizadoAt DateTime  @updatedAt
+  publicadoAt   DateTime?
 
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
@@ -26,6 +26,8 @@ model Publicacion {
   etiquetas   PublicacionEtiqueta[]
   comentarios Comentario[]
   reacciones  Reaccion[]
+  vistas      VistaPublicacion[]
+  descargas   DescargaPdf[]
 }
 
 model Categoria {
@@ -63,10 +65,34 @@ model Comentario {
 
 model Reaccion {
   id            String      @id @default(cuid())
-  tipo          String      // "me_gusta" | "me_encanta" | "inspirador"
+  tipo          String
   publicacionId String
   sessionId     String
   publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
 
   @@unique([publicacionId, sessionId, tipo])
+}
+
+model VistaPublicacion {
+  id            String      @id @default(cuid())
+  publicacionId String
+  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  pais          String?
+  dispositivo   String?
+  creadoAt      DateTime    @default(now())
+
+  @@index([publicacionId])
+  @@index([creadoAt])
+  @@index([pais])
+}
+
+model DescargaPdf {
+  id            String      @id @default(cuid())
+  publicacionId String
+  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  pais          String?
+  creadoAt      DateTime    @default(now())
+
+  @@index([publicacionId])
+  @@index([creadoAt])
 }

@@ -31,7 +31,7 @@ export default async function PdfPage({ params }: Props) {
           <a href={`/publicaciones/${params.slug}`} className="text-brand-300 hover:text-white transition-colors">
             ← Volver al artículo
           </a>
-          <PrintButton />
+          <PrintButton publicacionId={publicacion.id} />
         </div>
       </div>
 

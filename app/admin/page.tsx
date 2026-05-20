@@ -58,6 +58,9 @@ export default function AdminPage() {
           <Link href="/admin/nueva" className="btn-primary">
             Nueva publicación
           </Link>
+          <Link href="/admin/metricas" className="btn-secondary">
+            Métricas
+          </Link>
           <button onClick={handleLogout} className="btn-secondary">
             Salir
           </button>

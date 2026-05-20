@@ -4,6 +4,7 @@ import { formatFecha } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import ComentarioForm from "@/components/ComentarioForm";
 import ReaccionButtons from "@/components/ReaccionButtons";
+import TrackView from "@/components/TrackView";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -37,6 +38,7 @@ export default async function PublicacionPage({ params }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <TrackView publicacionId={publicacion.id} />
       {/* Breadcrumb */}
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
