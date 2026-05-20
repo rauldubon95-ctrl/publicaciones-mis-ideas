@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
-import { subirImagen, eliminarImagen } from "@/lib/supabase-admin";
+import { eliminarImagen } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-// Vercel Hobby limita el cuerpo de la solicitud a 4.5 MB; dejamos margen con 4 MB
-const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
@@ -19,40 +15,29 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(paginas);
 }
 
+// Recibe la URL pública ya subida directamente a Supabase desde el navegador
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
-  const formData = await req.formData().catch(() => null);
-  if (!formData) return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const { imageUrl, caption } = (body ?? {}) as { imageUrl?: string; caption?: string };
 
-  const imagen = formData.get("imagen") as File | null;
-  const caption = (formData.get("caption") as string | null)?.trim().slice(0, 300) ?? null;
-
-  if (!imagen) return NextResponse.json({ error: "Se requiere una imagen" }, { status: 400 });
-  if (!TIPOS_PERMITIDOS.includes(imagen.type)) {
-    return NextResponse.json({ error: "Tipo no permitido — usa JPEG, PNG, WebP o GIF" }, { status: 400 });
-  }
-  if (imagen.size > MAX_BYTES) {
-    return NextResponse.json({ error: "La imagen no puede superar 4 MB" }, { status: 400 });
-  }
-
-  let imageUrl: string;
-  try {
-    const buffer = Buffer.from(await imagen.arrayBuffer());
-    imageUrl = await subirImagen(buffer, imagen.name, imagen.type);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error desconocido al subir";
-    return NextResponse.json({ error: msg }, { status: 502 });
+  if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.startsWith("https://")) {
+    return NextResponse.json({ error: "URL de imagen inválida" }, { status: 400 });
   }
 
   const ultimo = await prisma.paginaComic.findFirst({
     where: { comicId: params.id },
     orderBy: { orden: "desc" },
   });
-  const orden = (ultimo?.orden ?? 0) + 1;
 
   const pagina = await prisma.paginaComic.create({
-    data: { comicId: params.id, imageUrl, orden, caption },
+    data: {
+      comicId: params.id,
+      imageUrl,
+      orden: (ultimo?.orden ?? 0) + 1,
+      caption: caption?.trim().slice(0, 300) ?? null,
+    },
   });
   return NextResponse.json(pagina, { status: 201 });
 }
@@ -71,13 +56,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   await eliminarImagen(pagina.imageUrl).catch(() => {});
   await prisma.paginaComic.delete({ where: { id: paginaId } });
 
-  // Re-numerar las páginas restantes
   const restantes = await prisma.paginaComic.findMany({
     where: { comicId: params.id },
     orderBy: { orden: "asc" },
   });
   await Promise.all(
-    restantes.map((p, i) => prisma.paginaComic.update({ where: { id: p.id }, data: { orden: i + 1 } }))
+    restantes.map((p, i) =>
+      prisma.paginaComic.update({ where: { id: p.id }, data: { orden: i + 1 } })
+    )
   );
 
   return NextResponse.json({ ok: true });

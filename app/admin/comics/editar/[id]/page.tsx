@@ -63,19 +63,49 @@ export default function EditarComicPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setSubiendo(true); setErrorUpload("");
-    const form = new FormData();
-    form.append("imagen", file);
-    form.append("caption", caption);
-    const res = await fetch(`/api/admin/comics/${id}/paginas`, { method: "POST", body: form });
-    if (!res.ok) {
-      const d = await res.json(); setErrorUpload(d.error ?? "Error al subir"); setSubiendo(false);
-      if (fileRef.current) fileRef.current.value = ""; return;
+
+    try {
+      // Paso 1: pedir URL firmada al servidor (petición pequeña, sin archivo)
+      const presignRes = await fetch(`/api/admin/comics/${id}/presigned-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: file.name, tipo: file.type }),
+      });
+      if (!presignRes.ok) {
+        const d = await presignRes.json();
+        throw new Error(d.error ?? "No se pudo obtener URL de subida");
+      }
+      const { signedUrl, publicUrl } = await presignRes.json();
+
+      // Paso 2: subir el archivo DIRECTAMENTE a Supabase desde el navegador
+      // (no pasa por Vercel, sin límite de tamaño)
+      const uploadRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Error al subir la imagen a Supabase");
+
+      // Paso 3: guardar la URL pública en la base de datos
+      const saveRes = await fetch(`/api/admin/comics/${id}/paginas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: publicUrl, caption }),
+      });
+      if (!saveRes.ok) {
+        const d = await saveRes.json();
+        throw new Error(d.error ?? "Error al guardar la página");
+      }
+
+      const nueva = await saveRes.json();
+      setPaginas((prev) => [...prev, nueva]);
+      setCaption("");
+    } catch (err) {
+      setErrorUpload(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setSubiendo(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
-    const nueva = await res.json();
-    setPaginas((prev) => [...prev, nueva]);
-    setCaption("");
-    setSubiendo(false);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   async function handleEliminarPagina(paginaId: string) {
@@ -159,7 +189,7 @@ export default function EditarComicPage() {
               ) : "Seleccionar y subir imagen"}
             </button>
             {errorUpload && <p className="text-red-600 text-sm mt-2 border border-red-100 bg-red-50 px-3 py-2 rounded">{errorUpload}</p>}
-            <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · máx. 4 MB por imagen</p>
+            <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · sin límite de tamaño</p>
           </div>
         </div>
       </section>
