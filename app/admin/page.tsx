@@ -58,6 +58,12 @@ export default function AdminPage() {
           <Link href="/admin/nueva" className="btn-primary">
             Nueva publicación
           </Link>
+          <Link href="/admin/recursos" className="btn-secondary">
+            Recursos
+          </Link>
+          <Link href="/admin/comics" className="btn-secondary">
+            Cómics
+          </Link>
           <Link href="/admin/metricas" className="btn-secondary">
             Métricas
           </Link>
