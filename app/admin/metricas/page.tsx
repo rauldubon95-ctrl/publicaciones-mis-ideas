@@ -19,10 +19,19 @@ interface TopArticulo  { titulo: string; slug: string; vistas: number; descargas
 interface DatoPais     { pais: string; total: number }
 interface DatoDispositivo { dispositivo: string; total: number }
 
+interface SupabaseStats {
+  dbBytes: number;
+  storageBytes: number;
+  storageArchivos: number;
+  bucketExiste: boolean;
+  limites: { dbBytes: number; storageBytes: number; bandwidthBytes: number };
+}
+
 interface Metricas {
   resumen: Resumen;
   graficos: { vistasPorDia: DatoDia[]; descargasPorDia: DatoDia[] };
   tablas: { topArticulos: TopArticulo[]; vistasPorPais: DatoPais[]; descargasPorPais: DatoPais[]; vistasPorDispositivo: DatoDispositivo[] };
+  supabase: SupabaseStats;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,6 +65,14 @@ function pct(valor: number, total: number) {
   return Math.round((valor / total) * 100);
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 // ─── Tarjeta de métrica ───────────────────────────────────────────────────────
 function Metrica({ label, valor, sub, color = "zinc" }: {
   label: string; valor: number | string; sub?: string; color?: string
@@ -71,6 +88,92 @@ function Metrica({ label, valor, sub, color = "zinc" }: {
       <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">{label}</p>
       <p className="text-3xl font-serif font-semibold text-zinc-900">{valor.toLocaleString()}</p>
       {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Indicador Supabase ───────────────────────────────────────────────────────
+function IndicadorSupabase({ stats }: { stats: SupabaseStats }) {
+  const { dbBytes, storageBytes, storageArchivos, bucketExiste, limites } = stats;
+  const pctDb      = Math.min(Math.round((dbBytes      / limites.dbBytes)      * 100), 100);
+  const pctStorage = Math.min(Math.round((storageBytes / limites.storageBytes) * 100), 100);
+
+  function colorBarra(p: number) {
+    if (p >= 80) return "bg-red-500";
+    if (p >= 50) return "bg-amber-500";
+    return "bg-emerald-500";
+  }
+
+  function alerta(p: number) {
+    if (p >= 80) return "⚠ Cerca del límite — considera hacer limpieza o actualizar el plan.";
+    if (p >= 50) return "Uso moderado — bien por ahora.";
+    return "En zona segura.";
+  }
+
+  return (
+    <div className="bg-white border border-zinc-200 p-6">
+      <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-5">
+        Uso de Supabase — Plan gratuito
+      </h3>
+
+      <div className="space-y-5">
+        {/* Base de datos */}
+        <div>
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="font-medium text-zinc-700">Base de datos</span>
+            <span className="text-zinc-500">
+              {formatBytes(dbBytes)} <span className="text-zinc-300">/ {formatBytes(limites.dbBytes)}</span>
+            </span>
+          </div>
+          <div className="h-2.5 bg-zinc-100 rounded-full overflow-hidden">
+            <div className={`h-full ${colorBarra(pctDb)} rounded-full transition-all`} style={{ width: `${pctDb}%` }} />
+          </div>
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-zinc-400">{pctDb}% utilizado</p>
+            <p className="text-xs text-zinc-300">{alerta(pctDb)}</p>
+          </div>
+        </div>
+
+        {/* Almacenamiento */}
+        <div>
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="font-medium text-zinc-700">Almacenamiento (imágenes)</span>
+            <span className="text-zinc-500">
+              {formatBytes(storageBytes)} <span className="text-zinc-300">/ {formatBytes(limites.storageBytes)}</span>
+            </span>
+          </div>
+          <div className="h-2.5 bg-zinc-100 rounded-full overflow-hidden">
+            <div className={`h-full ${colorBarra(pctStorage)} rounded-full transition-all`} style={{ width: `${pctStorage}%` }} />
+          </div>
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-zinc-400">{pctStorage}% · {storageArchivos} archivo{storageArchivos !== 1 ? "s" : ""}</p>
+            {!bucketExiste && (
+              <p className="text-xs text-red-400">Bucket &quot;comics&quot; no encontrado</p>
+            )}
+          </div>
+        </div>
+
+        {/* Ancho de banda */}
+        <div className="pt-4 border-t border-zinc-100">
+          <p className="text-xs font-medium text-zinc-500 mb-2">Límites del plan gratuito (referencia)</p>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[
+              { label: "Base de datos", valor: "500 MB" },
+              { label: "Storage",       valor: "1 GB" },
+              { label: "Bandwidth",     valor: "5 GB/mes" },
+            ].map((item) => (
+              <div key={item.label} className="border border-zinc-100 rounded p-2.5">
+                <p className="text-xs text-zinc-400">{item.label}</p>
+                <p className="text-sm font-semibold text-zinc-700 mt-0.5">{item.valor}</p>
+                <p className="text-xs text-emerald-600 mt-0.5">Gratis</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-300 mt-3 text-center">
+            Plan Pro: $25 USD/mes · 8 GB DB · 100 GB Storage · 250 GB Bandwidth
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -402,7 +505,10 @@ export default function MetricasPage() {
         </div>
       </div>
 
-      {/* Asesor de costos */}
+      {/* Indicadores Supabase */}
+      <IndicadorSupabase stats={data.supabase} />
+
+      {/* Asesor de costos Vercel */}
       <ConsejoCostos vistas={resumen.vistasEstesMes} />
     </div>
   );

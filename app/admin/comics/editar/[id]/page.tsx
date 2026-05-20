@@ -139,7 +139,7 @@ export default function EditarComicPage() {
               ) : "Seleccionar y subir imagen"}
             </button>
             {errorUpload && <p className="text-red-600 text-sm mt-2 border border-red-100 bg-red-50 px-3 py-2 rounded">{errorUpload}</p>}
-            <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · máx. 8 MB por imagen</p>
+            <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · máx. 4 MB por imagen</p>
           </div>
         </div>
       </section>

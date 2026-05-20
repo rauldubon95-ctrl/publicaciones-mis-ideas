@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB por imagen
+// Vercel Hobby limita el cuerpo de la solicitud a 4.5 MB; dejamos margen con 4 MB
+const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
@@ -29,14 +30,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (!imagen) return NextResponse.json({ error: "Se requiere una imagen" }, { status: 400 });
   if (!TIPOS_PERMITIDOS.includes(imagen.type)) {
-    return NextResponse.json({ error: "Tipo de archivo no permitido (JPEG, PNG, WebP o GIF)" }, { status: 400 });
+    return NextResponse.json({ error: "Tipo no permitido — usa JPEG, PNG, WebP o GIF" }, { status: 400 });
   }
   if (imagen.size > MAX_BYTES) {
-    return NextResponse.json({ error: "La imagen no puede superar 8 MB" }, { status: 400 });
+    return NextResponse.json({ error: "La imagen no puede superar 4 MB" }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await imagen.arrayBuffer());
-  const imageUrl = await subirImagen(buffer, imagen.name, imagen.type);
+  let imageUrl: string;
+  try {
+    const buffer = Buffer.from(await imagen.arrayBuffer());
+    imageUrl = await subirImagen(buffer, imagen.name, imagen.type);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido al subir";
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   const ultimo = await prisma.paginaComic.findFirst({
     where: { comicId: params.id },

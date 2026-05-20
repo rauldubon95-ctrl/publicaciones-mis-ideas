@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySessionToken } from "@/lib/auth";
+import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(_req: NextRequest) {
-  const cookieStore = cookies();
-  const secret = process.env.ADMIN_SECRET;
-  const token = cookieStore.get("admin_auth")?.value;
-  if (!secret || !token || !(await verifySessionToken(token, secret))) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
   const ahora = new Date();
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
@@ -33,6 +29,8 @@ export async function GET(_req: NextRequest) {
     descargasPorPais,
     vistasPorDispositivo,
     vistasUltimos7,
+    dbSize,
+    storageStats,
   ] = await Promise.all([
     prisma.vistaPublicacion.count(),
     prisma.vistaPublicacion.count({ where: { creadoAt: { gte: inicioMes } } }),
@@ -42,33 +40,18 @@ export async function GET(_req: NextRequest) {
     prisma.publicacion.count({ where: { publicado: true } }),
     prisma.comentario.count(),
 
-    // Vistas por día (últimos 30 días)
     prisma.$queryRaw<{ dia: string; total: number }[]>`
-      SELECT
-        TO_CHAR("creadoAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia,
-        COUNT(*)::int AS total
-      FROM "VistaPublicacion"
-      WHERE "creadoAt" >= ${hace30}
-      GROUP BY dia
-      ORDER BY dia ASC
+      SELECT TO_CHAR("creadoAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia, COUNT(*)::int AS total
+      FROM "VistaPublicacion" WHERE "creadoAt" >= ${hace30}
+      GROUP BY dia ORDER BY dia ASC
     `,
-
-    // Descargas por día (últimos 30 días)
     prisma.$queryRaw<{ dia: string; total: number }[]>`
-      SELECT
-        TO_CHAR("creadoAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia,
-        COUNT(*)::int AS total
-      FROM "DescargaPdf"
-      WHERE "creadoAt" >= ${hace30}
-      GROUP BY dia
-      ORDER BY dia ASC
+      SELECT TO_CHAR("creadoAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia, COUNT(*)::int AS total
+      FROM "DescargaPdf" WHERE "creadoAt" >= ${hace30}
+      GROUP BY dia ORDER BY dia ASC
     `,
-
-    // Top 5 artículos por vistas
     prisma.$queryRaw<{ titulo: string; slug: string; vistas: number; descargas: number }[]>`
-      SELECT
-        p.titulo,
-        p.slug,
+      SELECT p.titulo, p.slug,
         COUNT(DISTINCT v.id)::int AS vistas,
         COUNT(DISTINCT d.id)::int AS descargas
       FROM "Publicacion" p
@@ -76,63 +59,79 @@ export async function GET(_req: NextRequest) {
       LEFT JOIN "DescargaPdf"      d ON d."publicacionId" = p.id
       WHERE p.publicado = true
       GROUP BY p.id, p.titulo, p.slug
-      ORDER BY vistas DESC
-      LIMIT 5
+      ORDER BY vistas DESC LIMIT 5
     `,
-
-    // Vistas por país (top 8)
     prisma.$queryRaw<{ pais: string; total: number }[]>`
       SELECT COALESCE(pais, 'Desconocido') AS pais, COUNT(*)::int AS total
-      FROM "VistaPublicacion"
-      WHERE "creadoAt" >= ${hace30}
-      GROUP BY pais
-      ORDER BY total DESC
-      LIMIT 8
+      FROM "VistaPublicacion" WHERE "creadoAt" >= ${hace30}
+      GROUP BY pais ORDER BY total DESC LIMIT 8
     `,
-
-    // Descargas por país (top 8)
     prisma.$queryRaw<{ pais: string; total: number }[]>`
       SELECT COALESCE(pais, 'Desconocido') AS pais, COUNT(*)::int AS total
-      FROM "DescargaPdf"
-      WHERE "creadoAt" >= ${hace30}
-      GROUP BY pais
-      ORDER BY total DESC
-      LIMIT 8
+      FROM "DescargaPdf" WHERE "creadoAt" >= ${hace30}
+      GROUP BY pais ORDER BY total DESC LIMIT 8
     `,
-
-    // Vistas por dispositivo
     prisma.$queryRaw<{ dispositivo: string; total: number }[]>`
       SELECT COALESCE(dispositivo, 'desktop') AS dispositivo, COUNT(*)::int AS total
-      FROM "VistaPublicacion"
-      WHERE "creadoAt" >= ${hace30}
-      GROUP BY dispositivo
-      ORDER BY total DESC
+      FROM "VistaPublicacion" WHERE "creadoAt" >= ${hace30}
+      GROUP BY dispositivo ORDER BY total DESC
     `,
-
-    // Vistas últimos 7 días (para tendencia)
     prisma.vistaPublicacion.count({ where: { creadoAt: { gte: hace7 } } }),
+
+    // Tamaño de la base de datos (bytes)
+    prisma.$queryRaw<{ bytes: bigint }[]>`
+      SELECT pg_database_size(current_database())::bigint AS bytes
+    `.then((r) => Number(r[0]?.bytes ?? 0)).catch(() => 0),
+
+    // Archivos e tamaño en Supabase Storage
+    (async () => {
+      try {
+        const sb = getSupabaseAdmin();
+        const { data: buckets } = await sb.storage.listBuckets();
+        const comicsBucket = buckets?.find((b) => b.id === "comics");
+
+        // Obtener tamaño total de objetos en el bucket
+        const { data: files } = await sb.storage.from("comics").list("", {
+          limit: 1000,
+          offset: 0,
+        });
+
+        const totalBytes = files?.reduce((sum, f) => {
+          const size = (f.metadata as { size?: number } | null)?.size ?? 0;
+          return sum + size;
+        }, 0) ?? 0;
+
+        return {
+          bucketExiste: !!comicsBucket,
+          totalArchivos: files?.length ?? 0,
+          totalBytes,
+        };
+      } catch {
+        return { bucketExiste: false, totalArchivos: 0, totalBytes: 0 };
+      }
+    })(),
   ]);
 
   return NextResponse.json({
     resumen: {
-      totalVistas,
-      vistasEstesMes,
-      totalDescargas,
-      descargasEsteMes,
-      totalPublicaciones,
-      publicacionesPublicadas,
-      totalComentarios,
-      vistasUltimos7,
+      totalVistas, vistasEstesMes,
+      totalDescargas, descargasEsteMes,
+      totalPublicaciones, publicacionesPublicadas,
+      totalComentarios, vistasUltimos7,
     },
-    graficos: {
-      vistasPorDia,
-      descargasPorDia,
-    },
-    tablas: {
-      topArticulos,
-      vistasPorPais,
-      descargasPorPais,
-      vistasPorDispositivo,
+    graficos: { vistasPorDia, descargasPorDia },
+    tablas: { topArticulos, vistasPorPais, descargasPorPais, vistasPorDispositivo },
+    supabase: {
+      dbBytes: dbSize,
+      storageBytes: storageStats.totalBytes,
+      storageArchivos: storageStats.totalArchivos,
+      bucketExiste: storageStats.bucketExiste,
+      // Límites plan gratuito de Supabase
+      limites: {
+        dbBytes:      500 * 1024 * 1024,   // 500 MB
+        storageBytes: 1024 * 1024 * 1024,  // 1 GB
+        bandwidthBytes: 5 * 1024 * 1024 * 1024, // 5 GB/mes
+      },
     },
   });
 }
