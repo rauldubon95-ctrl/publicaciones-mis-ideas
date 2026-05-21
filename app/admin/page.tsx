@@ -53,6 +53,9 @@ export default function AdminPage() {
           <Link href="/admin/nueva" className="btn-primary">
             + Nueva publicación
           </Link>
+          <Link href="/admin/seguridad" className="btn-secondary text-sm">
+            🔒 Seguridad
+          </Link>
           <button onClick={handleLogout} className="btn-secondary text-sm">
             Salir
           </button>

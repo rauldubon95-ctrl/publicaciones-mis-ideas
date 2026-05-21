@@ -1,50 +1,93 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimitDb, registrarEvento, sanitizarTexto, getIp } from "@/lib/security";
 
-// Rate limiting simple: máx 3 comentarios por IP cada 10 minutos
-const comentarioLog = new Map<string, { count: number; resetAt: number }>();
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-function checkComentarioRate(ip: string): boolean {
-  const now = Date.now();
-  const entry = comentarioLog.get(ip);
-  if (!entry || entry.resetAt < now) {
-    comentarioLog.set(ip, { count: 1, resetAt: now + 10 * 60 * 1000 });
-    return true;
-  }
-  if (entry.count >= 3) return false;
-  entry.count++;
-  return true;
+// 3 comentarios por IP cada 10 minutos; bloqueo de 20 min si supera
+const RATE_CONFIG = {
+  maxIntentos: 3,
+  ventanaMs: 10 * 60 * 1000,
+  bloqueoMs: 20 * 60 * 1000,
+};
+
+// Patrones de spam comunes
+const SPAM_PATTERNS = [
+  /\b(viagra|casino|crypto|bitcoin|forex|loan|click here|free money)\b/i,
+  /https?:\/\/[^\s]{3,}/g, // cualquier URL en el contenido
+  /(.)\1{8,}/, // repetición de caracteres (aaaaaaaaaa)
+];
+
+function tieneSpam(texto: string): boolean {
+  return SPAM_PATTERNS.some((p) => p.test(texto));
 }
 
-function sanitizar(texto: string): string {
-  return texto
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .trim();
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const publicacionId = searchParams.get("publicacionId");
+
+  if (!publicacionId) {
+    return NextResponse.json({ error: "publicacionId requerido" }, { status: 400 });
+  }
+
+  const comentarios = await prisma.comentario.findMany({
+    where: { publicacionId },
+    orderBy: { creadoAt: "desc" },
+    take: 50,
+  });
+
+  return NextResponse.json(comentarios);
 }
 
 export async function POST(req: NextRequest) {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getIp(req);
 
-  if (!checkComentarioRate(ip)) {
+  const rate = await checkRateLimitDb(ip, "comentarios", RATE_CONFIG);
+  if (!rate.permitido) {
+    await registrarEvento("RATE_LIMIT", ip, "/api/comentarios", {
+      contador: rate.contador,
+    });
     return NextResponse.json(
       { error: "Demasiados comentarios. Espera unos minutos." },
       { status: 429 }
     );
   }
 
-  const body = await req.json();
-  const { publicacionId, autorNombre, contenido } = body;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
 
-  if (!publicacionId || !autorNombre?.trim() || !contenido?.trim()) {
+  const { publicacionId, autorNombre, contenido } = body as {
+    publicacionId?: string;
+    autorNombre?: string;
+    contenido?: string;
+  };
+
+  if (
+    !publicacionId ||
+    typeof publicacionId !== "string" ||
+    !autorNombre?.trim() ||
+    !contenido?.trim()
+  ) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
 
   if (contenido.length > 1000 || autorNombre.length > 80) {
     return NextResponse.json({ error: "Contenido demasiado largo" }, { status: 400 });
+  }
+
+  if (tieneSpam(contenido) || tieneSpam(autorNombre)) {
+    await registrarEvento("SPAM", ip, "/api/comentarios", {
+      autorNombre: autorNombre.slice(0, 40),
+    });
+    return NextResponse.json(
+      { error: "Comentario rechazado por filtro de contenido" },
+      { status: 422 }
+    );
   }
 
   const publicacion = await prisma.publicacion.findUnique({
@@ -59,8 +102,8 @@ export async function POST(req: NextRequest) {
   const comentario = await prisma.comentario.create({
     data: {
       publicacionId,
-      autorNombre: sanitizar(autorNombre),
-      contenido: sanitizar(contenido),
+      autorNombre: sanitizarTexto(autorNombre),
+      contenido: sanitizarTexto(contenido),
     },
   });
 
