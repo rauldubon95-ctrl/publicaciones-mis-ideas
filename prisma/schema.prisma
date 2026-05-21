@@ -134,3 +134,29 @@ model PaginaComic {
   @@index([comicId])
   @@index([comicId, orden])
 }
+
+// Registro persistente de eventos de seguridad
+model EventoSeguridad {
+  id       String   @id @default(cuid())
+  tipo     String   // LOGIN_FALLIDO | RATE_LIMIT | BOT_DETECTADO | ACCESO_DENEGADO | SPAM | SCAN_PATH
+  ip       String
+  ruta     String?
+  detalles String?
+  creadoAt DateTime @default(now())
+
+  @@index([tipo])
+  @@index([ip])
+  @@index([creadoAt])
+}
+
+// Rate limiting persistente (sobrevive cold starts en serverless)
+model RateLimitDb {
+  id             String    @id @default(cuid())
+  clave          String    @unique // "ip:ruta"
+  contador       Int       @default(1)
+  resetAt        DateTime
+  bloqueadoHasta DateTime?
+
+  @@index([clave])
+  @@index([resetAt])
+}

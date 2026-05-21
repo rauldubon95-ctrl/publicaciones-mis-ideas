@@ -1,36 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { safeCompare, createSessionToken } from "@/lib/auth";
+import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
 
-// Rate limiting en memoria: máx 5 intentos por IP cada 15 minutos
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || entry.resetAt < now) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
-    return true;
-  }
-  if (entry.count >= 5) return false;
-  entry.count++;
-  return true;
-}
-
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
+const RATE_CONFIG = {
+  maxIntentos: 5,
+  ventanaMs: 15 * 60 * 1000,
+  bloqueoMs: 30 * 60 * 1000,
+};
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
+  const ip = getIp(req);
 
-  if (!checkRateLimit(ip)) {
+  const rate = await checkRateLimitDb(ip, "login", RATE_CONFIG);
+  if (!rate.permitido) {
+    await registrarEvento("RATE_LIMIT", ip, "/api/admin/login", {
+      contador: rate.contador,
+      bloqueadoHasta: rate.resetAt.toISOString(),
+    });
     return NextResponse.json(
-      { error: "Demasiados intentos. Espera 15 minutos." },
+      { error: "Demasiados intentos. Intenta más tarde." },
       { status: 429 }
     );
   }
@@ -42,17 +34,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
   }
 
-  const clave = typeof (body as Record<string, unknown>).clave === "string"
-    ? (body as Record<string, string>).clave
-    : "";
+  const clave =
+    typeof (body as Record<string, unknown>).clave === "string"
+      ? (body as Record<string, string>).clave
+      : "";
 
   const secret = process.env.ADMIN_SECRET;
 
   if (!secret || !safeCompare(clave, secret)) {
+    await registrarEvento("LOGIN_FALLIDO", ip, "/api/admin/login", {
+      intento: rate.contador,
+    });
     return NextResponse.json({ error: "Clave incorrecta" }, { status: 401 });
   }
 
-  // Guardar un token derivado, nunca la clave directamente
+  await registrarEvento("LOGIN_EXITOSO", ip, "/api/admin/login");
+
   const sessionToken = await createSessionToken(secret);
 
   const cookieStore = cookies();
