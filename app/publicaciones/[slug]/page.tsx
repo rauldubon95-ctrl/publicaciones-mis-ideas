@@ -2,11 +2,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
-import ComentarioForm from "@/components/ComentarioForm";
 import ReaccionButtons from "@/components/ReaccionButtons";
 import TrackView from "@/components/TrackView";
+import TarjetaAutor from "@/components/TarjetaAutor";
+import SeccionComentarios from "@/components/SeccionComentarios";
 import Link from "next/link";
 import type { Metadata } from "next";
+import type { ComentarioArbol } from "@/app/api/comentarios/route";
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +21,56 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: p.titulo, description: p.resumen };
 }
 
-export default async function PublicacionPage({ params }: Props) {
-  const publicacion = await prisma.publicacion.findUnique({
-    where: { slug: params.slug, publicado: true },
-    include: {
-      categoria: true,
-      etiquetas: { include: { etiqueta: true } },
-      comentarios: { orderBy: { creadoAt: "asc" } },
-      reacciones: true,
-    },
+// Construye árbol de comentarios desde los datos planos de la DB
+function construirArbol(comentarios: {
+  id: string; contenido: string; autorNombre: string; esAdmin: boolean;
+  estado: string; parentId: string | null; profundidad: number;
+  creadoAt: Date; actualizadoAt: Date;
+}[]): ComentarioArbol[] {
+  const mapa = new Map<string, ComentarioArbol>();
+  const raices: ComentarioArbol[] = [];
+
+  for (const c of comentarios) {
+    mapa.set(c.id, {
+      ...c,
+      respuestas: [],
+      creadoAt: c.creadoAt.toISOString(),
+      actualizadoAt: c.actualizadoAt.toISOString(),
+    });
+  }
+
+  mapa.forEach((nodo) => {
+    if (nodo.parentId && mapa.has(nodo.parentId)) {
+      mapa.get(nodo.parentId)!.respuestas.push(nodo);
+    } else {
+      raices.push(nodo);
+    }
   });
+
+  return raices;
+}
+
+export default async function PublicacionPage({ params }: Props) {
+  const [publicacion, adminOk] = await Promise.all([
+    prisma.publicacion.findUnique({
+      where: { slug: params.slug, publicado: true },
+      include: {
+        categoria: true,
+        etiquetas: { include: { etiqueta: true } },
+        comentarios: {
+          where: { estado: "VISIBLE" },
+          orderBy: { creadoAt: "asc" },
+          select: {
+            id: true, contenido: true, autorNombre: true, esAdmin: true,
+            estado: true, parentId: true, profundidad: true,
+            creadoAt: true, actualizadoAt: true,
+          },
+        },
+        reacciones: true,
+      },
+    }),
+    isAdminAuthorized(),
+  ]);
 
   if (!publicacion) notFound();
 
@@ -36,9 +79,12 @@ export default async function PublicacionPage({ params }: Props) {
     return acc;
   }, {});
 
+  const comentariosArbol = construirArbol(publicacion.comentarios);
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
       <TrackView publicacionId={publicacion.id} />
+
       {/* Breadcrumb */}
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
@@ -98,40 +144,24 @@ export default async function PublicacionPage({ params }: Props) {
       <hr className="border-zinc-100 mb-10" />
 
       {/* Reacciones */}
-      <section className="mb-12">
+      <section className="mb-10">
         <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-4">
           ¿Qué te pareció?
         </p>
         <ReaccionButtons publicacionId={publicacion.id} conteos={conteos} />
       </section>
 
-      {/* Comentarios */}
-      <section>
-        <h2 className="text-xl font-serif font-semibold text-zinc-900 mb-6">
-          Comentarios
-          <span className="ml-2 text-sm font-sans font-normal text-zinc-400">
-            ({publicacion.comentarios.length})
-          </span>
-        </h2>
+      {/* Tarjeta del autor */}
+      <TarjetaAutor />
 
-        {publicacion.comentarios.length > 0 && (
-          <div className="space-y-4 mb-8">
-            {publicacion.comentarios.map((c) => (
-              <div key={c.id} className="border border-zinc-100 bg-zinc-50 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-medium text-sm text-zinc-800">{c.autorNombre}</span>
-                  <span className="text-xs text-zinc-400">{formatFecha(c.creadoAt)}</span>
-                </div>
-                <p className="text-zinc-600 text-sm leading-relaxed">{c.contenido}</p>
-              </div>
-            ))}
-          </div>
-        )}
+      <hr className="border-zinc-100 my-10" />
 
-        <div className="bg-white border border-zinc-200 p-6">
-          <ComentarioForm publicacionId={publicacion.id} />
-        </div>
-      </section>
+      {/* Comentarios anidados */}
+      <SeccionComentarios
+        comentariosIniciales={comentariosArbol}
+        publicacionId={publicacion.id}
+        esAdmin={adminOk}
+      />
     </div>
   );
 }

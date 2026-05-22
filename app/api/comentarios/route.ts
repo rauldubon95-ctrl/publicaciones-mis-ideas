@@ -21,6 +21,42 @@ function tieneSpam(texto: string): boolean {
   return SPAM_PATTERNS.some((p) => p.test(texto));
 }
 
+// Construye el árbol de comentarios en memoria (eficiente para blogs)
+export interface ComentarioPlano {
+  id: string;
+  contenido: string;
+  autorNombre: string;
+  esAdmin: boolean;
+  estado: string;
+  parentId: string | null;
+  profundidad: number;
+  creadoAt: string;
+  actualizadoAt: string;
+}
+
+export interface ComentarioArbol extends ComentarioPlano {
+  respuestas: ComentarioArbol[];
+}
+
+function construirArbol(planos: ComentarioPlano[]): ComentarioArbol[] {
+  const mapa = new Map<string, ComentarioArbol>();
+  const raices: ComentarioArbol[] = [];
+
+  for (const c of planos) {
+    mapa.set(c.id, { ...c, respuestas: [] });
+  }
+
+  mapa.forEach((nodo) => {
+    if (nodo.parentId && mapa.has(nodo.parentId)) {
+      mapa.get(nodo.parentId)!.respuestas.push(nodo);
+    } else {
+      raices.push(nodo);
+    }
+  });
+
+  return raices;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const publicacionId = searchParams.get("publicacionId");
@@ -30,12 +66,28 @@ export async function GET(req: NextRequest) {
   }
 
   const comentarios = await prisma.comentario.findMany({
-    where: { publicacionId },
-    orderBy: { creadoAt: "desc" },
-    take: 50,
+    where: { publicacionId, estado: "VISIBLE" },
+    orderBy: { creadoAt: "asc" },
+    select: {
+      id: true,
+      contenido: true,
+      autorNombre: true,
+      esAdmin: true,
+      estado: true,
+      parentId: true,
+      profundidad: true,
+      creadoAt: true,
+      actualizadoAt: true,
+    },
   });
 
-  return NextResponse.json(comentarios);
+  const planos: ComentarioPlano[] = comentarios.map((c) => ({
+    ...c,
+    creadoAt: c.creadoAt.toISOString(),
+    actualizadoAt: c.actualizadoAt.toISOString(),
+  }));
+
+  return NextResponse.json(construirArbol(planos));
 }
 
 export async function POST(req: NextRequest) {
@@ -59,10 +111,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
   }
 
-  const { publicacionId, autorNombre, contenido } = body as {
+  const { publicacionId, autorNombre, contenido, parentId } = body as {
     publicacionId?: string;
     autorNombre?: string;
     contenido?: string;
+    parentId?: string;
   };
 
   if (
@@ -92,9 +145,26 @@ export async function POST(req: NextRequest) {
     where: { id: publicacionId, publicado: true },
     select: { id: true },
   });
-
   if (!publicacion) {
     return NextResponse.json({ error: "Publicación no encontrada" }, { status: 404 });
+  }
+
+  // Validar parentId y calcular profundidad
+  let profundidad = 0;
+  if (parentId && typeof parentId === "string") {
+    const padre = await prisma.comentario.findFirst({
+      where: { id: parentId, publicacionId, estado: "VISIBLE" },
+      select: { profundidad: true },
+    });
+    if (!padre) {
+      return NextResponse.json({ error: "Comentario padre no encontrado" }, { status: 404 });
+    }
+    if (padre.profundidad >= 2) {
+      // Máximo 3 niveles: aplanar el hilo al nivel 2
+      profundidad = 2;
+    } else {
+      profundidad = padre.profundidad + 1;
+    }
   }
 
   const comentario = await prisma.comentario.create({
@@ -102,8 +172,29 @@ export async function POST(req: NextRequest) {
       publicacionId,
       autorNombre: sanitizarTexto(autorNombre),
       contenido: sanitizarTexto(contenido),
+      parentId: parentId && typeof parentId === "string" ? parentId : null,
+      profundidad,
+    },
+    select: {
+      id: true,
+      contenido: true,
+      autorNombre: true,
+      esAdmin: true,
+      estado: true,
+      parentId: true,
+      profundidad: true,
+      creadoAt: true,
+      actualizadoAt: true,
     },
   });
 
-  return NextResponse.json(comentario, { status: 201 });
+  return NextResponse.json(
+    {
+      ...comentario,
+      respuestas: [],
+      creadoAt: comentario.creadoAt.toISOString(),
+      actualizadoAt: comentario.actualizadoAt.toISOString(),
+    },
+    { status: 201 }
+  );
 }

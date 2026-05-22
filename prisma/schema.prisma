@@ -55,12 +55,27 @@ model PublicacionEtiqueta {
 }
 
 model Comentario {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   contenido     String
   autorNombre   String
   publicacionId String
-  creadoAt      DateTime    @default(now())
-  publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  creadoAt      DateTime     @default(now())
+  actualizadoAt DateTime     @updatedAt
+  // Anidación
+  parentId      String?
+  parent        Comentario?  @relation("Respuestas", fields: [parentId], references: [id], onDelete: Cascade)
+  respuestas    Comentario[] @relation("Respuestas")
+  profundidad   Int          @default(0) // 0=raíz, 1=respuesta, 2=respuesta a respuesta
+  // Autor
+  esAdmin       Boolean      @default(false)
+  // Moderación
+  estado        String       @default("VISIBLE") // VISIBLE | OCULTO | ELIMINADO
+
+  publicacion   Publicacion  @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+
+  @@index([publicacionId])
+  @@index([parentId])
+  @@index([estado])
 }
 
 model Reaccion {
