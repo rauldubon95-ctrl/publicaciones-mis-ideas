@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
 import ComicReader from "@/components/ComicReader";
+import TrackView from "@/components/TrackView";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function ComicPage({ params }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <TrackView tipo="comic" contenidoId={comic.id} />
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>

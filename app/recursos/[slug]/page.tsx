@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
+import TrackView from "@/components/TrackView";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function RecursoPage({ params }: Props) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>

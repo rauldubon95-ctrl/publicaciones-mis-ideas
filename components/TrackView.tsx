@@ -1,14 +1,29 @@
 "use client";
 import { useEffect } from "react";
 
-export default function TrackView({ publicacionId }: { publicacionId: string }) {
+type TipoContenido = "publicacion" | "recurso" | "comic";
+
+export default function TrackView({
+  tipo,
+  contenidoId,
+  // Compatibilidad con el prop anterior
+  publicacionId,
+}: {
+  tipo?: TipoContenido;
+  contenidoId?: string;
+  publicacionId?: string;
+}) {
+  const tipoFinal = tipo ?? "publicacion";
+  const idFinal = contenidoId ?? publicacionId ?? "";
+
   useEffect(() => {
+    if (!idFinal) return;
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publicacionId }),
+      body: JSON.stringify({ tipo: tipoFinal, contenidoId: idFinal }),
     }).catch(() => {});
-  }, [publicacionId]);
+  }, [tipoFinal, idFinal]);
 
   return null;
 }

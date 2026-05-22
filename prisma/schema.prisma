@@ -94,11 +94,41 @@ model VistaPublicacion {
   publicacion   Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
   pais          String?
   dispositivo   String?
+  ipHash        String?
   creadoAt      DateTime    @default(now())
 
   @@index([publicacionId])
   @@index([creadoAt])
   @@index([pais])
+  @@index([ipHash])
+}
+
+model VistaRecurso {
+  id         String      @id @default(cuid())
+  recursoId  String
+  recurso    RecursoHtml @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  pais       String?
+  dispositivo String?
+  ipHash     String?
+  creadoAt   DateTime    @default(now())
+
+  @@index([recursoId])
+  @@index([creadoAt])
+  @@index([ipHash])
+}
+
+model VistaComic {
+  id          String   @id @default(cuid())
+  comicId     String
+  comic       Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  pais        String?
+  dispositivo String?
+  ipHash      String?
+  creadoAt    DateTime @default(now())
+
+  @@index([comicId])
+  @@index([creadoAt])
+  @@index([ipHash])
 }
 
 model DescargaPdf {
@@ -113,14 +143,15 @@ model DescargaPdf {
 }
 
 model RecursoHtml {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   titulo        String
-  slug          String   @unique
+  slug          String         @unique
   descripcion   String
   contenido     String
-  publicado     Boolean  @default(false)
-  creadoAt      DateTime @default(now())
-  actualizadoAt DateTime @updatedAt
+  publicado     Boolean        @default(false)
+  creadoAt      DateTime       @default(now())
+  actualizadoAt DateTime       @updatedAt
+  vistas        VistaRecurso[]
 
   @@index([slug])
 }
@@ -134,6 +165,7 @@ model Comic {
   creadoAt      DateTime      @default(now())
   actualizadoAt DateTime      @updatedAt
   paginas       PaginaComic[]
+  vistas        VistaComic[]
 
   @@index([slug])
 }

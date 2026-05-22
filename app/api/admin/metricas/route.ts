@@ -22,6 +22,8 @@ export async function GET(_req: NextRequest) {
     totalPublicaciones,
     publicacionesPublicadas,
     totalComentarios,
+    totalVistasComics,
+    totalVistasRecursos,
     vistasPorDia,
     descargasPorDia,
     topArticulos,
@@ -39,6 +41,8 @@ export async function GET(_req: NextRequest) {
     prisma.publicacion.count(),
     prisma.publicacion.count({ where: { publicado: true } }),
     prisma.comentario.count(),
+    prisma.vistaComic.count(),
+    prisma.vistaRecurso.count(),
 
     prisma.$queryRaw<{ dia: string; total: number }[]>`
       SELECT TO_CHAR("creadoAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia, COUNT(*)::int AS total
@@ -118,6 +122,7 @@ export async function GET(_req: NextRequest) {
       totalDescargas, descargasEsteMes,
       totalPublicaciones, publicacionesPublicadas,
       totalComentarios, vistasUltimos7,
+      totalVistasComics, totalVistasRecursos,
     },
     graficos: { vistasPorDia, descargasPorDia },
     tablas: { topArticulos, vistasPorPais, descargasPorPais, vistasPorDispositivo },
