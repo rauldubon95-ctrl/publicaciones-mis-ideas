@@ -13,6 +13,7 @@ interface Resumen {
   totalDescargas: number; descargasEsteMes: number;
   totalPublicaciones: number; publicacionesPublicadas: number;
   totalComentarios: number; vistasUltimos7: number;
+  totalVistasComics: number; totalVistasRecursos: number;
 }
 interface DatoDia      { dia: string; total: number }
 interface TopArticulo  { titulo: string; slug: string; vistas: number; descargas: number }
@@ -309,7 +310,7 @@ export default function MetricasPage() {
       </div>
 
       {/* Tarjetas resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <Metrica
           label="Visitas este mes"
           valor={resumen.vistasEstesMes}
@@ -331,6 +332,32 @@ export default function MetricasPage() {
           label="Comentarios"
           valor={resumen.totalComentarios}
           sub="todos los artículos"
+        />
+      </div>
+
+      {/* Segunda fila: cómics y recursos */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+        <Metrica
+          label="Vistas de cómics"
+          valor={resumen.totalVistasComics}
+          sub="visitas únicas acumuladas"
+          color="amber"
+        />
+        <Metrica
+          label="Vistas de recursos"
+          valor={resumen.totalVistasRecursos}
+          sub="visitas únicas acumuladas"
+          color="amber"
+        />
+        <Metrica
+          label="Visitas últimos 7 días"
+          valor={resumen.vistasUltimos7}
+          sub="artículos solamente"
+        />
+        <Metrica
+          label="Total contenido"
+          valor={resumen.totalPublicaciones + (resumen.totalVistasComics > 0 ? 1 : 0)}
+          sub="artículos + secciones activas"
         />
       </div>
 
@@ -412,8 +439,8 @@ export default function MetricasPage() {
             <div className="space-y-3">
               {tablas.vistasPorDispositivo.map((d) => {
                 const p = pct(d.total, totalDisp);
-                const iconos: Record<string, string> = { desktop: "🖥", mobile: "📱", tablet: "📲" };
-                const nombres: Record<string, string> = { desktop: "Escritorio", mobile: "Móvil", tablet: "Tableta" };
+                const iconos: Record<string, string> = { computadora: "🖥", telefono: "📱", tablet: "📲", desktop: "🖥", mobile: "📱" };
+                const nombres: Record<string, string> = { computadora: "Computadora", telefono: "Teléfono", tablet: "Tableta", desktop: "Escritorio", mobile: "Móvil" };
                 return (
                   <div key={d.dispositivo}>
                     <div className="flex justify-between text-xs mb-1">
