@@ -25,7 +25,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
-      `connect-src 'self' https://${SUPABASE_HOST}`,
+      `connect-src 'self' https://${SUPABASE_HOST} https://sociologia.raul-dubon95.workers.dev`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
