@@ -1,0 +1,49 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { formatFecha } from "@/lib/utils";
+import Link from "next/link";
+import ComicReader from "@/components/ComicReader";
+import TrackView from "@/components/TrackView";
+import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
+
+interface Props { params: { slug: string } }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const c = await prisma.comic.findUnique({ where: { slug: params.slug } });
+  return c ? { title: c.titulo } : {};
+}
+
+export default async function ComicPage({ params }: Props) {
+  const comic = await prisma.comic.findUnique({
+    where: { slug: params.slug, publicado: true },
+    include: { paginas: { orderBy: { orden: "asc" } } },
+  });
+
+  if (!comic) notFound();
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <TrackView tipo="comic" contenidoId={comic.id} />
+      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+        <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
+        <span>/</span>
+        <Link href="/comics" className="hover:text-zinc-600 transition-colors">Cómics</Link>
+        <span>/</span>
+        <span className="text-zinc-600 truncate">{comic.titulo}</span>
+      </nav>
+
+      <header className="mb-10 border-b border-zinc-200 pb-6">
+        <h1 className="text-3xl font-serif font-semibold text-zinc-900 mb-2">{comic.titulo}</h1>
+        <p className="text-zinc-500 text-sm leading-relaxed mb-3">{comic.descripcion}</p>
+        <div className="flex items-center gap-4 text-xs text-zinc-400">
+          <time>{formatFecha(comic.creadoAt)}</time>
+          <span>{comic.paginas.length} páginas</span>
+        </div>
+      </header>
+
+      <ComicReader paginas={comic.paginas} />
+    </div>
+  );
+}

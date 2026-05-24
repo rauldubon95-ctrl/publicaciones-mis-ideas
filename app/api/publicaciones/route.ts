@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
-import { cookies } from "next/headers";
 
 export async function GET() {
   const publicaciones = await prisma.publicacion.findMany({
@@ -17,9 +18,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
-  if (!secret || cookieStore.get("admin_auth")?.value !== secret) {
+  const token = cookieStore.get("admin_auth")?.value;
+
+  if (!secret || !token || !(await verifySessionToken(token, secret))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
 
-  const finalSlug = slug || toSlug(titulo);
+  const finalSlug = toSlug(slug || titulo);
 
   const existente = await prisma.publicacion.findUnique({ where: { slug: finalSlug } });
   if (existente) {

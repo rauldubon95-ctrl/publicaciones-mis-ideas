@@ -1,27 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
-import { cookies } from "next/headers";
 
-function isAuthorized(): boolean {
-  const cookieStore = cookies();
+async function isAuthorized(): Promise<boolean> {
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
-  return !!secret && cookieStore.get("admin_auth")?.value === secret;
+  const token = cookieStore.get("admin_auth")?.value;
+  if (!secret || !token) return false;
+  return await verifySessionToken(token, secret);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAuthorized()) {
+  if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } = body;
+  let body: unknown;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } =
+    body as Record<string, unknown>;
+
+  if (
+    typeof titulo !== "string" || titulo.trim().length === 0 || titulo.length > 200 ||
+    typeof slug !== "string" || slug.trim().length === 0 || slug.length > 200 ||
+    typeof resumen !== "string" || resumen.trim().length === 0 || resumen.length > 500 ||
+    typeof contenido !== "string" || contenido.trim().length === 0 || contenido.length > 100000
+  ) {
+    return NextResponse.json({ error: "Campos inválidos o demasiado largos" }, { status: 400 });
+  }
+  if (etiquetas !== undefined && !Array.isArray(etiquetas)) {
+    return NextResponse.json({ error: "Etiquetas debe ser un array" }, { status: 400 });
+  }
 
   const existente = await prisma.publicacion.findUnique({ where: { id: params.id } });
   if (!existente) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-  if (slug !== existente.slug) {
-    const conflicto = await prisma.publicacion.findUnique({ where: { slug } });
+  const slugNormalizado = toSlug(slug);
+
+  if (slugNormalizado !== existente.slug) {
+    const conflicto = await prisma.publicacion.findUnique({ where: { slug: slugNormalizado } });
     if (conflicto) {
       return NextResponse.json({ error: "Ya existe una publicación con ese slug" }, { status: 409 });
     }
@@ -47,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     where: { id: params.id },
     data: {
       titulo,
-      slug,
+      slug: slugNormalizado,
       resumen,
       contenido,
       publicado: !!publicado,
@@ -61,7 +82,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAuthorized()) {
+  if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

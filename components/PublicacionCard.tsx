@@ -20,34 +20,34 @@ export default function PublicacionCard({ publicacion: p }: Props) {
         {p.categoria && (
           <Link
             href={`/categorias/${p.categoria.slug}`}
-            className="badge bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors"
+            className="badge bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors uppercase tracking-wider"
           >
             {p.categoria.nombre}
           </Link>
         )}
         {p.etiquetas.map(({ etiqueta }) => (
-          <span key={etiqueta.slug} className="badge bg-gray-100 text-gray-600">
-            #{etiqueta.nombre}
+          <span key={etiqueta.slug} className="badge bg-zinc-100 text-zinc-500">
+            {etiqueta.nombre}
           </span>
         ))}
       </div>
 
       <Link href={`/publicaciones/${p.slug}`} className="group">
-        <h2 className="text-xl font-bold text-gray-900 group-hover:text-brand-600 transition-colors leading-tight">
+        <h2 className="text-xl font-serif font-semibold text-zinc-900 group-hover:text-brand-700 transition-colors leading-snug">
           {p.titulo}
         </h2>
       </Link>
 
-      <p className="text-gray-500 text-sm leading-relaxed line-clamp-3">{p.resumen}</p>
+      <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3">{p.resumen}</p>
 
-      <div className="flex items-center justify-between mt-1">
-        <time className="text-xs text-gray-400">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-zinc-100">
+        <time className="text-xs text-zinc-400">
           {p.publicadoAt ? formatFecha(p.publicadoAt) : "Sin publicar"}
         </time>
         {p._count && (
-          <span className="text-xs text-gray-400 flex items-center gap-3">
-            <span>💬 {p._count.comentarios}</span>
-            <span>❤️ {p._count.reacciones}</span>
+          <span className="text-xs text-zinc-400 flex items-center gap-3">
+            <span>{p._count.comentarios} comentarios</span>
+            <span>{p._count.reacciones} reacciones</span>
           </span>
         )}
       </div>

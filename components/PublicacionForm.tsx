@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toSlug } from "@/lib/utils";
 
@@ -34,6 +34,35 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   );
   const [estado, setEstado] = useState<"idle" | "guardando" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [subiendoWord, setSubiendoWord] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleWordUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendoWord(true);
+    setErrorMsg("");
+    try {
+      const form = new FormData();
+      form.append("archivo", file);
+      const res = await fetch("/api/admin/upload-docx", { method: "POST", body: form });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Error al procesar el archivo");
+      }
+      const data = await res.json();
+      setContenido(data.contenido);
+      if (!esEdicion && !titulo) {
+        setTitulo(data.titulo);
+        setSlug(toSlug(data.titulo));
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Error al procesar el Word");
+    } finally {
+      setSubiendoWord(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   function handleTituloChange(val: string) {
     setTitulo(val);
@@ -76,43 +105,47 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   }
 
   async function handleEliminar() {
-    if (!publicacion || !confirm("¿Eliminar esta publicación?")) return;
+    if (!publicacion || !confirm("¿Eliminar esta publicación? Esta acción no se puede deshacer.")) return;
     await fetch(`/api/admin/publicaciones/${publicacion.id}`, { method: "DELETE" });
     router.push("/admin");
     router.refresh();
   }
 
+  const labelClass = "block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+          <label className={labelClass}>Título *</label>
           <input
             type="text"
             value={titulo}
             onChange={(e) => handleTituloChange(e.target.value)}
             required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input font-serif text-lg"
+            placeholder="Título de la publicación"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Slug (URL)</label>
+          <label className={labelClass}>Slug (URL)</label>
           <input
             type="text"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
+            onBlur={(e) => setSlug(toSlug(e.target.value))}
             required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input font-mono text-xs"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+          <label className={labelClass}>Categoría</label>
           <select
             value={categoriaId}
             onChange={(e) => setCategoriaId(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input"
           >
             <option value="">Sin categoría</option>
             {categorias.map((c) => (
@@ -122,80 +155,115 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Resumen *
-          </label>
+          <label className={labelClass}>Resumen *</label>
           <textarea
             value={resumen}
             onChange={(e) => setResumen(e.target.value)}
             required
             rows={2}
             maxLength={300}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input resize-none"
+            placeholder="Breve descripción visible en listados (máx. 300 caracteres)"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Contenido * <span className="text-gray-400 font-normal">(Markdown)</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={labelClass + " mb-0"}>
+              Contenido * <span className="text-zinc-300 normal-case tracking-normal font-normal">— Markdown</span>
+            </label>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx,.md"
+                className="hidden"
+                onChange={handleWordUpload}
+              />
+              <button
+                type="button"
+                disabled={subiendoWord}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+              >
+                {subiendoWord ? (
+                  <>
+                    <span className="animate-spin inline-block w-3 h-3 border border-brand-400 border-t-transparent rounded-full" />
+                    Procesando…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Importar .docx o .md
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
           <textarea
             value={contenido}
             onChange={(e) => setContenido(e.target.value)}
             required
-            rows={14}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-brand-500"
+            rows={18}
+            className="input font-mono text-xs resize-y leading-relaxed"
+            placeholder="Escribe el contenido en Markdown..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Etiquetas <span className="text-gray-400 font-normal">(separadas por coma)</span>
+          <label className={labelClass}>
+            Etiquetas <span className="text-zinc-300 normal-case tracking-normal font-normal">— separadas por coma</span>
           </label>
           <input
             type="text"
             value={etiquetasText}
             onChange={(e) => setEtiquetasText(e.target.value)}
             placeholder="tecnología, reflexión, proyectos"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input"
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={publicado}
-              onChange={(e) => setPublicado(e.target.checked)}
-              className="w-4 h-4 accent-brand-600"
-            />
-            <span className="text-sm font-medium text-gray-700">Publicar ahora</span>
+        <div className="flex items-center">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              onClick={() => setPublicado(!publicado)}
+              className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${
+                publicado ? "bg-brand-700" : "bg-zinc-300"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                  publicado ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </div>
+            <span className="text-sm text-zinc-700 font-medium">
+              {publicado ? "Visible al público" : "Guardar como borrador"}
+            </span>
           </label>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+        <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
           {errorMsg}
         </div>
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        <button type="submit" disabled={estado === "guardando"} className="btn-primary">
+      <div className="flex items-center gap-3 pt-4 border-t border-zinc-100">
+        <button type="submit" disabled={estado === "guardando"} className="btn-primary px-6">
           {estado === "guardando" ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear publicación"}
         </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="btn-secondary"
-        >
+        <button type="button" onClick={() => router.back()} className="btn-secondary">
           Cancelar
         </button>
         {esEdicion && (
           <button
             type="button"
             onClick={handleEliminar}
-            className="ml-auto text-sm text-red-500 hover:text-red-700 hover:underline"
+            className="ml-auto text-xs text-red-400 hover:text-red-600 transition-colors underline underline-offset-2"
           >
             Eliminar publicación
           </button>
