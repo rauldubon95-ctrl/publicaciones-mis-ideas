@@ -28,12 +28,25 @@ export async function handleEmbedRequest(
     );
   }
 
-  // Verificar que es admin: usa token dedicado admin_embed_token si existe,
-  // si no cae back al premium_master_token (migración gradual)
+  // Verificar que es admin: HMAC(ADMIN_SECRET, "premium-bypass-v1") — misma clave que el chat
   const adminKey = request.headers.get("X-Admin-Key");
-  const esperado = (await env.RATE_LIMIT.get("admin_embed_token").catch(() => null))
-    ?? (await env.RATE_LIMIT.get("premium_master_token").catch(() => null));
-  if (!adminKey || !esperado || adminKey !== esperado) {
+  if (!adminKey || !env.ADMIN_SECRET) {
+    return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
+  }
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", encoder.encode(env.ADMIN_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode("premium-bypass-v1"));
+  const esperado = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (adminKey.length !== esperado.length) {
+    return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
+  }
+  let diff = 0;
+  for (let i = 0; i < adminKey.length; i++) diff |= adminKey.charCodeAt(i) ^ esperado.charCodeAt(i);
+  if (diff !== 0) {
     return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
   }
 
