@@ -1,14 +1,17 @@
 // Agente 2: Priorizador — lee issues existentes y crea un reporte de prioridades
 // Se invoca desde el workflow prioritize.yml
+// Usa GitHub Models (gratuito) — sin API key extra, solo GITHUB_TOKEN
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO = process.env.GITHUB_REPOSITORY;
 
-if (!ANTHROPIC_API_KEY || !GITHUB_TOKEN || !REPO) {
+if (!GITHUB_TOKEN || !REPO) {
   console.error("Faltan variables de entorno.");
   process.exit(1);
 }
+
+const GITHUB_MODELS_URL = "https://models.inference.ai.azure.com/chat/completions";
+const MODEL = "meta-llama-3.1-70b-instruct";
 
 async function obtenerIssuesAbiertos() {
   let pagina = 1;
@@ -29,22 +32,26 @@ async function obtenerIssuesAbiertos() {
   return todos;
 }
 
-async function priorizarConClaude(issues) {
+async function priorizarConModelo(issues) {
   const resumen = issues.map(i => `#${i.number}: ${i.title}\n${i.body?.slice(0, 300) ?? ""}`).join("\n\n---\n\n");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(GITHUB_MODELS_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${GITHUB_TOKEN}`,
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 3000,
-      messages: [{
-        role: "user",
-        content: `Sos un arquitecto de software senior. Analizá estas sugerencias de mejora para una plataforma académica Next.js + Cloudflare Workers y priorizalas.
+      messages: [
+        {
+          role: "system",
+          content: "Sos un arquitecto de software senior especializado en Next.js, TypeScript y Cloudflare Workers. Tu tarea es analizar y priorizar sugerencias de mejora de código.",
+        },
+        {
+          role: "user",
+          content: `Analizá estas sugerencias de mejora para una plataforma académica Next.js + Cloudflare Workers y priorizalas.
 
 Criterios de priorización:
 1. Impacto en seguridad (lo más importante)
@@ -75,16 +82,21 @@ Respondé con exactamente este formato:
 
 ## 📊 Resumen ejecutivo
 2-3 oraciones sobre el estado general del código y las áreas de mayor atención.`,
-      }],
+        },
+      ],
     }),
   });
 
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`GitHub Models API error: ${err}`);
+  }
+
   const data = await res.json();
-  return data.content[0].text;
+  return data.choices[0].message.content;
 }
 
 async function cerrarReporteAnterior() {
-  // Cerrar el issue de reporte anterior si existe
   const res = await fetch(
     `https://api.github.com/repos/${REPO}/issues?labels=ai-reporte&state=open&per_page=10`,
     { headers: { "Authorization": `Bearer ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" } }
@@ -110,7 +122,7 @@ async function crearReporte(contenido, totalIssues) {
 ${contenido}
 
 ---
-*Generado por el Agente Priorizador. Para implementar una mejora, asignala y creá un PR.*`;
+*Generado por el Agente Priorizador con GitHub Models (Llama 3.1 70B). Para implementar una mejora, asignala y creá un PR.*`;
 
   const res = await fetch(`https://api.github.com/repos/${REPO}/issues`, {
     method: "POST",
@@ -141,7 +153,7 @@ async function main() {
     return;
   }
 
-  const reporte = await priorizarConClaude(issues);
+  const reporte = await priorizarConModelo(issues);
   await cerrarReporteAnterior();
   await crearReporte(reporte, issues.length);
 

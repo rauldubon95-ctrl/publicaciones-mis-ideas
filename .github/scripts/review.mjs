@@ -1,16 +1,19 @@
 // Agente 1: Revisor de código — analiza el diff y crea issues con mejoras
 // Se invoca desde el workflow code-review.yml
+// Usa GitHub Models (gratuito) — sin API key extra, solo GITHUB_TOKEN
 
 import { execSync } from "child_process";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO = process.env.GITHUB_REPOSITORY; // owner/repo
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME;
 const PR_NUMBER = process.env.PR_NUMBER;
 
-if (!ANTHROPIC_API_KEY) { console.error("Falta ANTHROPIC_API_KEY"); process.exit(1); }
 if (!GITHUB_TOKEN) { console.error("Falta GITHUB_TOKEN"); process.exit(1); }
+if (!REPO) { console.error("Falta GITHUB_REPOSITORY"); process.exit(1); }
+
+const GITHUB_MODELS_URL = "https://models.inference.ai.azure.com/chat/completions";
+const MODEL = "meta-llama-3.1-70b-instruct";
 
 // Obtener diff según el contexto (PR o revisión semanal)
 function obtenerDiff() {
@@ -34,20 +37,20 @@ function obtenerArchivosRecientes() {
   }
 }
 
-async function llamarClaude(diff, archivos) {
-  const contexto = `Eres un revisor de código senior especializado en Next.js, TypeScript, Cloudflare Workers y seguridad web.
+async function llamarModelo(diff, archivos) {
+  const sistema = `Eres un revisor de código senior especializado en Next.js, TypeScript, Cloudflare Workers y seguridad web.
 Estás revisando el repositorio "publicaciones-mis-ideas" — una plataforma académica con:
 - Frontend Next.js 14 + Supabase + Prisma (en Vercel)
 - Cloudflare Worker para asistente IA con D1, KV, Workers AI
-- Sistema de publicaciones, recursos, cómics y comentarios
+- Sistema de publicaciones, recursos, cómics y comentarios`;
 
-Archivos modificados:
+  const usuario = `Archivos modificados:
 ${archivos || "(revisión completa semanal)"}
 
 Diff de cambios:
-${diff.slice(0, 15000)}`;
+${diff.slice(0, 12000)}
 
-  const prompt = `Analiza el código y encuentra oportunidades de mejora concretas y realizables.
+Analiza el código y encuentra oportunidades de mejora concretas y realizables.
 
 Para cada mejora encontrada, crea una entrada con exactamente este formato:
 
@@ -75,29 +78,29 @@ Busca específicamente:
 
 Sé específico. Solo reporta mejoras reales que valgan la pena implementar. Máximo 8 mejoras por revisión.`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(GITHUB_MODELS_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${GITHUB_TOKEN}`,
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 4096,
       messages: [
-        { role: "user", content: `${contexto}\n\n${prompt}` }
+        { role: "system", content: sistema },
+        { role: "user", content: usuario },
       ],
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Claude API error: ${err}`);
+    throw new Error(`GitHub Models API error: ${err}`);
   }
 
   const data = await res.json();
-  return data.content[0].text;
+  return data.choices[0].message.content;
 }
 
 function parsearMejoras(texto) {
@@ -214,7 +217,7 @@ async function main() {
   }
 
   console.log(`📊 Analizando ${diff.split("\n").length} líneas de diff...`);
-  const respuesta = await llamarClaude(diff, archivos);
+  const respuesta = await llamarModelo(diff, archivos);
 
   const mejoras = parsearMejoras(respuesta);
   console.log(`\n💡 ${mejoras.length} mejoras encontradas\n`);
