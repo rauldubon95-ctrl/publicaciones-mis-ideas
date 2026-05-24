@@ -7,7 +7,7 @@ import TurndownService from "turndown";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
   if (!secret || !token || !(await verifySessionToken(token, secret))) {
@@ -22,13 +22,24 @@ export async function POST(req: NextRequest) {
   }
 
   const file = formData.get("archivo") as File | null;
-  if (!file || !file.name.toLowerCase().endsWith(".docx")) {
-    return NextResponse.json({ error: "Se requiere un archivo .docx" }, { status: 400 });
+  const isDocx = file?.name.toLowerCase().endsWith(".docx");
+  const isMd = file?.name.toLowerCase().endsWith(".md");
+
+  if (!file || (!isDocx && !isMd)) {
+    return NextResponse.json({ error: "Se requiere un archivo .docx o .md" }, { status: 400 });
   }
   if (file.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: "El archivo no puede superar 10 MB" }, { status: 400 });
   }
 
+  // Archivos Markdown: leer directamente como texto
+  if (isMd) {
+    const markdown = await file.text();
+    const titulo = file.name.replace(/\.md$/i, "").replace(/[-_]/g, " ");
+    return NextResponse.json({ contenido: markdown, titulo });
+  }
+
+  // Archivos Word: convertir HTML → Markdown
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const result = await mammoth.convertToHtml(

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth";
 
 export async function isAdminAuthorized(): Promise<boolean> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get("admin_auth")?.value;
   const secret = process.env.ADMIN_SECRET;
   if (!token || !secret) return false;
