@@ -55,7 +55,10 @@ export async function registrarEvento(
 interface RateLimitConfig {
   maxIntentos: number;
   ventanaMs: number;
-  bloqueoMs?: number; // si se excede el límite, bloquear este tiempo extra
+  bloqueoMs?: number;
+  // fail-close: si la DB cae, rechazar el request (seguro para login/AI)
+  // fail-open:  si la DB cae, permitir el request (UX para comentarios/reacciones)
+  failBehavior?: "close" | "open";
 }
 
 interface RateLimitResult {
@@ -63,6 +66,7 @@ interface RateLimitResult {
   bloqueado: boolean;
   contador: number;
   resetAt: Date;
+  dbError?: boolean;
 }
 
 export async function checkRateLimitDb(
@@ -72,6 +76,7 @@ export async function checkRateLimitDb(
 ): Promise<RateLimitResult> {
   const clave = `${ip}:${ruta}`;
   const ahora = new Date();
+  const failBehavior = config.failBehavior ?? "open";
 
   try {
     const registro = await prisma.rateLimitDb.findUnique({ where: { clave } });
@@ -121,12 +126,15 @@ export async function checkRateLimitDb(
       resetAt: bloqueadoHasta ?? registro.resetAt,
     };
   } catch {
-    // Si falla la DB, permitir (fail-open para no bloquear a usuarios legítimos)
+    // fail-close: rechazar si DB no disponible (rutas críticas: login, AI)
+    // fail-open: permitir si DB no disponible (rutas no críticas: comentarios)
+    const permitido = failBehavior === "open";
     return {
-      permitido: true,
-      bloqueado: false,
+      permitido,
+      bloqueado: !permitido,
       contador: 0,
       resetAt: new Date(ahora.getTime() + config.ventanaMs),
+      dbError: true,
     };
   }
 }
@@ -147,8 +155,9 @@ export function sanitizarTexto(texto: string): string {
 
 // ──────────────────────────────────────────
 // Detección de bots / scanners por User-Agent
+// Fuente única de verdad — importada también por middleware.ts
 // ──────────────────────────────────────────
-const BOT_PATTERNS = [
+export const BOT_UA_PATTERNS = [
   /sqlmap/i,
   /nikto/i,
   /nmap/i,
@@ -167,11 +176,21 @@ const BOT_PATTERNS = [
   /python-requests\/[0-9]/i,
   /go-http-client/i,
   /curl\/[0-9]/i,
+  /libwww-perl/i,
+  /scrapy/i,
+  /httpclient/i,
+  /java\/[0-9]/i,
+  /wget\//i,
+  /zgrab/i,
+  /zmeu/i,
+  /harvest/i,
+  /grab/i,
 ];
 
-const SCAN_PATHS = [
+export const SCAN_PATHS = [
   "/wp-admin",
   "/wp-login",
+  "/wp-content",
   "/.env",
   "/phpinfo",
   "/admin.php",
@@ -184,11 +203,17 @@ const SCAN_PATHS = [
   "/config.php",
   "/web.config",
   "/etc/passwd",
+  "/actuator",
+  "/console",
+  "/.aws",
+  "/.ssh",
+  "/.well-known/evil",
+  "/phpmyadmin",
 ];
 
 export function esBot(userAgent: string | null): boolean {
   if (!userAgent) return true;
-  return BOT_PATTERNS.some((p) => p.test(userAgent));
+  return BOT_UA_PATTERNS.some((p) => p.test(userAgent));
 }
 
 export function esScanPath(pathname: string): boolean {
