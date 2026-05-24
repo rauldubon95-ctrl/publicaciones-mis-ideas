@@ -1,89 +1,68 @@
 // ─────────────────────────────────────────────────────────────
-// Rate limiting via Cloudflare KV (sin DB, ultra-rápido en edge)
+// Rate limiting via Cloudflare KV (RATE_LIMIT namespace)
+// Compatible con el formato de clave del Worker v1
 // ─────────────────────────────────────────────────────────────
 import type { Env, RateLimitResult } from "./types";
 
-const LIMITE_GRATIS = 5;           // consultas por día para usuarios free
-const VENTANA_MS = 24 * 60 * 60 * 1000; // 24 horas
-
-interface KVRateLimitData {
-  contador: number;
-  resetAt: number; // unix ms
-}
-
-// Hash de IP para no guardar IPs reales en KV
-async function hashIp(ip: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + "rl-salt-2026");
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .slice(0, 8)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+const LIMITE_GRATIS = 5;
+const VENTANA_HORAS = 24;
 
 export async function checkRateLimit(
   ip: string,
   env: Env
 ): Promise<RateLimitResult> {
-  const ipHash = await hashIp(ip);
-  const key = `rl:${ipHash}`;
+  // Misma clave que usaba el Worker v1: rl:{ip}:{fecha}
+  const fecha = new Date().toISOString().slice(0, 10);
+  const clave = `rl:${ip}:${fecha}`;
   const ahora = Date.now();
+  const resetAt = ahora + VENTANA_HORAS * 3600 * 1000;
 
   try {
-    const raw = await env.KV.get(key);
-    let datos: KVRateLimitData;
+    const raw = await env.RATE_LIMIT.get(clave);
+    const contador = raw ? parseInt(raw, 10) : 0;
 
-    if (raw) {
-      datos = JSON.parse(raw) as KVRateLimitData;
-      // Si la ventana expiró, reiniciar
-      if (datos.resetAt <= ahora) {
-        datos = { contador: 0, resetAt: ahora + VENTANA_MS };
-      }
-    } else {
-      datos = { contador: 0, resetAt: ahora + VENTANA_MS };
+    if (contador >= LIMITE_GRATIS) {
+      return { permitido: false, restantes: 0, resetAt };
     }
 
-    const nuevoContador = datos.contador + 1;
-    const permitido = nuevoContador <= LIMITE_GRATIS;
-    const restantes = Math.max(0, LIMITE_GRATIS - nuevoContador);
+    await env.RATE_LIMIT.put(clave, String(contador + 1), {
+      expirationTtl: VENTANA_HORAS * 3600,
+    });
 
-    // Actualizar KV (TTL = tiempo hasta reset + 60s de margen)
-    const ttlSeg = Math.ceil((datos.resetAt - ahora) / 1000) + 60;
-    await env.KV.put(
-      key,
-      JSON.stringify({ contador: nuevoContador, resetAt: datos.resetAt }),
-      { expirationTtl: ttlSeg }
-    );
-
-    return { permitido, restantes, resetAt: datos.resetAt };
+    return {
+      permitido: true,
+      restantes: LIMITE_GRATIS - contador - 1,
+      resetAt,
+    };
   } catch {
-    // KV failure: fail-close para el asistente AI (no servir sin contabilizar)
-    return { permitido: false, restantes: 0, resetAt: ahora + VENTANA_MS, dbError: true };
+    // KV caído: fail-close para el asistente AI
+    return { permitido: false, restantes: 0, resetAt, dbError: true };
   }
 }
 
-// Validar token premium contra el hash almacenado en env
+// Validar token premium leyendo desde KV (igual que el Worker v1)
 export async function validarTokenPremium(
   token: string | null,
   env: Env
 ): Promise<boolean> {
   if (!token) return false;
-  const esperado = env.PREMIUM_TOKEN_HASH;
-  if (!esperado) return false;
 
-  // Comparación de tiempo constante para evitar timing attacks
-  if (token.length !== esperado.length) return false;
-  let diff = 0;
-  for (let i = 0; i < token.length; i++) {
-    diff |= token.charCodeAt(i) ^ esperado.charCodeAt(i);
+  try {
+    const esperado = await env.RATE_LIMIT.get("premium_master_token");
+    if (!esperado) return false;
+
+    if (token.length !== esperado.length) return false;
+    let diff = 0;
+    for (let i = 0; i < token.length; i++) {
+      diff |= token.charCodeAt(i) ^ esperado.charCodeAt(i);
+    }
+    return diff === 0;
+  } catch {
+    return false;
   }
-  return diff === 0;
 }
 
-// Contar tokens aproximados (para presupuesto y telemetría)
+// Contar tokens aproximados (~4 chars/token para español)
 export function contarTokens(texto: string): number {
-  // Aproximación: ~4 chars por token para español/inglés
-  // Más preciso que simplemente dividir palabras
   return Math.ceil(texto.length / 4);
 }

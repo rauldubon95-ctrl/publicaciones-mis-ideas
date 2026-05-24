@@ -1,36 +1,24 @@
-name = "sociologia-asistente"
+name = "sociologia"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Workers AI binding
+# Workers AI
 [ai]
 binding = "AI"
 
-# D1 database (knowledge base)
+# D1: llm_sociolog
 [[d1_databases]]
 binding = "DB"
-database_name = "sociologia-knowledge"
-database_id = "REEMPLAZAR_CON_ID_D1"
+database_name = "llm_sociolog"
+database_id = "ea9cad56-9b03-4af7-b15b-4e923bbc66c7"
 
-# KV namespace (rate limiting + cache)
+# KV: RATE_LIMIT (rate limiting + premium token + telemetría)
 [[kv_namespaces]]
-binding = "KV"
-id = "REEMPLAZAR_CON_ID_KV"
+binding = "RATE_LIMIT"
+id = "2f279c63ddbf45f19aaf55a02d290b47"
 
-# Variables de entorno
-# IMPORTANTE: PREMIUM_TOKEN_HASH se configura en Cloudflare Dashboard
-# como Secret (no en este archivo). Es el resultado de:
-#   HMAC-SHA256(ADMIN_SECRET, "premium-bypass-v1")
-# que es exactamente lo que genera /api/asistente/token en el Next.js app.
-[vars]
-ENVIRONMENT = "production"
-
-# Build
-[build]
-command = "npm run build"
-
-# Para desarrollo local
-# [dev]
-# port = 8787
-# local_protocol = "http"
+# ── Phase 3: Vectorize (descomentar cuando el índice esté creado) ──
+# [[vectorize]]
+# binding = "VECTORIZE"
+# index_name = "sociologia-embeddings"

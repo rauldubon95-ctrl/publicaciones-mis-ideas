@@ -1,56 +1,54 @@
 // ─────────────────────────────────────────────────────────────
-// Tipos compartidos del Worker
+// Tipos del Worker — alineados con la D1 real (tabla: documentos)
 // ─────────────────────────────────────────────────────────────
 
 export interface Env {
   AI: Ai;
   DB: D1Database;
-  KV: KVNamespace;
-  PREMIUM_TOKEN_HASH: string; // env var: HMAC del admin secret
-  AI_GATEWAY_URL?: string;    // env var: URL de AI Gateway (opcional)
+  RATE_LIMIT: KVNamespace;      // KV namespace binding real
+  VECTORIZE?: VectorizeIndex;   // Phase 3: opcional hasta que exista el index
 }
 
-// ── Request / Response ────────────────────────────────────────
+// ── Request / Response (backward-compatible con v1) ───────────
 
 export interface WorkerRequest {
   pregunta: string;
-  sessionId?: string;  // futuro: contexto de conversación
 }
 
 export interface WorkerResponse {
   respuesta?: string;
-  fuentes?: FuenteDoc[];
+  fuentes?: string[];           // títulos de documentos (compat v1)
+  fuentesDetalle?: FuenteDoc[]; // detalle enriquecido (nuevo)
   error?: string;
   mensaje?: string;
   restantes?: number;
   esPremium?: boolean;
   traceId?: string;
   confianza?: "alta" | "media" | "baja";
-  advertencia?: string; // si hay baja confianza
+  advertencia?: string;
 }
 
-// ── Documentos recuperados ────────────────────────────────────
+// ── Documento recuperado de D1 ────────────────────────────────
+
+export interface DocumentoRecuperado {
+  id: number;
+  titulo: string;
+  slug: string;
+  texto: string;
+  tipo: string;
+  palabras: string;
+  fuente: string;
+  score: number;
+  via: "fts" | "like" | "vector"; // cómo fue recuperado
+}
+
+// ── Fuente para el frontend ───────────────────────────────────
 
 export interface FuenteDoc {
   titulo: string;
-  autor?: string;
-  año?: number;
-  pagina?: number;
-  seccion?: string;
+  fuente: string;
+  tipo: string;
   score: number;
-}
-
-export interface ChunkRecuperado {
-  id: string;
-  doc_id: string;
-  contenido: string;
-  titulo_doc: string;
-  autor_doc?: string;
-  año_doc?: number;
-  pagina_inicio?: number;
-  seccion?: string;
-  score_fts?: number;
-  score_final: number;
 }
 
 // ── Rate limit ────────────────────────────────────────────────
@@ -58,7 +56,7 @@ export interface ChunkRecuperado {
 export interface RateLimitResult {
   permitido: boolean;
   restantes: number;
-  resetAt: number; // unix timestamp ms
+  resetAt: number;
   dbError?: boolean;
 }
 
@@ -66,8 +64,8 @@ export interface RateLimitResult {
 
 export interface AnalisisInyeccion {
   riesgo: "alto" | "medio" | "bajo";
-  score: number;         // 0.0 - 1.0
-  patrones: string[];    // patrones encontrados
+  score: number;
+  patrones: string[];
   accion: "bloquear" | "revisar" | "permitir";
 }
 
@@ -75,16 +73,16 @@ export interface AnalisisInyeccion {
 
 export interface TelemetriaEvento {
   traceId: string;
-  tipo: "query_start" | "retrieval" | "llm_response" | "query_complete" | "injection_blocked" | "error";
+  tipo: string;
   timestamp: number;
   duracionMs?: number;
   tokensEntrada?: number;
   tokensSalida?: number;
-  chunksRecuperados?: number;
+  docsRecuperados?: number;
   scoreConfianza?: number;
   scoreInyeccion?: number;
   groundingRatio?: number;
   modelId?: string;
-  skillUsada?: string;
+  viaRetrieval?: string;
   errorMsg?: string;
 }

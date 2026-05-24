@@ -1,266 +1,234 @@
 // ─────────────────────────────────────────────────────────────
-// Retrieval: FTS5 + metadata filter, con fallback a LIKE
+// Retrieval: FTS5 (BM25) → vector → LIKE fallback
+// Trabaja sobre la tabla real: documentos (D1: llm_sociolog)
 // ─────────────────────────────────────────────────────────────
-import type { ChunkRecuperado, Env } from "./types";
+import type { DocumentoRecuperado, Env } from "./types";
 
-const MAX_CHUNKS = 6;
-const MAX_CONTENIDO_POR_CHUNK = 1800; // chars, ~450 tokens
+const MAX_DOCS = 6;
+const MAX_TEXTO = 2200; // chars por documento al LLM (~550 tokens)
 
-// Normalizar query: quitar tildes opcionales, trim, lowercase
-function normalizarQuery(q: string): string {
-  return q
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, ""); // quita diacríticos para mejor match FTS
-}
+// Stop words para construir query FTS sin ruido
+const STOP_WORDS = new Set([
+  "hola","buenas","saludos","hey","hello","gracias","adios","chau",
+  "este","esta","esto","esos","esas","ellos","ellas","pero","para",
+  "como","cuando","donde","quien","cuyo","cual","porque","aunque",
+  "sino","desde","hasta","sobre","entre","contra","tambien","solo",
+  "bien","todo","todos","cada","otro","otra","otros","algún","alguna",
+  "mucho","poco","algo","nada","nunca","siempre","veces","según",
+  "que","con","del","una","uno","sus","son","hay","fue","ser","han",
+  "the","and","for","with","from","this","that","are","has","not",
+]);
 
-// Construir términos de búsqueda para FTS5
-function termsFTS(query: string): string {
-  const norm = normalizarQuery(query);
-  // Tokenizar: palabras >= 3 chars, sin stopwords comunes
-  const STOPWORDS = new Set([
-    "que", "con", "para", "por", "los", "las", "del", "una", "uno",
-    "sus", "sobre", "como", "pero", "sin", "más", "esta", "este",
-    "son", "hay", "fue", "ser", "han", "the", "and", "for", "with",
-    "from", "this", "that", "are", "has", "not", "can",
-  ]);
-  const tokens = norm
-    .replace(/[^a-z0-9áéíóúüñ\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+// ── Punto de entrada principal ────────────────────────────────
 
-  if (tokens.length === 0) return `"${norm}"`;
-
-  // FTS5 query: términos con OR, priorizar matches completos
-  return tokens.map((t) => `"${t}"*`).join(" OR ");
-}
-
-// Retrieval principal: FTS5 primero, fallback a LIKE si FTS falla
-export async function recuperarChunks(
+export async function recuperarDocumentos(
   query: string,
   env: Env
-): Promise<ChunkRecuperado[]> {
-  // Intentar FTS5 primero (más rápido y relevante)
-  try {
-    const chunks = await recuperarConFTS(query, env);
-    if (chunks.length > 0) return chunks;
-  } catch {
-    // FTS puede fallar si la tabla FTS no existe aún — fallback a LIKE
+): Promise<DocumentoRecuperado[]> {
+  // 1. Intentar FTS5 (BM25 real)
+  const fts = await buscarConFTS(query, env);
+  if (fts.length >= 2) return fts;
+
+  // 2. Si FTS devuelve poco, complementar con LIKE en palabras
+  const like = await buscarConLIKE(query, env, MAX_DOCS - fts.length);
+  const idsFts = new Set(fts.map((d) => d.id));
+  const extra = like.filter((d) => !idsFts.has(d.id));
+
+  const combinados = [...fts, ...extra].slice(0, MAX_DOCS);
+
+  // 3. Si hay Vectorize disponible (Phase 3), enriquecer con vector
+  if (env.VECTORIZE && combinados.length < 3) {
+    try {
+      const vectores = await buscarConVector(query, env);
+      const idsExist = new Set(combinados.map((d) => d.id));
+      const nuevos = vectores.filter((d) => !idsExist.has(d.id));
+      combinados.push(...nuevos);
+    } catch {
+      // Vectorize no disponible aún, no es error
+    }
   }
 
-  // Fallback: LIKE query en content (para compatibilidad con schema antiguo)
+  return combinados.slice(0, MAX_DOCS);
+}
+
+// ── FTS5 con BM25 ranking ─────────────────────────────────────
+
+async function buscarConFTS(
+  query: string,
+  env: Env
+): Promise<DocumentoRecuperado[]> {
+  const terminos = construirQueryFTS(query);
+  if (!terminos) return [];
+
   try {
-    return await recuperarConLIKE(query, env);
+    const res = await env.DB.prepare(`
+      SELECT
+        d.id, d.titulo, d.slug, d.texto, d.tipo, d.palabras, d.fuente,
+        bm25(documentos_fts) AS score
+      FROM documentos_fts
+      JOIN documentos d ON documentos_fts.rowid = d.id
+      WHERE documentos_fts MATCH ?
+      ORDER BY bm25(documentos_fts)
+      LIMIT ?
+    `)
+      .bind(terminos, MAX_DOCS)
+      .all<{
+        id: number; titulo: string; slug: string; texto: string;
+        tipo: string; palabras: string; fuente: string; score: number;
+      }>();
+
+    return (res.results ?? []).map((r) => ({
+      id: r.id,
+      titulo: r.titulo,
+      slug: r.slug,
+      texto: truncar(r.texto),
+      tipo: r.tipo,
+      palabras: r.palabras,
+      fuente: r.fuente,
+      score: Math.abs(r.score), // BM25 en SQLite es negativo → absoluto
+      via: "fts" as const,
+    }));
+  } catch {
+    return []; // FTS puede fallar si la tabla fue recién creada y aún no commitada
+  }
+}
+
+// ── LIKE fallback (compatible con el sistema anterior) ─────────
+
+async function buscarConLIKE(
+  query: string,
+  env: Env,
+  limite: number
+): Promise<DocumentoRecuperado[]> {
+  const palabras = extraerPalabras(query);
+  if (!palabras.length) return [];
+
+  const condiciones = palabras.map(() => "palabras LIKE ?").join(" OR ");
+  const scoreExpr = palabras.map(() => "(CASE WHEN palabras LIKE ? THEN 1 ELSE 0 END)").join("+");
+  const params = palabras.map((p) => `%${p}%`);
+
+  try {
+    const res = await env.DB.prepare(`
+      SELECT id, titulo, slug, texto, tipo, palabras, fuente,
+             (${scoreExpr}) AS score
+      FROM documentos
+      WHERE (${condiciones})
+      ORDER BY score DESC
+      LIMIT ?
+    `)
+      .bind(...params, ...params, limite)
+      .all<{
+        id: number; titulo: string; slug: string; texto: string;
+        tipo: string; palabras: string; fuente: string; score: number;
+      }>();
+
+    return (res.results ?? [])
+      .filter((r) => r.score > 0)
+      .map((r) => ({
+        id: r.id,
+        titulo: r.titulo,
+        slug: r.slug,
+        texto: truncar(r.texto),
+        tipo: r.tipo,
+        palabras: r.palabras,
+        fuente: r.fuente,
+        score: r.score / palabras.length, // normalizar
+        via: "like" as const,
+      }));
   } catch {
     return [];
   }
 }
 
-// Retrieval con FTS5 (D1 SQLite virtual table)
-async function recuperarConFTS(
+// ── Vector retrieval (Phase 3 — Cloudflare Vectorize) ─────────
+
+async function buscarConVector(
   query: string,
   env: Env
-): Promise<ChunkRecuperado[]> {
-  const terminos = termsFTS(query);
+): Promise<DocumentoRecuperado[]> {
+  if (!env.VECTORIZE) return [];
 
-  const resultado = await env.DB.prepare(`
-    SELECT
-      dc.id,
-      dc.doc_id,
-      dc.content              AS contenido,
-      dc.page_start           AS pagina_inicio,
-      dc.section              AS seccion,
-      d.title                 AS titulo_doc,
-      d.author                AS autor_doc,
-      d.publication_year      AS año_doc,
-      bm25(doc_chunks_fts)    AS score_fts
-    FROM doc_chunks_fts
-    JOIN doc_chunks dc ON doc_chunks_fts.rowid = dc.rowid
-    JOIN documents d ON dc.doc_id = d.id
-    WHERE doc_chunks_fts MATCH ?
-      AND d.status = 'indexed'
-    ORDER BY bm25(doc_chunks_fts)
-    LIMIT ?
-  `)
-    .bind(terminos, MAX_CHUNKS)
-    .all<{
-      id: string;
-      doc_id: string;
-      contenido: string;
-      pagina_inicio: number | null;
-      seccion: string | null;
-      titulo_doc: string;
-      autor_doc: string | null;
-      año_doc: number | null;
-      score_fts: number;
-    }>();
+  // Generar embedding de la query
+  const embeddingRes = await env.AI.run(
+    "@cf/baai/bge-large-en-v1.5" as Parameters<typeof env.AI.run>[0],
+    { text: [query] } as Parameters<typeof env.AI.run>[1]
+  ) as { data: number[][] };
 
-  return (resultado.results ?? []).map((r) => ({
+  const queryVector = embeddingRes.data[0];
+  if (!queryVector) return [];
+
+  // Buscar en Vectorize
+  const matches = await env.VECTORIZE.query(queryVector, {
+    topK: MAX_DOCS,
+    returnMetadata: "all",
+  });
+
+  if (!matches.matches || matches.matches.length === 0) return [];
+
+  // Obtener documentos de D1 por los IDs encontrados
+  const ids = matches.matches.map((m) => m.id).join(",");
+  const res = await env.DB.prepare(
+    `SELECT id, titulo, slug, texto, tipo, palabras, fuente FROM documentos WHERE id IN (${ids})`
+  ).all<{
+    id: number; titulo: string; slug: string; texto: string;
+    tipo: string; palabras: string; fuente: string;
+  }>();
+
+  const scoreMap = new Map(matches.matches.map((m) => [m.id, m.score]));
+
+  return (res.results ?? []).map((r) => ({
     id: r.id,
-    doc_id: r.doc_id,
-    contenido: truncarContenido(r.contenido),
-    titulo_doc: r.titulo_doc,
-    autor_doc: r.autor_doc ?? undefined,
-    año_doc: r.año_doc ?? undefined,
-    pagina_inicio: r.pagina_inicio ?? undefined,
-    seccion: r.seccion ?? undefined,
-    score_fts: Math.abs(r.score_fts), // bm25 devuelve negativo en SQLite
-    score_final: Math.abs(r.score_fts),
+    titulo: r.titulo,
+    slug: r.slug,
+    texto: truncar(r.texto),
+    tipo: r.tipo,
+    palabras: r.palabras,
+    fuente: r.fuente,
+    score: scoreMap.get(String(r.id)) ?? 0,
+    via: "vector" as const,
   }));
 }
 
-// Retrieval con LIKE (compatibilidad con schema anterior o si FTS no existe)
-async function recuperarConLIKE(
-  query: string,
-  env: Env
-): Promise<ChunkRecuperado[]> {
-  // Extraer palabras clave significativas (>= 4 chars)
-  const palabras = query
+// ── Helpers ───────────────────────────────────────────────────
+
+function construirQueryFTS(query: string): string {
+  const palabras = extraerPalabras(query);
+  if (!palabras.length) return "";
+
+  // Prefijo + OR para FTS5
+  return palabras.map((p) => `"${p}"*`).join(" OR ");
+}
+
+function extraerPalabras(query: string): string[] {
+  return query
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
-    .filter((p) => p.length >= 4)
-    .slice(0, 5); // máximo 5 palabras para no construir query gigante
-
-  if (palabras.length === 0) return [];
-
-  // Construir condiciones LIKE (una por palabra clave)
-  const condiciones = palabras.map(() => "content LIKE ?").join(" OR ");
-  const params = palabras.map((p) => `%${p}%`);
-
-  // Intentar con la tabla doc_chunks nueva primero
-  try {
-    const resultado = await env.DB.prepare(`
-      SELECT
-        dc.id,
-        dc.doc_id,
-        dc.content        AS contenido,
-        dc.page_start     AS pagina_inicio,
-        dc.section        AS seccion,
-        d.title           AS titulo_doc,
-        d.author          AS autor_doc,
-        d.publication_year AS año_doc
-      FROM doc_chunks dc
-      JOIN documents d ON dc.doc_id = d.id
-      WHERE (${condiciones})
-        AND d.status = 'indexed'
-      LIMIT ?
-    `)
-      .bind(...params, MAX_CHUNKS)
-      .all<{
-        id: string;
-        doc_id: string;
-        contenido: string;
-        pagina_inicio: number | null;
-        seccion: string | null;
-        titulo_doc: string;
-        autor_doc: string | null;
-        año_doc: number | null;
-      }>();
-
-    return (resultado.results ?? []).map((r, i) => ({
-      id: r.id,
-      doc_id: r.doc_id,
-      contenido: truncarContenido(r.contenido),
-      titulo_doc: r.titulo_doc,
-      autor_doc: r.autor_doc ?? undefined,
-      año_doc: r.año_doc ?? undefined,
-      pagina_inicio: r.pagina_inicio ?? undefined,
-      seccion: r.seccion ?? undefined,
-      score_fts: 1 / (i + 1), // puntuación posicional simple
-      score_final: 1 / (i + 1),
-    }));
-  } catch {
-    // Intentar con nombre de tabla viejo como último recurso
-    return recuperarSchemaLegacy(palabras, env);
-  }
+    .filter((p) => p.length >= 4 && !STOP_WORDS.has(p))
+    .slice(0, 8);
 }
 
-// Compatibilidad con schema antiguo (antes del refactor)
-// Busca en tablas con nombres que podrían existir en la D1 actual
-async function recuperarSchemaLegacy(
-  palabras: string[],
-  env: Env
-): Promise<ChunkRecuperado[]> {
-  try {
-    // Detectar qué tablas existen
-    const tablas = await env.DB.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table'"
-    ).all<{ name: string }>();
-    const nombreTablas = (tablas.results ?? []).map((t) => t.name);
-
-    // Buscar tabla de chunks con nombre variado
-    const tablaChunks = nombreTablas.find(
-      (n) =>
-        n.includes("chunk") ||
-        n.includes("documento") ||
-        n.includes("pdf") ||
-        n.includes("publicacion")
-    );
-    if (!tablaChunks) return [];
-
-    // Detectar columna de contenido
-    const columnas = await env.DB.prepare(
-      `PRAGMA table_info(${tablaChunks})`
-    ).all<{ name: string }>();
-    const nombresColumnas = (columnas.results ?? []).map((c) => c.name);
-
-    const colContenido = nombresColumnas.find(
-      (c) => c === "content" || c === "contenido" || c === "texto" || c === "text"
-    );
-    const colTitulo = nombresColumnas.find(
-      (c) =>
-        c === "title" || c === "titulo" || c === "nombre" || c === "name"
-    );
-
-    if (!colContenido) return [];
-
-    const condiciones = palabras
-      .map(() => `${colContenido} LIKE ?`)
-      .join(" OR ");
-    const params = palabras.map((p) => `%${p}%`);
-
-    const resultado = await env.DB.prepare(
-      `SELECT * FROM ${tablaChunks} WHERE (${condiciones}) LIMIT ?`
-    )
-      .bind(...params, MAX_CHUNKS)
-      .all<Record<string, unknown>>();
-
-    return (resultado.results ?? []).map((r, i) => ({
-      id: String(r.id ?? `legacy_${i}`),
-      doc_id: String(r.doc_id ?? r.documento_id ?? `doc_${i}`),
-      contenido: truncarContenido(String(r[colContenido] ?? "")),
-      titulo_doc: colTitulo ? String(r[colTitulo] ?? "Documento") : "Documento",
-      score_fts: 1 / (i + 1),
-      score_final: 1 / (i + 1),
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function truncarContenido(texto: string): string {
-  if (texto.length <= MAX_CONTENIDO_POR_CHUNK) return texto;
-  // Cortar en la última oración completa dentro del límite
-  const cortado = texto.slice(0, MAX_CONTENIDO_POR_CHUNK);
-  const ultimoPunto = Math.max(
-    cortado.lastIndexOf(". "),
-    cortado.lastIndexOf(".\n")
-  );
-  return ultimoPunto > MAX_CONTENIDO_POR_CHUNK * 0.7
+function truncar(texto: string): string {
+  if (texto.length <= MAX_TEXTO) return texto;
+  const cortado = texto.slice(0, MAX_TEXTO);
+  const ultimoPunto = Math.max(cortado.lastIndexOf(". "), cortado.lastIndexOf(".\n"));
+  return ultimoPunto > MAX_TEXTO * 0.7
     ? cortado.slice(0, ultimoPunto + 1)
     : cortado + "…";
 }
 
-// Calcular ratio de grounding: qué porcentaje de la respuesta está en los chunks
-export function calcularGroundingRatio(
-  respuesta: string,
-  chunks: ChunkRecuperado[]
-): number {
-  if (chunks.length === 0) return 0;
+// ── Grounding ratio ───────────────────────────────────────────
 
-  const textoDocumentos = chunks
-    .map((c) => c.contenido)
+export function calcularGrounding(
+  respuesta: string,
+  docs: DocumentoRecuperado[]
+): number {
+  if (docs.length === 0) return 0;
+
+  const corpus = docs
+    .map((d) => d.texto + " " + d.palabras)
     .join(" ")
     .toLowerCase()
     .normalize("NFD")
@@ -269,7 +237,7 @@ export function calcularGroundingRatio(
   const oraciones = respuesta
     .split(/[.!?]+/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 25);
+    .filter((s) => s.length > 20);
 
   if (oraciones.length === 0) return 0.5;
 
@@ -281,11 +249,10 @@ export function calcularGroundingRatio(
       .replace(/[̀-ͯ]/g, "")
       .split(/\s+/)
       .filter((p) => p.length >= 5);
-    if (palabras.length === 0) continue;
 
-    const encontradas = palabras.filter((p) => textoDocumentos.includes(p));
-    const cobertura = encontradas.length / palabras.length;
-    if (cobertura >= 0.4) ancladas++;
+    if (palabras.length === 0) continue;
+    const encontradas = palabras.filter((p) => corpus.includes(p)).length;
+    if (encontradas / palabras.length >= 0.35) ancladas++;
   }
 
   return ancladas / oraciones.length;

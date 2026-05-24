@@ -34,7 +34,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 - Login → fail-close (403 si DB cae, mejor rechazar que permitir fuerza bruta)
 - Comentarios/reacciones → fail-open (UX, no crítico)
 - AI queries → fail-close (no servir AI si no podemos contabilizar tokens)  
-**Commit:** [pendiente]
+**Commit:** `9979edd`
 
 ---
 
@@ -43,7 +43,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 **Archivos:** `middleware.ts:4-8` vs `lib/security.ts:151-170`  
 **Problema:** `middleware.ts` tiene 14 patrones de bot. `lib/security.ts` tiene 17. No están sincronizados. Algunos bots que security.ts bloquea, middleware.ts los deja pasar.  
 **Solución:** Centralizar en un solo array en `lib/security.ts`, importar en `middleware.ts`.  
-**Commit:** [pendiente]
+**Commit:** `9979edd`
 
 ---
 
@@ -52,11 +52,11 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 **Archivo:** `middleware.ts`  
 **Problema:** No hay correlación de requests. Si hay un error o ataque, no se puede trazar la cadena completa de eventos.  
 **Solución:** Agregar `X-Trace-ID` header (UUID v4) en todas las responses del middleware.  
-**Commit:** [pendiente]
+**Commit:** `9979edd`
 
 ---
 
-### [FEAT] Cloudflare Worker — Asistente AI
+### [FEAT] Cloudflare Worker v2 — Asistente AI Phase 1
 
 **Directorio:** `workers/sociologia/`  
 **Problema:** El Worker de IA no existe en este repositorio. No tiene control de versiones. Cualquier cambio es irreversible sin backup manual.  
@@ -68,7 +68,48 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 - Token counting real
 - Source citations en respuesta
 - Telemetría básica  
-**Commit:** [pendiente]
+**Commit:** `1a08f87`
+
+---
+
+## FASE 2+3 — WORKER REAL + EMBEDDINGS PIPELINE
+
+---
+
+### [FEAT] Worker v2 alineado con infraestructura real de Cloudflare
+
+**Directorio:** `workers/sociologia/src/`  
+**Problema:** El Worker v2 (Phase 1) usaba nombres de binding incorrectos (`env.KV` en lugar de `env.RATE_LIMIT`), tabla `doc_chunks` que no existe, y mecanismo de token premium incorrecto.  
+**Causa:** Los tipos se diseñaron antes de consultar la infraestructura real de Cloudflare.  
+**Solución:** Consultar Cloudflare MCP para obtener los IDs reales, luego corregir:
+- `types.ts`: `RATE_LIMIT: KVNamespace` (binding real), `VECTORIZE?: VectorizeIndex` (opcional)
+- `retrieval.ts`: Query FTS sobre tabla `documentos` real (no `doc_chunks`)
+- `ratelimit.ts`: Lee `premium_master_token` desde KV (igual que v1)
+- `wrangler.toml`: IDs reales de D1 `ea9cad56` y KV `2f279c63`  
+**Commit:** [este commit]
+
+---
+
+### [FEAT] Pipeline de embeddings Phase 3 (Vectorize)
+
+**Archivo:** `workers/sociologia/src/embed-worker.ts`  
+**Descripción:** Generador de embeddings batch para poblar Cloudflare Vectorize:
+- POST /embed con header `X-Admin-Key` para autenticación
+- Procesa en batches de 10 documentos desde D1
+- Guarda progreso en KV (`embed_progress`) para reanudabilidad
+- Genera embeddings con `@cf/baai/bge-large-en-v1.5` (dimensión 1024)
+- Hace upsert a Vectorize con id del documento + título como metadata  
+**Estado:** Listo para despliegue. Requiere crear el índice Vectorize primero.  
+**Commit:** [este commit]
+
+---
+
+### [FEAT] Routing /embed integrado en index.ts
+
+**Archivo:** `workers/sociologia/src/index.ts`  
+**Descripción:** Agregado despacho de ruta: `POST /embed` → `handleEmbedRequest()`.  
+Todas las demás rutas POST continúan al flujo de query AI normal.  
+**Commit:** [este commit]
 
 ---
 
@@ -81,6 +122,8 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 | 2026-05-24 | 9979edd | security: fail-close login, centralize bot patterns, X-Trace-ID | ✅ |
 | 2026-05-24 | 1a08f87 | feat: Cloudflare Worker v2 with Phase 1 AI improvements | ✅ |
 | 2026-05-24 | 5f750f8 | feat: D1 setup script + legacy chunk migration | ✅ |
+| 2026-05-24 | 8f99332 | docs: update ERRORS.md with Phase 1 commit history | ✅ |
+| 2026-05-24 | [Phase 2+3] | feat: Worker v2 real bindings + embeddings pipeline | ⏳ |
 
 ---
 

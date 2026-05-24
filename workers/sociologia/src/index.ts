@@ -1,130 +1,149 @@
 // ─────────────────────────────────────────────────────────────
 // Cloudflare Worker: Asistente Académico v2.0
-// Reemplaza el Worker monolítico anterior.
-// API idéntica — retrocompatible con AsistenteChat.tsx
+// D1: llm_sociolog | KV: RATE_LIMIT | AI: Workers AI
+// API 100% compatible con v1 (AsistenteChat.tsx no cambia)
 // ─────────────────────────────────────────────────────────────
-import type { Env, WorkerRequest, WorkerResponse } from "./types";
+import type { Env, WorkerResponse } from "./types";
 import { analizarInyeccion, validarOutput } from "./security";
-import { recuperarChunks, calcularGroundingRatio } from "./retrieval";
+import { recuperarDocumentos, calcularGrounding } from "./retrieval";
 import {
-  construirPrompt,
-  extraerFuentes,
+  construirMensajes,
+  extraerFuentesTitulos,
   construirAdvertencia,
   determinarConfianza,
+  esSaludo,
 } from "./prompts";
 import { checkRateLimit, validarTokenPremium, contarTokens } from "./ratelimit";
 import { emitirEvento } from "./telemetry";
+import { handleEmbedRequest } from "./embed-worker";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Premium-Token, X-Trace-Id",
-};
+// Orígenes permitidos (mismos que el Worker v1)
+const ORIGENES_PERMITIDOS = [
+  "https://publicaciones-mis-ideas.vercel.app",
+  "http://localhost:3000",
+  "https://mis-ideas.vercel.app",
+];
 
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
-const MAX_OUTPUT_TOKENS = 600;
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const origin = request.headers.get("Origin") ?? "";
+    const allowedOrigin = ORIGENES_PERMITIDOS.includes(origin)
+      ? origin
+      : ORIGENES_PERMITIDOS[0];
+
+    const CORS = {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, X-Premium-Token, X-Trace-Id",
+      "Content-Type": "application/json",
+    };
+
     // CORS preflight
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return new Response(null, { status: 204, headers: CORS });
     }
 
     if (request.method !== "POST") {
-      return jsonResponse({ error: "Método no permitido" }, 405);
+      return resp({ error: "Método no permitido" }, 405, CORS);
+    }
+
+    // ── Admin: generación de embeddings (Phase 3) ────────────
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/embed" || pathname.endsWith("/embed")) {
+      return handleEmbedRequest(request, env);
     }
 
     const traceId =
-      request.headers.get("x-trace-id") ??
-      crypto.randomUUID();
+      request.headers.get("X-Trace-Id") ?? crypto.randomUUID();
     const inicioMs = Date.now();
 
-    // ── 1. Extraer IP ────────────────────────────────────────
+    // ── 1. IP ────────────────────────────────────────────────
     const ip =
       request.headers.get("CF-Connecting-IP") ??
-      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+      request.headers.get("X-Forwarded-For")?.split(",")[0].trim() ??
       "unknown";
 
-    // ── 2. Validar token premium ─────────────────────────────
+    // ── 2. Token premium ─────────────────────────────────────
     const tokenHeader = request.headers.get("X-Premium-Token");
     const esPremium = await validarTokenPremium(tokenHeader, env);
 
-    // ── 3. Rate limiting (solo usuarios free) ────────────────
+    // ── 3. Rate limiting ─────────────────────────────────────
     if (!esPremium) {
       const rl = await checkRateLimit(ip, env);
       if (!rl.permitido) {
         if (rl.dbError) {
-          return jsonResponse(
-            { error: "Servicio temporalmente no disponible", mensaje: "Inténtalo en unos minutos." },
-            503,
-            traceId
+          return resp(
+            { error: "Servicio no disponible temporalmente", mensaje: "Inténtalo en unos minutos." },
+            503, CORS, traceId
           );
         }
-        return jsonResponse(
+        return resp(
           {
-            mensaje: "Alcanzaste el límite de 5 consultas diarias. Vuelve mañana.",
+            error: "Límite diario alcanzado",
+            mensaje: "Has usado tus 5 consultas gratuitas de hoy. Vuelve mañana.",
             restantes: 0,
             esPremium: false,
           },
-          429,
-          traceId
+          429, CORS, traceId
         );
       }
     }
 
     // ── 4. Parsear body ──────────────────────────────────────
-    let body: WorkerRequest;
+    let pregunta: string;
     try {
-      body = (await request.json()) as WorkerRequest;
+      const body = await request.json() as { pregunta?: string };
+      pregunta = (body.pregunta ?? "").trim();
     } catch {
-      return jsonResponse({ error: "Cuerpo de solicitud inválido" }, 400, traceId);
+      return resp({ error: "Solicitud inválida" }, 400, CORS, traceId);
     }
 
-    const pregunta = (body.pregunta ?? "").trim();
-
-    if (!pregunta) {
-      return jsonResponse({ error: "La pregunta no puede estar vacía" }, 400, traceId);
+    if (!pregunta || pregunta.length < 3) {
+      return resp({ error: "Pregunta muy corta" }, 400, CORS, traceId);
     }
 
-    if (pregunta.length > 600) {
-      return jsonResponse({ error: "La pregunta es demasiado larga (máx. 600 caracteres)" }, 400, traceId);
+    if (pregunta.length > 500) {
+      return resp({ error: "Pregunta demasiado larga (máx. 500 caracteres)" }, 400, CORS, traceId);
     }
 
-    // ── 5. Detección de prompt injection ────────────────────
-    const analisisSeguridad = analizarInyeccion(pregunta);
-    if (analisisSeguridad.accion === "bloquear") {
+    // ── 5. Detección de injection ────────────────────────────
+    const seguridad = analizarInyeccion(pregunta);
+    if (seguridad.accion === "bloquear") {
       emitirEvento(
+        { traceId, tipo: "injection_blocked", timestamp: Date.now(), scoreInyeccion: seguridad.score },
+        env, ctx
+      );
+      return resp(
+        { error: "Consulta no permitida", mensaje: "Tu consulta contiene instrucciones no permitidas." },
+        422, CORS, traceId
+      );
+    }
+
+    // ── 6. Saludo rápido sin LLM ─────────────────────────────
+    if (esSaludo(pregunta)) {
+      return resp(
         {
-          traceId,
-          tipo: "injection_blocked",
-          timestamp: Date.now(),
-          scoreInyeccion: analisisSeguridad.score,
+          respuesta: "¡Hola! Soy el asistente académico de Raúl Dubón. Puedo ayudarte a explorar sus publicaciones sobre ciencias sociales, sociología y análisis político latinoamericano. ¿Sobre qué tema querés consultar?",
+          fuentes: [],
+          esPremium,
         },
-        env,
-        ctx
-      );
-      return jsonResponse(
-        { error: "Consulta rechazada. Por favor realiza una pregunta académica." },
-        422,
-        traceId
+        200, CORS, traceId
       );
     }
 
-    // ── 6. Retrieval: buscar en corpus documental ────────────
-    let chunks;
+    // ── 7. Retrieval (FTS → LIKE → vector) ───────────────────
+    let docs;
     try {
-      chunks = await recuperarChunks(pregunta, env);
+      docs = await recuperarDocumentos(pregunta, env);
     } catch {
-      chunks = [];
+      docs = [];
     }
 
-    // Si no hay documentos, responder con mensaje estándar
-    if (chunks.length === 0) {
-      const respSinFuentes: WorkerResponse = {
-        respuesta:
-          "No encuentro información sobre esto en mis fuentes actuales. " +
-          "El corpus disponible puede no cubrir este tema específico.",
+    if (docs.length === 0) {
+      const sinFuentes: WorkerResponse = {
+        respuesta: "No tengo información suficiente en mis fuentes actuales sobre ese tema.",
         fuentes: [],
         esPremium,
         confianza: "baja",
@@ -132,93 +151,61 @@ export default {
       };
       if (!esPremium) {
         const rl = await checkRateLimit(ip, env).catch(() => null);
-        if (rl) respSinFuentes.restantes = rl.restantes;
+        if (rl) sinFuentes.restantes = rl.restantes;
       }
-      return jsonResponse(respSinFuentes, 200, traceId);
+      return resp(sinFuentes, 200, CORS, traceId);
     }
 
-    // ── 7. Construir prompt con documentos sandboxeados ──────
-    const messages = construirPrompt(pregunta, chunks);
+    // ── 8. Construir prompt ──────────────────────────────────
+    const messages = construirMensajes(pregunta, docs, esPremium);
+    const tokensEntrada = contarTokens(messages.map((m) => m.content).join(" "));
 
-    // Contar tokens de entrada para telemetría
-    const tokensEntrada = contarTokens(
-      messages.map((m) => m.content).join(" ")
-    );
-
-    // ── 8. Llamar al modelo de lenguaje ─────────────────────
+    // ── 9. Llamar al LLM ─────────────────────────────────────
     let respuestaLLM: string;
     try {
-      const aiResponse = await env.AI.run(MODEL, {
+      const aiRes = await env.AI.run(MODEL, {
         messages,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        temperature: 0.1, // baja temperatura = menor alucinación
-      } as Parameters<typeof env.AI.run>[1]);
+        max_tokens: esPremium ? 1200 : 600,
+        temperature: 0.25,
+      } as Parameters<typeof env.AI.run>[1]) as { response?: string };
 
-      // Workers AI response shape
-      const resultado = aiResponse as { response?: string };
-      respuestaLLM = resultado.response?.trim() ?? "";
+      respuestaLLM = (aiRes.response ?? "").trim();
     } catch (err) {
       emitirEvento(
-        {
-          traceId,
-          tipo: "error",
-          timestamp: Date.now(),
-          duracionMs: Date.now() - inicioMs,
-          errorMsg: String(err),
-        },
-        env,
-        ctx
+        { traceId, tipo: "error", timestamp: Date.now(), duracionMs: Date.now() - inicioMs, errorMsg: String(err) },
+        env, ctx
       );
-      return jsonResponse(
-        { error: "Error al procesar tu consulta. Inténtalo de nuevo." },
-        500,
-        traceId
-      );
+      return resp({ error: "Error al procesar tu consulta. Inténtalo de nuevo." }, 500, CORS, traceId);
     }
 
     if (!respuestaLLM) {
-      return jsonResponse(
-        { error: "El modelo no generó una respuesta. Inténtalo de nuevo." },
-        500,
-        traceId
-      );
+      return resp({ error: "El modelo no generó una respuesta." }, 500, CORS, traceId);
     }
 
-    // ── 9. Validar output (seguridad post-LLM) ───────────────
+    // ── 10. Validar output ───────────────────────────────────
     const validacion = validarOutput(respuestaLLM);
     if (!validacion.seguro) {
-      // No enviar la respuesta comprometida; registrar y retornar mensaje seguro
       emitirEvento(
-        {
-          traceId,
-          tipo: "error",
-          timestamp: Date.now(),
-          errorMsg: `output_validation_failed:${validacion.razon}`,
-        },
-        env,
-        ctx
+        { traceId, tipo: "output_invalid", timestamp: Date.now(), errorMsg: validacion.razon },
+        env, ctx
       );
-      respuestaLLM =
-        "No puedo proporcionar una respuesta en este momento. Reformula tu pregunta.";
+      respuestaLLM = "No puedo proporcionar una respuesta en este momento. Reformula tu pregunta.";
     }
 
-    // ── 10. Calcular grounding y confianza ───────────────────
-    const groundingRatio = calcularGroundingRatio(respuestaLLM, chunks);
-    const confianza = determinarConfianza(groundingRatio, chunks.length);
+    // ── 11. Grounding y confianza ────────────────────────────
+    const groundingRatio = calcularGrounding(respuestaLLM, docs);
+    const confianza = determinarConfianza(groundingRatio, docs.length);
     const advertencia = construirAdvertencia(groundingRatio);
     const tokensSalida = contarTokens(respuestaLLM);
 
-    // ── 11. Preparar fuentes para frontend ───────────────────
-    const fuentes = extraerFuentes(chunks);
-
-    // ── 12. Rate limit restante (para display en frontend) ───
+    // ── 12. Rate limit restante ──────────────────────────────
     let restantes: number | undefined;
     if (!esPremium) {
-      const rlCheck = await checkRateLimit(ip, env).catch(() => null);
-      restantes = rlCheck?.restantes ?? undefined;
+      const rl = await checkRateLimit(ip, env).catch(() => null);
+      restantes = rl?.restantes;
     }
 
-    // ── 13. Telemetría (async, no bloquea) ───────────────────
+    // ── 13. Telemetría async ─────────────────────────────────
     emitirEvento(
       {
         traceId,
@@ -227,19 +214,19 @@ export default {
         duracionMs: Date.now() - inicioMs,
         tokensEntrada,
         tokensSalida,
-        chunksRecuperados: chunks.length,
+        docsRecuperados: docs.length,
         scoreConfianza: groundingRatio,
         groundingRatio,
         modelId: MODEL,
+        viaRetrieval: docs[0]?.via ?? "none",
       },
-      env,
-      ctx
+      env, ctx
     );
 
-    // ── 14. Respuesta final ───────────────────────────────────
+    // ── 14. Respuesta ─────────────────────────────────────────
     const respuesta: WorkerResponse = {
       respuesta: respuestaLLM,
-      fuentes,
+      fuentes: extraerFuentesTitulos(docs), // compat v1
       esPremium,
       confianza,
       traceId,
@@ -248,19 +235,17 @@ export default {
     if (restantes !== undefined) respuesta.restantes = restantes;
     if (advertencia) respuesta.advertencia = advertencia;
 
-    return jsonResponse(respuesta, 200, traceId);
+    return resp(respuesta, 200, CORS, traceId);
   },
 };
 
-function jsonResponse(
+function resp(
   data: unknown,
   status: number,
+  headers: Record<string, string>,
   traceId?: string
 ): Response {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...CORS_HEADERS,
-  };
-  if (traceId) headers["X-Trace-Id"] = traceId;
-  return new Response(JSON.stringify(data), { status, headers });
+  const h = { ...headers };
+  if (traceId) h["X-Trace-Id"] = traceId;
+  return new Response(JSON.stringify(data), { status, headers: h });
 }
