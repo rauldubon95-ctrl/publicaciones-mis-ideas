@@ -86,7 +86,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 - `retrieval.ts`: Query FTS sobre tabla `documentos` real (no `doc_chunks`)
 - `ratelimit.ts`: Lee `premium_master_token` desde KV (igual que v1)
 - `wrangler.toml`: IDs reales de D1 `ea9cad56` y KV `2f279c63`  
-**Commit:** [este commit]
+**Commit:** `3828e1c`
 
 ---
 
@@ -100,7 +100,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 - Genera embeddings con `@cf/baai/bge-large-en-v1.5` (dimensión 1024)
 - Hace upsert a Vectorize con id del documento + título como metadata  
 **Estado:** Listo para despliegue. Requiere crear el índice Vectorize primero.  
-**Commit:** [este commit]
+**Commit:** `3828e1c`
 
 ---
 
@@ -109,7 +109,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 **Archivo:** `workers/sociologia/src/index.ts`  
 **Descripción:** Agregado despacho de ruta: `POST /embed` → `handleEmbedRequest()`.  
 Todas las demás rutas POST continúan al flujo de query AI normal.  
-**Commit:** [este commit]
+**Commit:** `3828e1c`
 
 ---
 
@@ -123,7 +123,7 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | 1a08f87 | feat: Cloudflare Worker v2 with Phase 1 AI improvements | ✅ |
 | 2026-05-24 | 5f750f8 | feat: D1 setup script + legacy chunk migration | ✅ |
 | 2026-05-24 | 8f99332 | docs: update ERRORS.md with Phase 1 commit history | ✅ |
-| 2026-05-24 | [Phase 2+3] | feat: Worker v2 real bindings + embeddings pipeline | ⏳ |
+| 2026-05-24 | 3828e1c | feat: Worker v2 real bindings + embeddings pipeline | ✅ |
 
 ---
 
