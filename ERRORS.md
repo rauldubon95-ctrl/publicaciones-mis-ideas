@@ -132,6 +132,24 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 
 ---
 
+### [FIX] Causa raíz del mismatch KV: comillas en el valor almacenado
+
+**Fecha:** 2026-05-24 (sesión 2)
+**Contexto:** Después de múltiples intentos fallidos de sincronizar PREMIUM_TOKEN con KV, se descubrió que el valor en KV tenía comillas literales alrededor: `"b19d188c..."` en lugar de `b19d188c...`. Worker hace comparación exacta de strings, por lo que nunca coincidía.
+**Solución:** Usuario corrigió el valor en KV dashboard (Cloudflare → Workers KV → RATE_LIMIT → premium_master_token) eliminando las comillas. Valor correcto: `b19d188c0f4aefe22e76649e2b8824ffed387f4d33ecf1140099c03392866f8e` (HMAC de ADMIN_SECRET).
+**También:** PREMIUM_TOKEN eliminado de Vercel env vars. Ahora Vercel computa el HMAC automáticamente desde ADMIN_SECRET.
+
+---
+
+### [FIX] CF_API_TOKEN con restricción de IP — Worker v2 no se despliega
+
+**Fecha:** 2026-05-24 (sesión 2)
+**Problema:** El CF_API_TOKEN configurado en GitHub Secrets tiene "Client IP Address Filtering" activado (solo permite la IP de la PC del usuario). GitHub Actions corre desde servidores de GitHub → "Host not in allowlist" → deploy falla silenciosamente.
+**Estado:** PENDIENTE. Worker v2 tiene código correcto en `main` pero Cloudflare sigue corriendo v1.
+**Solución pendiente:** Crear un nuevo API token de Cloudflare con plantilla "Edit Cloudflare Workers" y SIN restricción de IP. Reemplazar `CF_API_TOKEN` en GitHub Secrets. El deploy-worker.yml funcionará automáticamente en el próximo push a `workers/sociologia/**`.
+
+---
+
 ### [FIX] Validación premium vía HMAC — elimina dependencia de KV
 
 **Archivos:** `app/api/asistente/token/route.ts`, `workers/sociologia/src/ratelimit.ts`, `workers/sociologia/src/types.ts`
@@ -165,6 +183,12 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | d8bdbe7 | feat: CLAUDE.md memoria institucional + fix auth bypass /api/publicaciones | ✅ |
 | 2026-05-24 | d7c4670 | fix: esScanPath startsWith() — artículos con "eval" en slug ya no dan 404 | ✅ |
 | 2026-05-24 | 5514ba1 | fix: token premium post-login — HMAC + usePathname re-fetch | ✅ |
+| 2026-05-24 | 0473151 | fix: embed-worker auth migra a HMAC — elimina dependencia de KV tokens | ✅ |
+| 2026-05-24 | 64434b7 | docs: actualizar ERRORS.md con hash de commit 5514ba1 | ✅ |
+| 2026-05-24 | 8cb640d | merge: fix token premium + Worker v2 con HMAC (feature branch → main) | ✅ |
+| 2026-05-24 | 8d75108 | fix: compatibilidad v1/v2 — PREMIUM_TOKEN primero, HMAC como fallback | ✅ |
+| 2026-05-24 | 3ed231a | chore: actualizar compatibility_date del Worker a 2025-09-23 | ✅ |
+| 2026-05-24 | 8170347 | chore: forzar redeploy Vercel tras eliminar PREMIUM_TOKEN | ✅ |
 
 ---
 

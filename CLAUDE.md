@@ -16,7 +16,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `claude/clever-mccarthy-PRvxk` (pendiente de merge a main)
+**Rama de desarrollo activa:** `main` (feature branch `claude/clever-mccarthy-PRvxk` ya mergeado)
 
 ---
 
@@ -25,9 +25,9 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | Componente | Estado | Notas |
 |---|---|---|
 | ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main` |
-| ✅ Cloudflare Worker v1 (retrieval básico) | Producción | Worker `sociologia`, LIKE query — el que está desplegado HOY |
-| ✅ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Listo en feature branch | En `claude/clever-mccarthy-PRvxk` — se despliega al mergear a main |
-| ✅ Sistema de premium token (admin sin límite) | Listo en feature branch | Fix completo — ver sección 5. No requiere KV ni PREMIUM_TOKEN |
+| ✅ Cloudflare Worker v1 (retrieval básico) | Producción | Worker `sociologia`, LIKE query — **sigue desplegado** |
+| ⚠️ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Código en main, NO desplegado | deploy-worker.yml falla: `CF_API_TOKEN` en GitHub tiene restricción de IP — solo funciona desde la PC del usuario, no desde GitHub Actions |
+| ✅ Sistema de premium token (admin sin límite) | Funcionando con Worker v1 | KV `premium_master_token` = HMAC(ADMIN_SECRET). `PREMIUM_TOKEN` eliminado de Vercel. Ver sección 5. |
 | ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en wrangler.toml — requiere crear índice con wrangler |
 | ✅ Agentes IA en GitHub Actions | En main | `.github/scripts/review.mjs` y `prioritize.mjs` — usan GitHub Models (gratis) |
 | ❌ Sistema de Skills / SkillRegistry | Solo documentación | SKILL.md existe, sin implementación de código |
@@ -52,7 +52,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key de Supabase | Sí |
 | `SUPABASE_URL` | Igual que `NEXT_PUBLIC_SUPABASE_URL` pero server-side | Sí (storage admin) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key de Supabase (no exponer al cliente) | Sí (storage admin) |
-| `PREMIUM_TOKEN` | **OBSOLETO** — Reemplazado por HMAC(ADMIN_SECRET). Ya no se usa. | No |
+| `PREMIUM_TOKEN` | **ELIMINADO** — Fue removido de Vercel el 2026-05-24. No reconfigurar. | No |
 | `HEALTH_TOKEN` | Token para endpoint `/api/health` con métricas completas | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 
@@ -103,19 +103,22 @@ Actualmente hay **1,288 documentos** indexados en producción.
 
 ## 5. Mecanismo de token premium (asistente IA)
 
-El flujo completo para que el admin tenga acceso ilimitado al chat (Worker v2):
+El flujo actual (Worker v1 desplegado + KV sync):
 
 1. Admin se loguea → cookie `admin_auth` se establece
-2. `AsistenteChat.tsx` llama a `/api/asistente/token` **en cada cambio de ruta** (no solo al montar)
+2. `AsistenteChat.tsx` llama a `/api/asistente/token` **en cada cambio de ruta** (usa `usePathname` como dependencia)
 3. Ese endpoint verifica la cookie y computa `HMAC(ADMIN_SECRET, "premium-bypass-v1")`
 4. El chat envía ese token en el header `X-Premium-Token`
-5. El Worker computa el mismo HMAC con su `ADMIN_SECRET` y compara (timing-safe)
+5. El Worker v1 lo compara contra `env.RATE_LIMIT.get("premium_master_token")` en KV
 
-**Para que funcione:** Solo necesitas que `ADMIN_SECRET` sea el mismo valor en Vercel y en el Worker secret de Cloudflare. No se necesita `PREMIUM_TOKEN` ni la clave `premium_master_token` en KV.
+**Estado actual del KV:** `premium_master_token` = `HMAC(ADMIN_SECRET, "premium-bypass-v1")` — sincronizado manualmente el 2026-05-24. Si `ADMIN_SECRET` cambia, hay que actualizar el KV también.
+
+**Cuando Worker v2 se despliegue:** El paso 5 cambiará a HMAC directo (sin KV). La clave `premium_master_token` en KV quedará obsoleta y se podrá eliminar. El `ADMIN_SECRET` en el Worker secret de Cloudflare lo maneja todo automáticamente.
 
 **Bugs resueltos (2026-05-24):**
 - **Bug navegación**: `useEffect` solo corría al montar — ahora usa `usePathname` como dependencia
-- **Bug fragilidad KV**: Token validado vía HMAC, no via KV — elimina posibilidad de mismatch silencioso
+- **Bug KV con comillas**: El valor en KV tenía comillas alrededor (`"b19d..."` en lugar de `b19d...`) — causa raíz del mismatch durante semanas
+- **PREMIUM_TOKEN eliminado de Vercel**: Ya no hay variable estática que sincronizar — Vercel computa HMAC automáticamente
 
 ---
 
@@ -184,13 +187,15 @@ EventoSeguridad → log de eventos de seguridad
 
 ## 11. Reglas para sesiones IA futuras
 
-1. **Nunca asumir que el Worker v2 está desplegado** — verificar con Cloudflare MCP o mirando el código fuente del Worker antes de hacer cambios.
+1. **Worker v2 NO está desplegado** — El código está en `main` pero Cloudflare sigue corriendo v1. Verificar con `workers_get_worker_code scriptName=sociologia` antes de asumir que v2 está activo.
 2. **La tabla D1 real se llama `documentos`**, no `documents` ni `doc_chunks`.
-3. **No mergear a main sin confirmar con el usuario** — los deploys a Vercel y al Worker son automáticos en push a main.
+3. **No pushear a main sin confirmar con el usuario** — los deploys a Vercel son automáticos. El Worker NO despliega automático por el problema de CF_API_TOKEN.
 4. **Actualizar este archivo** cuando se agreguen variables de entorno, se cambie la arquitectura, o se complete una fase del roadmap.
 5. **ERRORS.md** es el registro histórico de commits — actualizarlo después de cada commit importante.
 6. **La rama de desarrollo activa** puede cambiar por sesión. Verificar con `git branch --show-current` al inicio.
 7. **No hardcodear secretos en archivos** — usar siempre `${{ secrets.NOMBRE }}` en workflows y `process.env.NOMBRE` en código.
+8. **CF_API_TOKEN en GitHub tiene restricción de IP** — El token existente solo funciona desde la PC del usuario. Para que GitHub Actions despliegue el Worker, el usuario debe crear un nuevo API token de Cloudflare SIN restricción de IP (desmarcar "Client IP Address Filtering" al crearlo) y actualizarlo en GitHub Secrets.
+9. **Si ADMIN_SECRET cambia**, actualizar también: (a) KV `premium_master_token` con el nuevo HMAC, (b) Worker secret en Cloudflare, (c) Vercel env var `ADMIN_SECRET`.
 
 ---
 
@@ -213,5 +218,5 @@ cd workers/sociologia && npx wrangler tail
 
 ---
 
-*Última actualización: 2026-05-24*
-*Rama: `claude/clever-mccarthy-PRvxk` — fix token premium + preparación Worker v2*
+*Última actualización: 2026-05-24 (sesión 2 — fix KV + limpieza de entorno)*
+*Rama activa: `main`*
