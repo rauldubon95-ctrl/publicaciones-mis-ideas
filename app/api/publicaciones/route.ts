@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
 
-  const finalSlug = slug || toSlug(titulo);
+  const finalSlug = toSlug(slug || titulo);
 
   const existente = await prisma.publicacion.findUnique({ where: { slug: finalSlug } });
   if (existente) {

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
 
 async function isAuthorized(): Promise<boolean> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
   if (!secret || !token) return false;
@@ -39,8 +39,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const existente = await prisma.publicacion.findUnique({ where: { id: params.id } });
   if (!existente) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-  if (slug !== existente.slug) {
-    const conflicto = await prisma.publicacion.findUnique({ where: { slug } });
+  const slugNormalizado = toSlug(slug);
+
+  if (slugNormalizado !== existente.slug) {
+    const conflicto = await prisma.publicacion.findUnique({ where: { slug: slugNormalizado } });
     if (conflicto) {
       return NextResponse.json({ error: "Ya existe una publicación con ese slug" }, { status: 409 });
     }
@@ -66,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     where: { id: params.id },
     data: {
       titulo,
-      slug,
+      slug: slugNormalizado,
       resumen,
       contenido,
       publicado: !!publicado,

@@ -134,6 +134,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
             type="text"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
+            onBlur={(e) => setSlug(toSlug(e.target.value))}
             required
             className="input font-mono text-xs"
           />
