@@ -10,6 +10,7 @@ const RATE_CONFIG = {
   maxIntentos: 5,
   ventanaMs: 15 * 60 * 1000,
   bloqueoMs: 30 * 60 * 1000,
+  failBehavior: "close" as const, // si DB cae, rechazar login (no permitir fuerza bruta)
 };
 
 export async function POST(req: NextRequest) {

@@ -9,6 +9,8 @@ interface Mensaje {
   texto: string;
   fuentes?: string[];
   error?: boolean;
+  confianza?: "alta" | "media" | "baja";
+  advertencia?: string;
 }
 
 export default function AsistenteChat() {
@@ -62,6 +64,8 @@ export default function AsistenteChat() {
         mensaje?: string;
         restantes?: number;
         esPremium?: boolean;
+        confianza?: "alta" | "media" | "baja";
+        advertencia?: string;
       };
 
       if (!res.ok) {
@@ -73,7 +77,13 @@ export default function AsistenteChat() {
       } else {
         setMensajes((prev) => [
           ...prev,
-          { rol: "asistente", texto: data.respuesta ?? "", fuentes: data.fuentes },
+          {
+            rol: "asistente",
+            texto: data.respuesta ?? "",
+            fuentes: data.fuentes,
+            confianza: data.confianza,
+            advertencia: data.advertencia,
+          },
         ]);
         if (!data.esPremium && typeof data.restantes === "number") {
           setRestantes(data.restantes);
@@ -164,10 +174,22 @@ export default function AsistenteChat() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.texto}</p>
-                  {m.fuentes && m.fuentes.length > 0 && (
-                    <p className="text-xs text-zinc-400 mt-1.5 border-t border-zinc-200 pt-1.5">
-                      📚 {m.fuentes.join(" · ")}
+                  {m.advertencia && (
+                    <p className="text-xs text-amber-600 mt-1.5 border-t border-amber-100 pt-1.5 italic">
+                      {m.advertencia}
                     </p>
+                  )}
+                  {m.fuentes && m.fuentes.length > 0 && (
+                    <div className="mt-1.5 border-t border-zinc-200 pt-1.5">
+                      <p className="text-xs text-zinc-400">
+                        Fuentes: {m.fuentes.join(" · ")}
+                      </p>
+                      {m.confianza && m.confianza !== "alta" && (
+                        <p className={`text-xs mt-0.5 ${m.confianza === "media" ? "text-amber-500" : "text-red-400"}`}>
+                          Confianza: {m.confianza}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
