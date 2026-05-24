@@ -16,7 +16,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `claude/elegant-bardeen-HHEmr`
+**Rama de desarrollo activa:** `main` (feature branch `claude/elegant-bardeen-HHEmr` mergeada)
 
 ---
 
@@ -24,14 +24,17 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 | Componente | Estado | Notas |
 |---|---|---|
-| Next.js app (publicaciones, admin, métricas) | ✅ Producción | En Vercel, rama `main` |
-| Cloudflare Worker v1 (retrieval básico) | ✅ Producción | Worker `sociologia`, LIKE query |
-| Cloudflare Worker v2 (FTS5, seguridad, telemetría) | ⚠️ Código listo, NO desplegado | Rama feature sin mergear |
-| Sistema de premium token (admin sin límite) | ⚠️ Parcial | Ver sección 5 |
-| Vectorize (retrieval semántico) | ❌ No activo | Binding comentado en wrangler.toml |
-| Agentes IA en GitHub Actions | ✅ Código listo | Requiere mergear feature branch |
-| Sistema de Skills / SkillRegistry | ❌ Solo documentación | SKILL.md existe, sin implementación |
-| Sistema de agentes multi-Worker | ❌ Solo documentación | ARQUITECTURA.md §6 es visión futura |
+| ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main` |
+| ✅ Cloudflare Worker v1 (retrieval básico) | Producción | Worker `sociologia`, LIKE query — el que está desplegado HOY |
+| ✅ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Código en main | Mergeado pero **aún no desplegado** — requiere push manual a Cloudflare |
+| ⚠️ Sistema de premium token (admin sin límite) | Parcial | Ver sección 5 — requiere configurar KV y PREMIUM_TOKEN |
+| ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en wrangler.toml — requiere crear índice con wrangler |
+| ✅ Agentes IA en GitHub Actions | En main | `.github/scripts/review.mjs` y `prioritize.mjs` — usan GitHub Models (gratis) |
+| ❌ Sistema de Skills / SkillRegistry | Solo documentación | SKILL.md existe, sin implementación de código |
+| ❌ Sistema de agentes multi-Worker | Solo documentación | ARQUITECTURA.md §6 es visión futura, no existe código |
+| ✅ Fix esScanPath (404 en artículos) | Producción | `startsWith()` — artículos con "eval" en slug ya no dan 404 |
+| ✅ Fix auth bypass (POST /api/publicaciones) | Producción | `await verifySessionToken()` corregido |
+| ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
 
 ---
 
@@ -151,11 +154,17 @@ EventoSeguridad → log de eventos de seguridad
 
 ## 9. Workflows de GitHub Actions
 
-| Workflow | Trigger | Propósito |
-|---|---|---|
-| `deploy-worker.yml` | Push a `main` con cambios en `workers/sociologia/**` | Despliega el Worker a Cloudflare |
-| `code-review.yml` | PR o cada lunes 8:00 UTC | Agente IA revisa código y crea Issues |
-| `prioritize.yml` | Cada lunes 9:00 UTC | Agente IA prioriza Issues abiertos |
+| Workflow | Trigger | Propósito | IA utilizada |
+|---|---|---|---|
+| `deploy-worker.yml` | Push a `main` con cambios en `workers/sociologia/**` | Despliega el Worker a Cloudflare | — |
+| `code-review.yml` | PR o cada lunes 8:00 UTC | Revisa código y crea Issues con etiquetas | GitHub Models (Llama 3.1 70B) — **gratis** |
+| `prioritize.yml` | Cada lunes 9:00 UTC | Prioriza Issues abiertos, crea reporte semanal | GitHub Models (Llama 3.1 70B) — **gratis** |
+
+**Cómo funcionan los agentes (gratis):**
+- Usan `GITHUB_TOKEN` (automático en Actions, sin configuración extra)
+- Endpoint: `https://models.inference.ai.azure.com/chat/completions`
+- No requieren `ANTHROPIC_API_KEY` ni ninguna API key de pago
+- El `GITHUB_TOKEN` sirve para tanto la API de GitHub como GitHub Models
 
 ---
 
@@ -203,4 +212,4 @@ cd workers/sociologia && npx wrangler tail
 ---
 
 *Última actualización: 2026-05-24*
-*Rama: `claude/elegant-bardeen-HHEmr`*
+*Rama: `main` (merge de `claude/elegant-bardeen-HHEmr` completado)*

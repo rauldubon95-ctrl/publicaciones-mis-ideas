@@ -4,9 +4,6 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Ruta interna para registrar eventos de seguridad desde el middleware.
-// No requiere auth de admin; está protegida por validar que no venga
-// con x-forwarded-for (requests externos siempre lo traen en Vercel).
 const TIPOS_VALIDOS = new Set([
   "LOGIN_FALLIDO",
   "LOGIN_EXITOSO",
@@ -19,8 +16,10 @@ const TIPOS_VALIDOS = new Set([
 ]);
 
 export async function POST(req: NextRequest) {
-  // Rechazar si viene con x-forwarded-for (indicaría request externo en Vercel)
-  if (req.headers.get("x-forwarded-for")) {
+  // Protección con token interno — solo el middleware puede llamar este endpoint
+  const token = req.headers.get("x-internal-token");
+  const esperado = process.env.INTERNAL_EVENT_TOKEN;
+  if (!esperado || !token || token !== esperado) {
     return new NextResponse(null, { status: 204 });
   }
 

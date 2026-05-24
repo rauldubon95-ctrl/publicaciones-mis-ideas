@@ -31,14 +31,16 @@ export async function POST(req: NextRequest) {
     };
 
     const { tipo, contenidoId } = body;
-    if (!contenidoId || typeof contenidoId !== "string") {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!contenidoId || typeof contenidoId !== "string" || !UUID_RE.test(contenidoId)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
     if (!["publicacion", "recurso", "comic"].includes(tipo ?? "")) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+    const ip = req.headers.get("x-vercel-forwarded-for")
+      ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
       ?? req.headers.get("x-real-ip")
       ?? "unknown";
     const pais = req.headers.get("x-vercel-ip-country") ?? null;

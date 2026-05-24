@@ -29,16 +29,14 @@ const MODEL = "@cf/meta/llama-3.1-8b-instruct";
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = request.headers.get("Origin") ?? "";
-    const allowedOrigin = ORIGENES_PERMITIDOS.includes(origin)
-      ? origin
-      : ORIGENES_PERMITIDOS[0];
+    const allowedOrigin = ORIGENES_PERMITIDOS.includes(origin) ? origin : null;
 
-    const CORS = {
-      "Access-Control-Allow-Origin": allowedOrigin,
+    const CORS: Record<string, string> = {
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, X-Premium-Token, X-Trace-Id",
       "Content-Type": "application/json",
     };
+    if (allowedOrigin) CORS["Access-Control-Allow-Origin"] = allowedOrigin;
 
     // CORS preflight
     if (request.method === "OPTIONS") {
@@ -104,8 +102,8 @@ export default {
       return resp({ error: "Pregunta muy corta" }, 400, CORS, traceId);
     }
 
-    if (pregunta.length > 2000) {
-      return resp({ error: "Pregunta demasiado larga (máx. 2000 caracteres)" }, 400, CORS, traceId);
+    if (pregunta.length > 500) {
+      return resp({ error: "Pregunta demasiado larga (máx. 500 caracteres)" }, 400, CORS, traceId);
     }
 
     // ── 5. Detección de injection ────────────────────────────

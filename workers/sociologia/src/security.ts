@@ -53,6 +53,23 @@ const INJECTION_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /execute\s+(this\s+)?(code|script|command)/gi, label: "exec_code" },
   { re: /eval\s*\(/gi, label: "exec_eval" },
   { re: /import\s+os/gi, label: "exec_os" },
+
+  // Español — Role hijacking
+  { re: /ignora[r]?\s+(todas?\s+)?(las?\s+)?instrucciones?\s*(previas?|anteriores?|dadas?)/gi, label: "es_hijack_ignore" },
+  { re: /olvida[r]?\s+(todo|tus?\s+instrucciones?|lo\s+anterior)/gi, label: "es_hijack_forget" },
+  { re: /actú[ao][s]?\s+como\s+(?!un\s+asistente\s+académico|un\s+asistente\s+de)/gi, label: "es_hijack_act_as" },
+  { re: /finge[s]?\s+(ser|que\s+eres?|ser\s+un)/gi, label: "es_hijack_pretend" },
+  { re: /eres?\s+ahora\s+(?!el\s+asistente|un\s+asistente\s+académico)/gi, label: "es_hijack_redefine" },
+  { re: /a\s+partir\s+de\s+ahora\s+(eres?|serás?|actúas?)/gi, label: "es_hijack_from_now" },
+  { re: /sin\s+(ninguna?\s+)?(restricciones?|límites?|reglas?|filtros?)/gi, label: "es_jailbreak_no_restrictions" },
+
+  // Español — Extracción de prompt
+  { re: /muéstrame\s+(tu|el)\s+(prompt|system\s+prompt|instrucciones?|reglas?)/gi, label: "es_extract_show" },
+  { re: /repite\s+(tu|el|tus?)\s+(prompt|instrucciones?|reglas?|sistema)/gi, label: "es_extract_repeat" },
+  { re: /cuáles?\s+son\s+tus?\s+(instrucciones?|reglas?|directivas?|restricciones?)/gi, label: "es_extract_what_are" },
+  { re: /revela[r]?\s+(tu|el)\s+(prompt|instrucciones?|sistema)/gi, label: "es_extract_reveal" },
+  { re: /dime\s+(tus?|cuáles?\s+son\s+tus?)\s+(instrucciones?|reglas?)/gi, label: "es_extract_tell_me" },
+  { re: /copia\s+(tu|el)\s+(prompt|instrucciones?)/gi, label: "es_extract_copy" },
 ];
 
 // Sanitizar el contenido de un documento (documento envuelto)

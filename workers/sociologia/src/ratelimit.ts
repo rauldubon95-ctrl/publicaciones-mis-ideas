@@ -40,27 +40,16 @@ export async function checkRateLimit(
   }
 }
 
-// Validar token premium: computa el mismo HMAC que genera Next.js
-// Requiere que ADMIN_SECRET esté configurado como Worker secret
+// Validar token premium leyendo desde KV (igual que el Worker v1)
 export async function validarTokenPremium(
   token: string | null,
   env: Env
 ): Promise<boolean> {
-  if (!token || !env.ADMIN_SECRET) return false;
+  if (!token) return false;
 
   try {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(env.ADMIN_SECRET),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode("premium-bypass-v1"));
-    const esperado = Array.from(new Uint8Array(sig))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+    const esperado = await env.RATE_LIMIT.get("premium_master_token");
+    if (!esperado) return false;
 
     if (token.length !== esperado.length) return false;
     let diff = 0;

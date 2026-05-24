@@ -3,8 +3,10 @@ import { verifySessionToken } from "@/lib/auth";
 import { esBot, esScanPath } from "@/lib/security";
 
 function getIp(req: NextRequest): string {
+  // En Vercel, x-vercel-forwarded-for no puede ser falsificado por el cliente
   return (
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-vercel-forwarded-for") ??
+    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
     req.headers.get("x-real-ip") ??
     "unknown"
   );
@@ -25,9 +27,14 @@ function logEvento(
   traceId: string,
   detalles?: Record<string, string>
 ): void {
+  const token = process.env.INTERNAL_EVENT_TOKEN;
+  if (!token) return;
   fetch("/api/seguridad/evento", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-token": token,
+    },
     body: JSON.stringify({ tipo, ip, ruta, detalles: { ...detalles, traceId } }),
   }).catch(() => {});
 }

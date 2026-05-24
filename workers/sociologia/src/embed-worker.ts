@@ -28,9 +28,11 @@ export async function handleEmbedRequest(
     );
   }
 
-  // Verificar que es admin (usando el mismo token premium como admin key)
+  // Verificar que es admin: usa token dedicado admin_embed_token si existe,
+  // si no cae back al premium_master_token (migración gradual)
   const adminKey = request.headers.get("X-Admin-Key");
-  const esperado = await env.RATE_LIMIT.get("premium_master_token").catch(() => null);
+  const esperado = (await env.RATE_LIMIT.get("admin_embed_token").catch(() => null))
+    ?? (await env.RATE_LIMIT.get("premium_master_token").catch(() => null));
   if (!adminKey || !esperado || adminKey !== esperado) {
     return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
   }

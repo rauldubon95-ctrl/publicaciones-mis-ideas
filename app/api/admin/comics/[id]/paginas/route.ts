@@ -22,7 +22,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json().catch(() => null);
   const { imageUrl, caption } = (body ?? {}) as { imageUrl?: string; caption?: string };
 
-  if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.startsWith("https://")) {
+  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+    : null;
+  const urlValida = supabaseHost
+    ? imageUrl?.startsWith(`https://${supabaseHost}/storage/v1/object/public/comics/`)
+    : imageUrl?.startsWith("https://");
+  if (!imageUrl || typeof imageUrl !== "string" || !urlValida) {
     return NextResponse.json({ error: "URL de imagen inválida" }, { status: 400 });
   }
 
