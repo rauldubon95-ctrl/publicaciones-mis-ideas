@@ -77,7 +77,10 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 | Fecha | Hash | Descripción | Estado |
 |---|---|---|---|
 | 2026-05-24 | ab4c10d | Add professional AI architecture design | ✅ |
-| ... | ... | ... | ... |
+| 2026-05-24 | 380a256 | Add ERRORS.md change tracking | ✅ |
+| 2026-05-24 | 9979edd | security: fail-close login, centralize bot patterns, X-Trace-ID | ✅ |
+| 2026-05-24 | 1a08f87 | feat: Cloudflare Worker v2 with Phase 1 AI improvements | ✅ |
+| 2026-05-24 | 5f750f8 | feat: D1 setup script + legacy chunk migration | ✅ |
 
 ---
 
