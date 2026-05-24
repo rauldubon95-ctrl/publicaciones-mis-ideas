@@ -6,6 +6,7 @@ export interface Env {
   AI: Ai;
   DB: D1Database;
   RATE_LIMIT: KVNamespace;      // KV namespace binding real
+  ADMIN_SECRET?: string;        // Worker secret — valida token premium vía HMAC
   VECTORIZE?: VectorizeIndex;   // Phase 3: opcional hasta que exista el index
 }
 

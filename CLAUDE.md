@@ -16,7 +16,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `main` (feature branch `claude/elegant-bardeen-HHEmr` mergeada)
+**Rama de desarrollo activa:** `claude/clever-mccarthy-PRvxk` (pendiente de merge a main)
 
 ---
 
@@ -26,8 +26,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 |---|---|---|
 | ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main` |
 | ✅ Cloudflare Worker v1 (retrieval básico) | Producción | Worker `sociologia`, LIKE query — el que está desplegado HOY |
-| ✅ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Código en main | Mergeado pero **aún no desplegado** — requiere push manual a Cloudflare |
-| ⚠️ Sistema de premium token (admin sin límite) | Parcial | Ver sección 5 — requiere configurar KV y PREMIUM_TOKEN |
+| ✅ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Listo en feature branch | En `claude/clever-mccarthy-PRvxk` — se despliega al mergear a main |
+| ✅ Sistema de premium token (admin sin límite) | Listo en feature branch | Fix completo — ver sección 5. No requiere KV ni PREMIUM_TOKEN |
 | ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en wrangler.toml — requiere crear índice con wrangler |
 | ✅ Agentes IA en GitHub Actions | En main | `.github/scripts/review.mjs` y `prioritize.mjs` — usan GitHub Models (gratis) |
 | ❌ Sistema de Skills / SkillRegistry | Solo documentación | SKILL.md existe, sin implementación de código |
@@ -52,7 +52,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key de Supabase | Sí |
 | `SUPABASE_URL` | Igual que `NEXT_PUBLIC_SUPABASE_URL` pero server-side | Sí (storage admin) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key de Supabase (no exponer al cliente) | Sí (storage admin) |
-| `PREMIUM_TOKEN` | Token estático para bypass de rate limit del admin en el Worker | Sí (asistente IA) |
+| `PREMIUM_TOKEN` | **OBSOLETO** — Reemplazado por HMAC(ADMIN_SECRET). Ya no se usa. | No |
 | `HEALTH_TOKEN` | Token para endpoint `/api/health` con métricas completas | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 
@@ -103,17 +103,19 @@ Actualmente hay **1,288 documentos** indexados en producción.
 
 ## 5. Mecanismo de token premium (asistente IA)
 
-El flujo completo para que el admin tenga acceso ilimitado al chat:
+El flujo completo para que el admin tenga acceso ilimitado al chat (Worker v2):
 
 1. Admin se loguea → cookie `admin_auth` se establece
-2. `AsistenteChat.tsx` llama a `/api/asistente/token`
-3. Ese endpoint verifica la cookie y devuelve `process.env.PREMIUM_TOKEN`
+2. `AsistenteChat.tsx` llama a `/api/asistente/token` **en cada cambio de ruta** (no solo al montar)
+3. Ese endpoint verifica la cookie y computa `HMAC(ADMIN_SECRET, "premium-bypass-v1")`
 4. El chat envía ese token en el header `X-Premium-Token`
-5. El Worker lo compara contra `RATE_LIMIT.get("premium_master_token")` en KV
+5. El Worker computa el mismo HMAC con su `ADMIN_SECRET` y compara (timing-safe)
 
-**Para que funcione:** El valor de `PREMIUM_TOKEN` en Vercel debe ser exactamente igual al valor guardado como `premium_master_token` en el KV namespace `RATE_LIMIT` de Cloudflare.
+**Para que funcione:** Solo necesitas que `ADMIN_SECRET` sea el mismo valor en Vercel y en el Worker secret de Cloudflare. No se necesita `PREMIUM_TOKEN` ni la clave `premium_master_token` en KV.
 
-Si el Worker v2 está desplegado (rama mergeada), la validación es diferente: el Worker computa `HMAC(ADMIN_SECRET, "premium-bypass-v1")` y lo compara con el header. En ese caso, `ADMIN_SECRET` en Vercel y en el Worker deben ser iguales.
+**Bugs resueltos (2026-05-24):**
+- **Bug navegación**: `useEffect` solo corría al montar — ahora usa `usePathname` como dependencia
+- **Bug fragilidad KV**: Token validado vía HMAC, no via KV — elimina posibilidad de mismatch silencioso
 
 ---
 
@@ -212,4 +214,4 @@ cd workers/sociologia && npx wrangler tail
 ---
 
 *Última actualización: 2026-05-24*
-*Rama: `main` (merge de `claude/elegant-bardeen-HHEmr` completado)*
+*Rama: `claude/clever-mccarthy-PRvxk` — fix token premium + preparación Worker v2*

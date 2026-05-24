@@ -40,17 +40,16 @@ export async function checkRateLimit(
   }
 }
 
-// Validar token premium leyendo desde KV (igual que el Worker v1)
+// Validar token premium mediante HMAC(ADMIN_SECRET, "premium-bypass-v1")
+// Mismo cálculo que /api/asistente/token en Vercel — no requiere clave en KV
 export async function validarTokenPremium(
   token: string | null,
   env: Env
 ): Promise<boolean> {
-  if (!token) return false;
+  if (!token || !env.ADMIN_SECRET) return false;
 
   try {
-    const esperado = await env.RATE_LIMIT.get("premium_master_token");
-    if (!esperado) return false;
-
+    const esperado = await computarHmacPremium(env.ADMIN_SECRET);
     if (token.length !== esperado.length) return false;
     let diff = 0;
     for (let i = 0; i < token.length; i++) {
@@ -60,6 +59,25 @@ export async function validarTokenPremium(
   } catch {
     return false;
   }
+}
+
+async function computarHmacPremium(secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode("premium-bypass-v1")
+  );
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Contar tokens aproximados (~4 chars/token para español)

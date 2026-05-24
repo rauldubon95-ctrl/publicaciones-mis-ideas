@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { createHmac } from "crypto";
 import { verifySessionToken } from "@/lib/auth";
 
 export async function GET() {
@@ -15,7 +16,7 @@ export async function GET() {
     return Response.json({ token: null });
   }
 
-  // Usa el token estático configurado en Vercel env vars
-  const token = process.env.PREMIUM_TOKEN ?? null;
+  // Token derivado de ADMIN_SECRET — mismo cálculo que el Worker
+  const token = createHmac("sha256", secret).update("premium-bypass-v1").digest("hex");
   return Response.json({ token });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 
@@ -22,15 +23,16 @@ export default function AsistenteChat() {
   const [tokenPremium, setTokenPremium] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     fetch("/api/asistente/token")
       .then((r) => r.json())
       .then((data: { token: string | null }) => {
-        if (data.token) setTokenPremium(data.token);
+        setTokenPremium(data.token);
       })
       .catch(() => {});
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     if (abierto) {

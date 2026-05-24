@@ -113,6 +113,37 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 
 ---
 
+## SESIÓN 2026-05-24 — Fix token premium + Worker v2
+
+---
+
+### [FIX] Token premium no funciona después del login (navegación suave)
+
+**Archivo:** `components/AsistenteChat.tsx`
+**Problema:** `AsistenteChat` vive en `app/layout.tsx` (layout global). El `useEffect` con `deps: []` llama `/api/asistente/token` solo una vez al montar el componente. Cuando el usuario:
+1. Llega al sitio sin sesión → el efecto corre → endpoint devuelve `{token: null}` → `tokenPremium = null`
+2. Navega a `/admin/login` → el layout NO se desmonta (misma raíz de layout)
+3. Hace login → `router.push("/admin"); router.refresh()` → soft navigation → el componente NO se re-monta
+4. `useEffect` nunca vuelve a correr → `tokenPremium` permanece `null`
+5. El chat no envía `X-Premium-Token` → el Worker aplica rate limit normal
+
+**Solución:** Agregar `usePathname` de `next/navigation` como dependencia del `useEffect`. Ahora el token se re-verifica en cada cambio de ruta, incluyendo el redirect post-login.
+**Commit:** pendiente
+
+---
+
+### [FIX] Validación premium vía HMAC — elimina dependencia de KV
+
+**Archivos:** `app/api/asistente/token/route.ts`, `workers/sociologia/src/ratelimit.ts`, `workers/sociologia/src/types.ts`
+**Problema:** El token premium se validaba leyendo `premium_master_token` desde KV. Si el key no estaba configurado, tenía un typo o los valores diferían en whitespace/encoding, el premium fallaba silenciosamente. Requería sincronizar manualmente PREMIUM_TOKEN en Vercel y el KV key en Cloudflare.
+**Solución:** Cambiar a HMAC(ADMIN_SECRET, "premium-bypass-v1"):
+- Vercel: `createHmac("sha256", ADMIN_SECRET).update("premium-bypass-v1").digest("hex")`
+- Worker: `crypto.subtle.importKey()` + `crypto.subtle.sign()` — mismo cálculo con Web Crypto API
+- Ambos lados usan el mismo `ADMIN_SECRET` ya configurado → no se necesita PREMIUM_TOKEN ni la clave KV
+**Commit:** pendiente
+
+---
+
 ## HISTORIAL DE COMMITS (se actualiza con cada commit)
 
 | Fecha | Hash | Descripción | Estado |
