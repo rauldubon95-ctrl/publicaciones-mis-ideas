@@ -128,7 +128,7 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 5. El chat no envía `X-Premium-Token` → el Worker aplica rate limit normal
 
 **Solución:** Agregar `usePathname` de `next/navigation` como dependencia del `useEffect`. Ahora el token se re-verifica en cada cambio de ruta, incluyendo el redirect post-login.
-**Commit:** pendiente
+**Commit:** `5514ba1`
 
 ---
 
@@ -140,7 +140,7 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 - Vercel: `createHmac("sha256", ADMIN_SECRET).update("premium-bypass-v1").digest("hex")`
 - Worker: `crypto.subtle.importKey()` + `crypto.subtle.sign()` — mismo cálculo con Web Crypto API
 - Ambos lados usan el mismo `ADMIN_SECRET` ya configurado → no se necesita PREMIUM_TOKEN ni la clave KV
-**Commit:** pendiente
+**Commit:** `5514ba1`
 
 ---
 
@@ -164,6 +164,7 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | f0d138f | fix: token premium via PREMIUM_TOKEN env var (compatible Worker v1) | ✅ |
 | 2026-05-24 | d8bdbe7 | feat: CLAUDE.md memoria institucional + fix auth bypass /api/publicaciones | ✅ |
 | 2026-05-24 | d7c4670 | fix: esScanPath startsWith() — artículos con "eval" en slug ya no dan 404 | ✅ |
+| 2026-05-24 | 5514ba1 | fix: token premium post-login — HMAC + usePathname re-fetch | ✅ |
 
 ---
 
