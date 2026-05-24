@@ -51,28 +51,30 @@ function construirArbol(comentarios: {
 }
 
 export default async function PublicacionPage({ params }: Props) {
-  const [publicacion, adminOk] = await Promise.all([
-    prisma.publicacion.findUnique({
-      where: { slug: params.slug, publicado: true },
-      include: {
-        categoria: true,
-        etiquetas: { include: { etiqueta: true } },
-        comentarios: {
-          where: { estado: "VISIBLE" },
-          orderBy: { creadoAt: "asc" },
-          select: {
-            id: true, contenido: true, autorNombre: true, esAdmin: true,
-            estado: true, parentId: true, profundidad: true,
-            creadoAt: true, actualizadoAt: true,
-          },
-        },
-        reacciones: true,
-      },
-    }),
-    isAdminAuthorized(),
-  ]);
+  const adminOk = await isAdminAuthorized();
 
+  const publicacion = await prisma.publicacion.findUnique({
+    where: { slug: params.slug },
+    include: {
+      categoria: true,
+      etiquetas: { include: { etiqueta: true } },
+      comentarios: {
+        where: { estado: "VISIBLE" },
+        orderBy: { creadoAt: "asc" },
+        select: {
+          id: true, contenido: true, autorNombre: true, esAdmin: true,
+          estado: true, parentId: true, profundidad: true,
+          creadoAt: true, actualizadoAt: true,
+        },
+      },
+      reacciones: true,
+    },
+  });
+
+  // Artículo no existe
   if (!publicacion) notFound();
+  // Borrador: solo el admin puede verlo
+  if (!publicacion.publicado && !adminOk) notFound();
 
   const conteos = publicacion.reacciones.reduce<Record<string, number>>((acc, r) => {
     acc[r.tipo] = (acc[r.tipo] ?? 0) + 1;
@@ -83,6 +85,19 @@ export default async function PublicacionPage({ params }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      {!publicacion.publicado && adminOk && (
+        <div className="mb-6 flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded px-4 py-3">
+          <p className="text-sm text-amber-800 font-medium">
+            Borrador — solo visible para el admin. Publica el artículo para que aparezca en el sitio.
+          </p>
+          <Link
+            href={`/admin/editar/${publicacion.id}`}
+            className="shrink-0 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700"
+          >
+            Editar y publicar
+          </Link>
+        </div>
+      )}
       <TrackView publicacionId={publicacion.id} />
 
       {/* Breadcrumb */}
