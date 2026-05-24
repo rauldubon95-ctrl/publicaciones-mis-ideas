@@ -218,7 +218,13 @@ export function esBot(userAgent: string | null): boolean {
 }
 
 export function esScanPath(pathname: string): boolean {
-  return SCAN_PATHS.some((p) => pathname.toLowerCase().includes(p));
+  const lower = pathname.toLowerCase();
+  // Usar coincidencia exacta o prefijo con separador para evitar
+  // falsos positivos en rutas legítimas que contienen la cadena
+  // (ej: /publicaciones/evaluacion contiene /eval pero NO es un scan path)
+  return SCAN_PATHS.some(
+    (p) => lower === p || lower.startsWith(p + "/") || lower.startsWith(p + "?")
+  );
 }
 
 // ──────────────────────────────────────────

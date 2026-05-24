@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
 

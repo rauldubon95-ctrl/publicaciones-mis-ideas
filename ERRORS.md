@@ -124,6 +124,15 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | 5f750f8 | feat: D1 setup script + legacy chunk migration | ✅ |
 | 2026-05-24 | 8f99332 | docs: update ERRORS.md with Phase 1 commit history | ✅ |
 | 2026-05-24 | 3828e1c | feat: Worker v2 real bindings + embeddings pipeline | ✅ |
+| 2026-05-24 | dd62dab | feat: agregar AsistenteChat con acceso ilimitado para admin | ✅ |
+| 2026-05-24 | c3cf746 | docs: reescribir README con arquitectura completa del proyecto | ✅ |
+| 2026-05-24 | b6b0842 | feat: Asistente AI v2 — FTS5, seguridad, embeddings y despliegue automático | ✅ |
+| 2026-05-24 | 3331fd9 | fix: exclude workers/ from Next.js TypeScript compilation | ✅ |
+| 2026-05-24 | e5ad6bc | security: corregir 15 vulnerabilidades (auth bypass, injection, IP spoofing) | ✅ |
+| 2026-05-24 | c26f995 | refactor: migrar agentes IA a GitHub Models (Llama 3.1 70B, sin costo) | ✅ |
+| 2026-05-24 | f0d138f | fix: token premium via PREMIUM_TOKEN env var (compatible Worker v1) | ✅ |
+| 2026-05-24 | d8bdbe7 | feat: CLAUDE.md memoria institucional + fix auth bypass /api/publicaciones | ✅ |
+| 2026-05-24 | d7c4670 | fix: esScanPath startsWith() — artículos con "eval" en slug ya no dan 404 | ✅ |
 
 ---
 
