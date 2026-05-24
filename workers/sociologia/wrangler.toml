@@ -1,0 +1,36 @@
+name = "sociologia-asistente"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers AI binding
+[ai]
+binding = "AI"
+
+# D1 database (knowledge base)
+[[d1_databases]]
+binding = "DB"
+database_name = "sociologia-knowledge"
+database_id = "REEMPLAZAR_CON_ID_D1"
+
+# KV namespace (rate limiting + cache)
+[[kv_namespaces]]
+binding = "KV"
+id = "REEMPLAZAR_CON_ID_KV"
+
+# Variables de entorno
+# IMPORTANTE: PREMIUM_TOKEN_HASH se configura en Cloudflare Dashboard
+# como Secret (no en este archivo). Es el resultado de:
+#   HMAC-SHA256(ADMIN_SECRET, "premium-bypass-v1")
+# que es exactamente lo que genera /api/asistente/token en el Next.js app.
+[vars]
+ENVIRONMENT = "production"
+
+# Build
+[build]
+command = "npm run build"
+
+# Para desarrollo local
+# [dev]
+# port = 8787
+# local_protocol = "http"
