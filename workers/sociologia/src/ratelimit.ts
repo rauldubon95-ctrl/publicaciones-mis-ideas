@@ -40,16 +40,35 @@ export async function checkRateLimit(
   }
 }
 
-// Validar token premium mediante HMAC(ADMIN_SECRET, "premium-bypass-v1")
-// Mismo cálculo que /api/asistente/token en Vercel — no requiere clave en KV
+// Validar token premium — acepta dos métodos (orden de prioridad):
+// 1. HMAC(ADMIN_SECRET, "premium-bypass-v1") — preferido, sin dependencia de KV
+// 2. KV key "premium_master_token" — fallback para compat con instalaciones previas
 export async function validarTokenPremium(
   token: string | null,
   env: Env
 ): Promise<boolean> {
-  if (!token || !env.ADMIN_SECRET) return false;
+  if (!token) return false;
 
+  // Método 1: HMAC (requiere ADMIN_SECRET como Worker secret)
+  if (env.ADMIN_SECRET) {
+    try {
+      const esperado = await computarHmacPremium(env.ADMIN_SECRET);
+      if (token.length === esperado.length) {
+        let diff = 0;
+        for (let i = 0; i < token.length; i++) {
+          diff |= token.charCodeAt(i) ^ esperado.charCodeAt(i);
+        }
+        if (diff === 0) return true;
+      }
+    } catch {
+      // Continúa al fallback KV
+    }
+  }
+
+  // Método 2: KV — backward compat con el Worker v1 y PREMIUM_TOKEN
   try {
-    const esperado = await computarHmacPremium(env.ADMIN_SECRET);
+    const esperado = await env.RATE_LIMIT.get("premium_master_token");
+    if (!esperado) return false;
     if (token.length !== esperado.length) return false;
     let diff = 0;
     for (let i = 0; i < token.length; i++) {
