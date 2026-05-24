@@ -217,7 +217,7 @@ export default function AsistenteChat() {
               onKeyDown={manejarTecla}
               placeholder="Escribe tu pregunta…"
               rows={1}
-              maxLength={500}
+              maxLength={2000}
               disabled={cargando}
               className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
               style={{ minHeight: "38px" }}

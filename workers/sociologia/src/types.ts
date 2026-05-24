@@ -7,6 +7,7 @@ export interface Env {
   DB: D1Database;
   RATE_LIMIT: KVNamespace;      // KV namespace binding real
   VECTORIZE?: VectorizeIndex;   // Phase 3: opcional hasta que exista el index
+  ADMIN_SECRET?: string;        // Worker secret — mismo valor que en Vercel
 }
 
 // ── Request / Response (backward-compatible con v1) ───────────
