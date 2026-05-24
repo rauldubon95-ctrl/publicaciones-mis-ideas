@@ -124,6 +124,8 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | 5f750f8 | feat: D1 setup script + legacy chunk migration | ✅ |
 | 2026-05-24 | 8f99332 | docs: update ERRORS.md with Phase 1 commit history | ✅ |
 | 2026-05-24 | 3828e1c | feat: Worker v2 real bindings + embeddings pipeline | ✅ |
+| 2026-05-24 | c5fe66d | security: corregir 15 vulnerabilidades (auth, injection, IP, CVEs) | ✅ |
+| 2026-05-24 | cc995d9 | feat: agentes IA revisión de código + priorización, límite 2000 chars | ✅ |
 
 ---
 
