@@ -9,7 +9,7 @@ async function isAuthorized(): Promise<boolean> {
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
   if (!secret || !token) return false;
-  return verifySessionToken(token, secret);
+  return await verifySessionToken(token, secret);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

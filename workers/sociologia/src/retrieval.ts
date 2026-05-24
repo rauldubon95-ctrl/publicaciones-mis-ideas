@@ -166,7 +166,11 @@ async function buscarConVector(
   if (!matches.matches || matches.matches.length === 0) return [];
 
   // Obtener documentos de D1 por los IDs encontrados
-  const ids = matches.matches.map((m) => m.id).join(",");
+  const idsValidos = matches.matches
+    .map((m) => m.id)
+    .filter((id) => /^\d+$/.test(id));
+  if (idsValidos.length === 0) return [];
+  const ids = idsValidos.join(",");
   const res = await env.DB.prepare(
     `SELECT id, titulo, slug, texto, tipo, palabras, fuente FROM documentos WHERE id IN (${ids})`
   ).all<{

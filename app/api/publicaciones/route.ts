@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
 
-  if (!secret || !token || !verifySessionToken(token, secret)) {
+  if (!secret || !token || !(await verifySessionToken(token, secret))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
