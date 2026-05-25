@@ -22,3 +22,5 @@ id = "2f279c63ddbf45f19aaf55a02d290b47"
 # [[vectorize]]
 # binding = "VECTORIZE"
 # index_name = "sociologia-embeddings"
+
+# deploy trigger: 2026-05-25
