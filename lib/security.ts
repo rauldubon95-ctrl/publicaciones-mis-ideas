@@ -186,6 +186,13 @@ export const BOT_UA_PATTERNS = [
   /zmeu/i,
   /harvest/i,
   /grab/i,
+  // Navegadores headless y automatización
+  /HeadlessChrome/i,
+  /PhantomJS/i,
+  /Selenium/i,
+  /WebDriver/i,
+  /puppeteer/i,
+  /playwright/i,
 ];
 
 export const SCAN_PATHS = [
@@ -210,6 +217,21 @@ export const SCAN_PATHS = [
   "/.ssh",
   "/.well-known/evil",
   "/phpmyadmin",
+  // Paths adicionales de reconocimiento
+  "/.git/config",
+  "/.git/head",
+  "/env.js",
+  "/config/database",
+  "/server-status",
+  "/.svn",
+  "/debug",
+  "/telescope",
+  "/horizon",
+  "/api/env",
+  "/api/.env",
+  "/server-info",
+  "/elmah.axd",
+  "/trace.axd",
 ];
 
 export function esBot(userAgent: string | null): boolean {

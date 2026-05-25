@@ -2,6 +2,7 @@ import type { Env } from "../types";
 import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
+import { validarOutput } from "../security";
 
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
@@ -73,7 +74,15 @@ export class SociologicalAnalysisSkill implements Skill {
       return sinFuentes(input.query);
     }
 
-    return parsearOutput(rawOutput, docs, input.frameworks ?? []);
+    const resultado = parsearOutput(rawOutput, docs, input.frameworks ?? []);
+
+    // Validar que el output no filtra el system prompt ni indica hijacking exitoso
+    const check = validarOutput(resultado.analysis);
+    if (!check.seguro) {
+      return sinFuentes(input.query);
+    }
+
+    return resultado;
   }
 }
 
