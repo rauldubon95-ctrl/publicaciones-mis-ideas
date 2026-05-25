@@ -20,6 +20,7 @@ export default function AsistenteChat() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [cargando, setCargando] = useState(false);
   const [restantes, setRestantes] = useState<number | null>(null);
+  const LIMITE_CHARS = 500;
   const [tokenPremium, setTokenPremium] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -147,6 +148,18 @@ export default function AsistenteChat() {
             ) : restantes !== null ? (
               <span className="text-xs text-zinc-400 shrink-0">{restantes} restantes</span>
             ) : null}
+            {mensajes.length > 0 && (
+              <button
+                onClick={() => setMensajes([])}
+                title="Limpiar conversación"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 ml-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Mensajes */}
@@ -211,30 +224,37 @@ export default function AsistenteChat() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-zinc-100 p-3 flex gap-2 items-end">
-            <textarea
-              ref={inputRef}
-              value={pregunta}
-              onChange={(e) => setPregunta(e.target.value)}
-              onKeyDown={manejarTecla}
-              placeholder="Escribe tu pregunta…"
-              rows={1}
-              maxLength={2000}
-              disabled={cargando}
-              className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
-              style={{ minHeight: "38px" }}
-            />
-            <button
-              onClick={enviar}
-              disabled={!pregunta.trim() || cargando}
-              className="w-9 h-9 shrink-0 bg-zinc-900 text-white rounded-lg flex items-center justify-center hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Enviar"
-            >
-              <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+          <div className="border-t border-zinc-100 p-3 flex flex-col gap-1.5">
+            <div className="flex gap-2 items-end">
+              <textarea
+                ref={inputRef}
+                value={pregunta}
+                onChange={(e) => setPregunta(e.target.value)}
+                onKeyDown={manejarTecla}
+                placeholder="Escribe tu pregunta…"
+                rows={1}
+                maxLength={LIMITE_CHARS}
+                disabled={cargando}
+                className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
+                style={{ minHeight: "38px" }}
+              />
+              <button
+                onClick={enviar}
+                disabled={!pregunta.trim() || cargando}
+                className="w-9 h-9 shrink-0 bg-zinc-900 text-white rounded-lg flex items-center justify-center hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Enviar"
+              >
+                <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
+            {pregunta.length > 0 && (
+              <p className={`text-right text-xs pr-1 ${pregunta.length >= LIMITE_CHARS * 0.9 ? "text-red-400" : "text-zinc-300"}`}>
+                {pregunta.length}/{LIMITE_CHARS}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -16,7 +16,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `main` (feature branch `claude/clever-mccarthy-PRvxk` ya mergeado)
+**Rama de desarrollo activa:** `main` (feature branch `claude/friendly-curie-Oj91h` — sesión 2026-05-25)
 
 ---
 
@@ -29,7 +29,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Sistema de premium token (admin sin límite) | Funcionando con Worker v2 | HMAC(ADMIN_SECRET) directo — ya no depende de KV. Ver sección 5. |
 | ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en wrangler.toml — requiere crear índice con wrangler |
 | ✅ Agentes IA en GitHub Actions | En main | `.github/scripts/review.mjs` y `prioritize.mjs` — usan GitHub Models (gratis) |
-| ❌ Sistema de Skills / SkillRegistry | Solo documentación | SKILL.md existe, sin implementación de código |
+| ✅ Sistema de Skills / SkillRegistry | Implementado en Worker v2 | `workers/sociologia/src/skills/` — ruta POST `/skill`, skill `sociological-analysis` activo |
 | ❌ Sistema de agentes multi-Worker | Solo documentación | ARQUITECTURA.md §6 es visión futura, no existe código |
 | ✅ Fix esScanPath (404 en artículos) | Producción | `startsWith()` — artículos con "eval" en slug ya no dan 404 |
 | ✅ Fix auth bypass (POST /api/publicaciones) | Producción | `await verifySessionToken()` corregido |
@@ -62,7 +62,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `DB` | D1 binding | `llm_sociolog` (ID: `ea9cad56-9b03-4af7-b15b-4e923bbc66c7`) |
 | `RATE_LIMIT` | KV binding | `RATE_LIMIT` (ID: `2f279c63ddbf45f19aaf55a02d290b47`) |
 | `AI` | Workers AI binding | Modelo `@cf/meta/llama-3.1-8b-instruct` |
-| `ADMIN_SECRET` | Worker secret | Mismo valor que en Vercel — valida el token premium |
+| `ADMIN_SECRET` | Worker secret | Mismo valor que en Vercel — valida token premium Y sync D1 |
 
 ### GitHub Secrets (Actions)
 
@@ -139,6 +139,10 @@ El flujo actual (Worker v1 desplegado + KV sync):
 | `workers/sociologia/src/index.ts` | Punto de entrada del Worker de IA |
 | `workers/sociologia/src/retrieval.ts` | Búsqueda FTS5 + LIKE en D1 |
 | `workers/sociologia/src/ratelimit.ts` | Rate limiting en KV + validación premium |
+| `workers/sociologia/src/sync.ts` | Endpoint POST `/sync` — recibe artículos de Next.js y los escribe en D1 |
+| `workers/sociologia/src/skills/registry.ts` | SkillRegistry — registro y ejecución de skills |
+| `workers/sociologia/src/skills/sociological-analysis.ts` | Skill de análisis sociológico estructurado |
+| `lib/d1Sync.ts` | Cliente Next.js → Worker sync (llamado desde admin al publicar/despublicar) |
 
 ---
 
@@ -177,10 +181,12 @@ EventoSeguridad → log de eventos de seguridad
 | Item | Detalle | Prioridad |
 |---|---|---|
 | Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere crear índice con `wrangler vectorize create` | Media |
+| Sync D1 no retroactivo | `lib/d1Sync.ts` solo sincroniza artículos al publicar/despublicar. Los ya publicados no están en D1. Ver §13 para sync inicial. | Alta |
 | Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. El dashboard de observabilidad planificado requiere D1 | Media |
 | CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Contradice "CSP estricta" | Baja |
 | `config/prompts/v1.1.txt` desconectado | El Worker usa SYSTEM_PROMPT hardcodeado en `prompts.ts`, no este archivo | Baja |
 | ARQUITECTURA.md mezcla producción y visión | §2-§18 describen arquitectura futura, no actual | Documental |
+| Worker no redesplegado | SkillRegistry + sync requieren redeploy del Worker — actualmente solo en git, no en Cloudflare | Alta |
 
 ---
 
@@ -195,6 +201,22 @@ EventoSeguridad → log de eventos de seguridad
 7. **No hardcodear secretos en archivos** — usar siempre `${{ secrets.NOMBRE }}` en workflows y `process.env.NOMBRE` en código.
 8. **CF_API_TOKEN en GitHub tiene restricción de IP** — El token existente solo funciona desde la PC del usuario. Para que GitHub Actions despliegue el Worker, el usuario debe crear un nuevo API token de Cloudflare SIN restricción de IP (desmarcar "Client IP Address Filtering" al crearlo) y actualizarlo en GitHub Secrets.
 9. **Si ADMIN_SECRET cambia**, actualizar también: (a) KV `premium_master_token` con el nuevo HMAC, (b) Worker secret en Cloudflare, (c) Vercel env var `ADMIN_SECRET`.
+
+---
+
+## 13. Sync inicial de artículos ya publicados a D1
+
+Después de desplegar el Worker con `sync.ts`, hay que sincronizar los artículos ya publicados en Supabase. El mecanismo automático solo aplica a futuros cambios. Para sincronizar los existentes, ejecutar desde la API admin o via script:
+
+```bash
+# Ejemplo via curl (requiere cookie de sesión admin):
+curl -X PUT /api/admin/publicaciones/{id} -d '{"publicado":true,...}'
+# Repetir por cada artículo publicado — o hacer un script de migración.
+```
+
+O bien, crear un endpoint temporal `GET /api/admin/sync-d1-all` que itere sobre todas las publicaciones `publicado: true` y llame a `syncPublicacionToD1` para cada una.
+
+**El sync usa:** HMAC(ADMIN_SECRET, "d1-sync-v1") en header `X-Sync-Token`.
 
 ---
 
@@ -217,5 +239,5 @@ cd workers/sociologia && npx wrangler tail
 
 ---
 
-*Última actualización: 2026-05-24 (sesión 2 — fix KV + limpieza de entorno)*
-*Rama activa: `main`*
+*Última actualización: 2026-05-25 (sesión 3 — SkillRegistry + sync Supabase→D1 + UX chat)*
+*Rama activa: `claude/friendly-curie-Oj91h`*

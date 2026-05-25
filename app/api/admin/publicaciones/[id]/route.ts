@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
+import { syncPublicacionToD1 } from "@/lib/d1Sync";
 
 async function isAuthorized(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -77,6 +78,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       etiquetas: { create: nuevasEtiquetas },
     },
   });
+
+  // Sync a D1 en background — no bloquea la respuesta al admin
+  const syncAction = publicacion.publicado ? "upsert" : "delete";
+  syncPublicacionToD1(
+    {
+      slug: publicacion.slug,
+      titulo: publicacion.titulo,
+      contenido: publicacion.contenido,
+      resumen: publicacion.resumen,
+      etiquetas: etiquetas as string[] | undefined,
+    },
+    syncAction
+  ).catch(() => {});
 
   return NextResponse.json(publicacion);
 }

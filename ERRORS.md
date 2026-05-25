@@ -192,7 +192,50 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-25 | c0a03d1 | chore: trigger Worker v2 deploy (nuevo CF_API_TOKEN) | ✅ |
 | 2026-05-25 | 37f9ccc | chore: add .gitignore para build artifacts del Worker | ✅ |
 | 2026-05-25 | a3b8332 | fix: remove nodejs_compat — Worker usa solo Web APIs | ✅ |
+| 2026-05-25 | aad1718 | docs: Worker v2 desplegado en producción — actualizar CLAUDE.md y ERRORS.md | ✅ |
 | 2026-05-25 | — | **deploy: Worker v2 activo en producción (subido via Cloudflare dashboard)** | ✅ |
+| 2026-05-25 | — | feat: SkillRegistry + sociological-analysis skill + sync Supabase→D1 + UX chat | pendiente |
+
+---
+
+## SESIÓN 2026-05-25 — SkillRegistry + Sync Supabase→D1 + UX
+
+---
+
+### [FEAT] SkillRegistry modular en Worker v2
+
+**Archivos:** `workers/sociologia/src/skills/registry.ts`, `workers/sociologia/src/skills/sociological-analysis.ts`, `workers/sociologia/src/index.ts`
+**Descripción:** Implementación del SkillRegistry que existía solo como documentación (SKILL.md). El registro es modular (`.register(skill)` / `.execute(name, input, env)`). La skill `sociological-analysis` hace retrieval FTS5, llama al LLM con un prompt estructurado, y devuelve `{ analysis, frameworks_identified, key_concepts, citations, entities, confidence, grounding_ratio, uncertainty_flags }`. Nueva ruta `POST /skill` en el Worker con rate limiting y validación de injection.
+**También:** Fix de bug preexistente — `let docs` sin tipo en `index.ts` causaba `error TS7034`.
+
+---
+
+### [FEAT] Sincronización Supabase → D1 (webhook automático)
+
+**Archivos:** `workers/sociologia/src/sync.ts`, `lib/d1Sync.ts`, `app/api/admin/publicaciones/[id]/route.ts`
+**Problema:** El Worker de IA solo tenía acceso a los 1,288 documentos del corpus académico en D1, pero no a los artículos del propio sitio (almacenados en Supabase/PostgreSQL).
+**Solución:**
+- `sync.ts`: Endpoint `POST /sync` en el Worker, autenticado con HMAC(ADMIN_SECRET, "d1-sync-v1"). Acepta `{ action: "upsert"|"delete", slug, titulo, contenido, etiquetas, categoria, fuente }`. Hace strip de HTML, UPSERT/DELETE en `documentos` con `tipo='publicacion'`, y rebuild del índice FTS5.
+- `lib/d1Sync.ts`: Cliente Next.js server-side que computa el HMAC y llama al Worker. Fallos son no-bloqueantes (catch vacío + console.error).
+- `app/api/admin/publicaciones/[id]/route.ts`: Después de cada `prisma.publicacion.update`, llama a `syncPublicacionToD1` según el nuevo estado `publicado`. Fire-and-forget (`.catch(() => {})`).
+**Estado:** Requiere redeploy del Worker para activarse en producción. Los artículos ya publicados necesitan sync inicial (ver CLAUDE.md §13).
+
+---
+
+### [FIX] maxLength del textarea AsistenteChat era 2000, Worker limita a 500
+
+**Archivo:** `components/AsistenteChat.tsx`
+**Problema:** El textarea tenía `maxLength={2000}` pero el Worker rechaza queries > 500 caracteres. Los últimos 1500 chars eran silenciosamente cortados (o el Worker devolvía error).
+**Solución:** Cambiar a `maxLength={LIMITE_CHARS}` donde `LIMITE_CHARS = 500`.
+
+---
+
+### [FEAT] UX: contador de caracteres + botón "limpiar conversación"
+
+**Archivo:** `components/AsistenteChat.tsx`
+**Descripción:**
+- Contador de caracteres visible cuando el usuario escribe. Se torna rojo al 90% del límite (450+ chars).
+- Botón de papelera en el header del chat (visible cuando hay mensajes). Limpia `mensajes` al hacer click.
 
 ---
 

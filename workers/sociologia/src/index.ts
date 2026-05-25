@@ -16,6 +16,12 @@ import {
 import { checkRateLimit, validarTokenPremium, contarTokens } from "./ratelimit";
 import { emitirEvento } from "./telemetry";
 import { handleEmbedRequest } from "./embed-worker";
+import { SkillRegistry } from "./skills/registry";
+import { SociologicalAnalysisSkill } from "./skills/sociological-analysis";
+import { handleSyncRequest } from "./sync";
+
+const skillRegistry = new SkillRegistry();
+skillRegistry.register(new SociologicalAnalysisSkill());
 
 // Orígenes permitidos (mismos que el Worker v1)
 const ORIGENES_PERMITIDOS = [
@@ -47,10 +53,21 @@ export default {
       return resp({ error: "Método no permitido" }, 405, CORS);
     }
 
-    // ── Admin: generación de embeddings (Phase 3) ────────────
     const pathname = new URL(request.url).pathname;
+
+    // ── Sync Supabase → D1 (server-to-server, no rate limit) ─
+    if (pathname === "/sync" || pathname.endsWith("/sync")) {
+      return handleSyncRequest(request, env);
+    }
+
+    // ── Admin: generación de embeddings (Phase 3) ────────────
     if (pathname === "/embed" || pathname.endsWith("/embed")) {
       return handleEmbedRequest(request, env);
+    }
+
+    // ── Skill: análisis académico estructurado ───────────────
+    if (pathname === "/skill" || pathname.endsWith("/skill")) {
+      return handleSkillRequest(request, env, CORS);
     }
 
     const traceId =
@@ -132,7 +149,7 @@ export default {
     }
 
     // ── 7. Retrieval (FTS → LIKE → vector) ───────────────────
-    let docs;
+    let docs: Awaited<ReturnType<typeof recuperarDocumentos>>;
     try {
       docs = await recuperarDocumentos(pregunta, env);
     } catch {
@@ -236,6 +253,83 @@ export default {
     return resp(respuesta, 200, CORS, traceId);
   },
 };
+
+async function handleSkillRequest(
+  request: Request,
+  env: Env,
+  CORS: Record<string, string>
+): Promise<Response> {
+  const traceId = request.headers.get("X-Trace-Id") ?? crypto.randomUUID();
+  const ip =
+    request.headers.get("CF-Connecting-IP") ??
+    request.headers.get("X-Forwarded-For")?.split(",")[0].trim() ??
+    "unknown";
+
+  const tokenHeader = request.headers.get("X-Premium-Token");
+  const esPremium = await validarTokenPremium(tokenHeader, env);
+
+  if (!esPremium) {
+    const rl = await checkRateLimit(ip, env);
+    if (!rl.permitido) {
+      return resp(
+        { error: "Límite diario alcanzado", mensaje: "Has usado tus consultas gratuitas de hoy.", restantes: 0 },
+        429, CORS, traceId
+      );
+    }
+  }
+
+  let body: { skill?: string; query?: string; depth?: string; frameworks?: string[]; outputFormat?: string };
+  try {
+    body = await request.json() as typeof body;
+  } catch {
+    return resp({ error: "Solicitud inválida" }, 400, CORS, traceId);
+  }
+
+  const { skill: skillName, query, depth, frameworks, outputFormat } = body;
+
+  if (!skillName) {
+    return resp(
+      { error: "Campo 'skill' requerido", available: skillRegistry.list() },
+      400, CORS, traceId
+    );
+  }
+  if (!skillRegistry.has(skillName)) {
+    return resp(
+      { error: `Skill '${skillName}' no encontrada`, available: skillRegistry.list() },
+      404, CORS, traceId
+    );
+  }
+  if (!query || query.trim().length < 3) {
+    return resp({ error: "query muy corta (mín. 3 caracteres)" }, 400, CORS, traceId);
+  }
+  if (query.length > 500) {
+    return resp({ error: "query demasiado larga (máx. 500 caracteres)" }, 400, CORS, traceId);
+  }
+
+  const seguridad = analizarInyeccion(query);
+  if (seguridad.accion === "bloquear") {
+    return resp({ error: "Consulta no permitida" }, 422, CORS, traceId);
+  }
+
+  try {
+    const result = await skillRegistry.execute(skillName, {
+      query: query.trim(),
+      depth: depth as "shallow" | "standard" | "deep" | undefined,
+      frameworks,
+      outputFormat: outputFormat as "prose" | "structured" | undefined,
+    }, env);
+
+    let restantes: number | undefined;
+    if (!esPremium) {
+      const rl = await checkRateLimit(ip, env).catch(() => null);
+      restantes = rl?.restantes;
+    }
+
+    return resp({ ...result, esPremium, traceId, restantes }, 200, CORS, traceId);
+  } catch (err) {
+    return resp({ error: String(err) }, 500, CORS, traceId);
+  }
+}
 
 function resp(
   data: unknown,
