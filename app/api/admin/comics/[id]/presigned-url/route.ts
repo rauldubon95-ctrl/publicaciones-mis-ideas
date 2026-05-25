@@ -9,8 +9,9 @@ const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 // Genera una URL firmada para que el navegador suba directamente a Supabase.
 // El archivo nunca pasa por Vercel, por eso no hay límite de tamaño.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
+  const { id } = await params;
 
   const { nombre, tipo } = await req.json() as { nombre?: string; tipo?: string };
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const sb = getSupabaseAdmin();
-  const ruta = `${params.id}/${Date.now()}-${nombre.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+  const ruta = `${id}/${Date.now()}-${nombre.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
 
   const { data, error } = await sb.storage
     .from(BUCKET_COMICS)

@@ -4,7 +4,7 @@ import { verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_req: NextRequest) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const secret = process.env.ADMIN_SECRET;
   const token = cookieStore.get("admin_auth")?.value;
 

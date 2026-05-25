@@ -7,12 +7,13 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Editar publicación | Admin" };
 
-interface Props { params: { id: string } }
+interface Props { params: Promise<{ id: string }> }
 
 export default async function EditarPage({ params }: Props) {
+  const { id } = await params;
   const [publicacion, categorias] = await Promise.all([
     prisma.publicacion.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { etiquetas: { include: { etiqueta: true } } },
     }),
     prisma.categoria.findMany({ orderBy: { nombre: "asc" } }),

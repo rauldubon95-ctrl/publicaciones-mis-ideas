@@ -13,10 +13,11 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = await prisma.publicacion.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  const p = await prisma.publicacion.findUnique({ where: { slug } });
   if (!p) return {};
   return { title: p.titulo, description: p.resumen };
 }
@@ -51,10 +52,11 @@ function construirArbol(comentarios: {
 }
 
 export default async function PublicacionPage({ params }: Props) {
+  const { slug } = await params;
   const adminOk = await isAdminAuthorized();
 
   const publicacion = await prisma.publicacion.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       categoria: true,
       etiquetas: { include: { etiqueta: true } },
@@ -139,7 +141,7 @@ export default async function PublicacionPage({ params }: Props) {
             </time>
           )}
           <Link
-            href={`/publicaciones/${params.slug}/pdf`}
+            href={`/publicaciones/${slug}/pdf`}
             target="_blank"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-brand-700 border border-zinc-200 hover:border-brand-300 px-3 py-1.5 rounded transition-colors"
           >

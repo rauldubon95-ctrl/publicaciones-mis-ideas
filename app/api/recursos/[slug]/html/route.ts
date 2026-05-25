@@ -5,9 +5,10 @@ export const dynamic = "force-dynamic";
 
 // Sirve el HTML del recurso con headers de seguridad estrictos.
 // Se muestra en un <iframe sandbox> — los scripts del documento están completamente bloqueados.
-export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const recurso = await prisma.recursoHtml.findUnique({
-    where: { slug: params.slug, publicado: true },
+    where: { slug, publicado: true },
     select: { contenido: true, titulo: true },
   });
 

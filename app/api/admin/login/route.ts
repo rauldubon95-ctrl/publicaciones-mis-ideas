@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   const sessionToken = await createSessionToken(secret);
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set("admin_auth", sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

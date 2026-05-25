@@ -7,16 +7,18 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const r = await prisma.recursoHtml.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  const r = await prisma.recursoHtml.findUnique({ where: { slug } });
   return r ? { title: r.titulo } : {};
 }
 
 export default async function RecursoPage({ params }: Props) {
+  const { slug } = await params;
   const recurso = await prisma.recursoHtml.findUnique({
-    where: { slug: params.slug, publicado: true },
+    where: { slug, publicado: true },
   });
 
   if (!recurso) notFound();
@@ -40,7 +42,7 @@ export default async function RecursoPage({ params }: Props) {
         <div className="flex items-center justify-between">
           <time className="text-xs text-zinc-400">{formatFecha(recurso.creadoAt)}</time>
           <a
-            href={`/api/recursos/${params.slug}/descargar`}
+            href={`/api/recursos/${slug}/descargar`}
             className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-brand-700 border border-zinc-200 hover:border-brand-300 px-3 py-1.5 rounded transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +56,7 @@ export default async function RecursoPage({ params }: Props) {
       {/* Visor HTML — iframe completamente sandboxed */}
       <div className="border border-zinc-200 bg-white overflow-hidden" style={{ height: "75vh" }}>
         <iframe
-          src={`/api/recursos/${params.slug}/html`}
+          src={`/api/recursos/${slug}/html`}
           sandbox="allow-same-origin"
           className="w-full h-full border-0"
           title={recurso.titulo}

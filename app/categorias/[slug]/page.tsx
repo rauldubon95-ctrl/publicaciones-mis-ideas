@@ -6,17 +6,19 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const cat = await prisma.categoria.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  const cat = await prisma.categoria.findUnique({ where: { slug } });
   if (!cat) return {};
   return { title: cat.nombre };
 }
 
 export default async function CategoriaPage({ params }: Props) {
+  const { slug } = await params;
   const categoria = await prisma.categoria.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       publicaciones: {
         where: { publicado: true },

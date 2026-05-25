@@ -8,16 +8,18 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const c = await prisma.comic.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  const c = await prisma.comic.findUnique({ where: { slug } });
   return c ? { title: c.titulo } : {};
 }
 
 export default async function ComicPage({ params }: Props) {
+  const { slug } = await params;
   const comic = await prisma.comic.findUnique({
-    where: { slug: params.slug, publicado: true },
+    where: { slug, publicado: true },
     include: { paginas: { orderBy: { orden: "asc" } } },
   });
 

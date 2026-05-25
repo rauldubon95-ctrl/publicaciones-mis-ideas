@@ -8,9 +8,10 @@ export const runtime = "nodejs";
 // PATCH: cambiar estado (VISIBLE / OCULTO / ELIMINADO)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
+  const { id } = await params;
 
   const { estado } = await req.json().catch(() => ({})) as { estado?: string };
   const ESTADOS = ["VISIBLE", "OCULTO", "ELIMINADO"];
@@ -19,13 +20,13 @@ export async function PATCH(
   }
 
   const comentario = await prisma.comentario.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true },
   });
   if (!comentario) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
   await prisma.comentario.update({
-    where: { id: params.id },
+    where: { id },
     data: { estado },
   });
 
@@ -35,16 +36,17 @@ export async function PATCH(
 // DELETE: eliminar permanentemente (y sus respuestas por cascade)
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
+  const { id } = await params;
 
   const comentario = await prisma.comentario.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true },
   });
   if (!comentario) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-  await prisma.comentario.delete({ where: { id: params.id } });
+  await prisma.comentario.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

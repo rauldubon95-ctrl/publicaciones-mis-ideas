@@ -13,10 +13,11 @@ async function isAuthorized(): Promise<boolean> {
   return await verifySessionToken(token, secret);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+  const { id } = await params;
 
   let body: unknown;
   try { body = await req.json(); } catch {
@@ -37,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "Etiquetas debe ser un array" }, { status: 400 });
   }
 
-  const existente = await prisma.publicacion.findUnique({ where: { id: params.id } });
+  const existente = await prisma.publicacion.findUnique({ where: { id } });
   if (!existente) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
   const slugNormalizado = toSlug(slug);
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   }
 
-  await prisma.publicacionEtiqueta.deleteMany({ where: { publicacionId: params.id } });
+  await prisma.publicacionEtiqueta.deleteMany({ where: { publicacionId: id } });
 
   const nuevasEtiquetas = etiquetas?.length
     ? await Promise.all(
@@ -66,7 +67,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     : [];
 
   const publicacion = await prisma.publicacion.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       titulo,
       slug: slugNormalizado,
@@ -95,11 +96,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(publicacion);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAuthorized())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+  const { id } = await params;
 
-  await prisma.publicacion.delete({ where: { id: params.id } });
+  await prisma.publicacion.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

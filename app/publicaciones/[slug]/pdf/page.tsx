@@ -7,16 +7,18 @@ import PrintButton from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = await prisma.publicacion.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  const p = await prisma.publicacion.findUnique({ where: { slug } });
   return p ? { title: p.titulo } : {};
 }
 
 export default async function PdfPage({ params }: Props) {
+  const { slug } = await params;
   const publicacion = await prisma.publicacion.findUnique({
-    where: { slug: params.slug, publicado: true },
+    where: { slug, publicado: true },
     include: { categoria: true, etiquetas: { include: { etiqueta: true } } },
   });
 
@@ -28,7 +30,7 @@ export default async function PdfPage({ params }: Props) {
       <div className="no-print fixed top-0 left-0 right-0 z-50 bg-brand-800 text-white px-6 py-3 flex items-center justify-between text-sm">
         <span className="font-serif italic text-brand-200">Vista previa de impresión</span>
         <div className="flex items-center gap-3">
-          <a href={`/publicaciones/${params.slug}`} className="text-brand-300 hover:text-white transition-colors">
+          <a href={`/publicaciones/${slug}`} className="text-brand-300 hover:text-white transition-colors">
             ← Volver al artículo
           </a>
           <PrintButton publicacionId={publicacion.id} />

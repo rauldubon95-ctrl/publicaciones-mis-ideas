@@ -7,8 +7,9 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Editar recurso | Admin" };
 
-export default async function EditarRecursoPage({ params }: { params: { id: string } }) {
-  const recurso = await prisma.recursoHtml.findUnique({ where: { id: params.id } });
+export default async function EditarRecursoPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const recurso = await prisma.recursoHtml.findUnique({ where: { id } });
   if (!recurso) notFound();
 
   return (
