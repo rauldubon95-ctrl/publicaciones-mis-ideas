@@ -18,6 +18,8 @@ export default function AdminPage() {
   const router = useRouter();
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [resultadoSync, setResultadoSync] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/publicaciones")
@@ -32,6 +34,20 @@ export default function AdminPage() {
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.replace("/admin/login");
+  }
+
+  async function handleSyncD1() {
+    setSincronizando(true);
+    setResultadoSync(null);
+    try {
+      const res = await fetch("/api/admin/sync-d1-all", { method: "POST" });
+      const data = await res.json() as { total: number; exitosos: number; fallidos: number };
+      setResultadoSync(`✓ ${data.exitosos} de ${data.total} artículos sincronizados al asistente IA`);
+    } catch {
+      setResultadoSync("Error al sincronizar. Intenta de nuevo.");
+    } finally {
+      setSincronizando(false);
+    }
   }
 
   if (cargando) {
@@ -74,6 +90,26 @@ export default function AdminPage() {
             Salir
           </button>
         </div>
+      </div>
+
+      {/* Sync IA */}
+      <div className="mb-8 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-zinc-800">Asistente IA — sincronización</p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Envía todos los artículos publicados al asistente para que pueda responder sobre ellos.
+          </p>
+          {resultadoSync && (
+            <p className="text-xs mt-1 text-emerald-700 font-medium">{resultadoSync}</p>
+          )}
+        </div>
+        <button
+          onClick={handleSyncD1}
+          disabled={sincronizando}
+          className="btn-secondary shrink-0 disabled:opacity-50"
+        >
+          {sincronizando ? "Sincronizando…" : "Sincronizar artículos"}
+        </button>
       </div>
 
       {/* Lista */}
