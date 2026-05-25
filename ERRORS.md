@@ -20,8 +20,8 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 
 ### 2026-05-24 — Inicio de refactor arquitectónico
 
-**Estado:** EN PROGRESO  
-**Rama:** `claude/elegant-bardeen-HHEmr`
+**Estado:** COMPLETADO  
+**Rama:** `claude/elegant-bardeen-HHEmr` → mergeada a `main`
 
 ---
 
@@ -104,15 +104,6 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 
 ---
 
-### [FEAT] Routing /embed integrado en index.ts
-
-**Archivo:** `workers/sociologia/src/index.ts`  
-**Descripción:** Agregado despacho de ruta: `POST /embed` → `handleEmbedRequest()`.  
-Todas las demás rutas POST continúan al flujo de query AI normal.  
-**Commit:** `3828e1c`
-
----
-
 ## SESIÓN 2026-05-24 — Fix token premium + Worker v2
 
 ---
@@ -136,29 +127,99 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 
 **Fecha:** 2026-05-24 (sesión 2)
 **Contexto:** Después de múltiples intentos fallidos de sincronizar PREMIUM_TOKEN con KV, se descubrió que el valor en KV tenía comillas literales alrededor: `"b19d188c..."` en lugar de `b19d188c...`. Worker hace comparación exacta de strings, por lo que nunca coincidía.
-**Solución:** Usuario corrigió el valor en KV dashboard (Cloudflare → Workers KV → RATE_LIMIT → premium_master_token) eliminando las comillas. Valor correcto: `b19d188c0f4aefe22e76649e2b8824ffed387f4d33ecf1140099c03392866f8e` (HMAC de ADMIN_SECRET).
-**También:** PREMIUM_TOKEN eliminado de Vercel env vars. Ahora Vercel computa el HMAC automáticamente desde ADMIN_SECRET.
-
----
-
-### [FIX] CF_API_TOKEN con restricción de IP — Worker v2 no se despliega
-
-**Fecha:** 2026-05-24 (sesión 2)
-**Problema:** El CF_API_TOKEN configurado en GitHub Secrets tiene "Client IP Address Filtering" activado (solo permite la IP de la PC del usuario). GitHub Actions corre desde servidores de GitHub → "Host not in allowlist" → deploy falla silenciosamente.
-**Estado:** PENDIENTE. Worker v2 tiene código correcto en `main` pero Cloudflare sigue corriendo v1.
-**Solución pendiente:** Crear un nuevo API token de Cloudflare con plantilla "Edit Cloudflare Workers" y SIN restricción de IP. Reemplazar `CF_API_TOKEN` en GitHub Secrets. El deploy-worker.yml funcionará automáticamente en el próximo push a `workers/sociologia/**`.
+**Solución:** Usuario corrigió el valor en KV dashboard. También eliminado PREMIUM_TOKEN de Vercel. Vercel computa el HMAC automáticamente desde ADMIN_SECRET.
 
 ---
 
 ### [FIX] Validación premium vía HMAC — elimina dependencia de KV
 
 **Archivos:** `app/api/asistente/token/route.ts`, `workers/sociologia/src/ratelimit.ts`, `workers/sociologia/src/types.ts`
-**Problema:** El token premium se validaba leyendo `premium_master_token` desde KV. Si el key no estaba configurado, tenía un typo o los valores diferían en whitespace/encoding, el premium fallaba silenciosamente. Requería sincronizar manualmente PREMIUM_TOKEN en Vercel y el KV key en Cloudflare.
+**Problema:** El token premium se validaba leyendo `premium_master_token` desde KV. Frágil: cualquier diferencia en whitespace/encoding hacía fallar el premium silenciosamente.
 **Solución:** Cambiar a HMAC(ADMIN_SECRET, "premium-bypass-v1"):
 - Vercel: `createHmac("sha256", ADMIN_SECRET).update("premium-bypass-v1").digest("hex")`
 - Worker: `crypto.subtle.importKey()` + `crypto.subtle.sign()` — mismo cálculo con Web Crypto API
-- Ambos lados usan el mismo `ADMIN_SECRET` ya configurado → no se necesita PREMIUM_TOKEN ni la clave KV
 **Commit:** `5514ba1`
+
+---
+
+## SESIÓN 2026-05-25 (sesión 3) — SkillRegistry + Sync Supabase→D1 + UX
+
+---
+
+### [FEAT] SkillRegistry modular en Worker
+
+**Archivos:** `workers/sociologia/src/skills/registry.ts`, `workers/sociologia/src/skills/sociological-analysis.ts`
+**Descripción:** Implementación del SkillRegistry que existía solo como documentación (SKILL.md). El registro es modular (`.register(skill)` / `.execute(name, input, env)`). La skill `sociological-analysis` hace retrieval FTS5, llama al LLM con un prompt estructurado que fuerza citas y declara incertidumbre, y devuelve `{ analysis, frameworks_identified, key_concepts, citations, entities, confidence, grounding_ratio, uncertainty_flags }`. Nueva ruta `POST /skill` en el Worker.
+**Commit:** `58a8d21`
+
+---
+
+### [FEAT] Sincronización Supabase → D1 (automática)
+
+**Archivos:** `workers/sociologia/src/sync.ts`, `lib/d1Sync.ts`, `app/api/admin/publicaciones/[id]/route.ts`
+**Problema:** El Worker de IA solo tenía acceso a los 1,288 documentos del corpus académico en D1, pero no a los artículos del propio sitio (almacenados en Supabase/PostgreSQL).
+**Solución:**
+- `sync.ts`: Endpoint `POST /sync` en el Worker, autenticado con HMAC(ADMIN_SECRET, "d1-sync-v1"). Hace strip de HTML, UPSERT/DELETE en `documentos` con `tipo='publicacion'`, y rebuild del índice FTS5.
+- `lib/d1Sync.ts`: Cliente Next.js server-side que computa el HMAC y llama al Worker. Fallos no-bloqueantes.
+- `app/api/admin/publicaciones/[id]/route.ts`: Después de cada `prisma.publicacion.update`, llama a `syncPublicacionToD1` según el estado `publicado`. Fire-and-forget.
+**Commit:** `58a8d21`
+
+---
+
+### [FEAT] UX: contador de caracteres + botón "limpiar conversación"
+
+**Archivo:** `components/AsistenteChat.tsx`
+**Descripción:**
+- Contador de caracteres visible cuando el usuario escribe. Se torna rojo al 90% del límite.
+- Botón de papelera en el header del chat (visible cuando hay mensajes). Limpia `mensajes` al hacer click.
+**Commit:** `58a8d21`
+
+---
+
+## SESIÓN 2026-05-25 (sesión 4) — Skill en chat principal + sync masivo + Git integration
+
+---
+
+### [FEAT] Skill integrada en flujo principal del chat (anti-alucinación)
+
+**Archivo:** `workers/sociologia/src/index.ts`
+**Problema:** El chat usaba un prompt libre en `construirMensajes()` que no forzaba al LLM a citar fuentes ni declarar incertidumbre. El LLM podía alucinaciones aunque hubiera documentos disponibles.
+**Solución:** Reemplazar pasos 8-11 (construir prompt → LLM directo → validar → grounding) con `skillRegistry.execute("sociological-analysis", { query, context: docs, depth })`. La skill usa un prompt estructurado que obliga a:
+- Solo usar el corpus dado
+- Declarar secciones: ANÁLISIS / CONCEPTOS CLAVE / CITAS / INCERTIDUMBRE
+- Los `uncertainty_flags` se exponen como `advertencia` visible al usuario
+- Admin usa `depth=deep` para respuestas más extensas
+**Commit:** `cc398bc`
+
+---
+
+### [FEAT] Límite de caracteres 1500 (era 500)
+
+**Archivos:** `components/AsistenteChat.tsx`, `workers/sociologia/src/index.ts`
+**Problema:** El límite de 500 chars era demasiado restrictivo para preguntas académicas con contexto. El textarea y el Worker ahora coinciden en 1500 chars.
+**Commit:** `cc398bc`
+
+---
+
+### [FIX] package-lock.json desincronizado (next@14.2.3 vs next@14.2.29)
+
+**Archivo:** `package-lock.json` (raíz)
+**Problema:** El lock file del repo tenía `next@14.2.3` mientras que `package.json` exigía `next@14.2.29`. Cloudflare Git integration fallaba al correr `npm ci` desde la raíz del repo.
+**Causa raíz:** La Git integration de Cloudflare intentaba instalar desde la raíz (Next.js) en lugar de `workers/sociologia/` (el Worker).
+**Solución en dos partes:**
+1. Configurar en Cloudflare dashboard: root directory = `workers/sociologia` → resuelve el deploy del Worker
+2. Regenerar `package-lock.json` con `npm install --package-lock-only --ignore-scripts` → sincroniza next@14.2.29
+**Commit:** `57781c2`
+
+---
+
+### [FEAT] Sync masivo + botón admin
+
+**Archivos:** `app/api/admin/sync-d1-all/route.ts`, `app/admin/page.tsx`
+**Descripción:** El sync automático (al publicar/despublicar) solo aplica a cambios futuros. Los artículos ya publicados necesitaban sync inicial.
+- Endpoint `POST /api/admin/sync-d1-all`: itera `prisma.publicacion.findMany({ where: { publicado: true } })`, llama a `syncPublicacionToD1` por cada uno. Devuelve `{ total, exitosos, fallidos }`.
+- Botón "Sincronizar artículos" en `/admin`: caja visible entre el header y la lista, con estado de carga y mensaje de resultado.
+**Commits:** `2a0df77`, `70354be`
 
 ---
 
@@ -193,49 +254,11 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-25 | 37f9ccc | chore: add .gitignore para build artifacts del Worker | ✅ |
 | 2026-05-25 | a3b8332 | fix: remove nodejs_compat — Worker usa solo Web APIs | ✅ |
 | 2026-05-25 | aad1718 | docs: Worker v2 desplegado en producción — actualizar CLAUDE.md y ERRORS.md | ✅ |
-| 2026-05-25 | — | **deploy: Worker v2 activo en producción (subido via Cloudflare dashboard)** | ✅ |
-| 2026-05-25 | — | feat: SkillRegistry + sociological-analysis skill + sync Supabase→D1 + UX chat | pendiente |
-
----
-
-## SESIÓN 2026-05-25 — SkillRegistry + Sync Supabase→D1 + UX
-
----
-
-### [FEAT] SkillRegistry modular en Worker v2
-
-**Archivos:** `workers/sociologia/src/skills/registry.ts`, `workers/sociologia/src/skills/sociological-analysis.ts`, `workers/sociologia/src/index.ts`
-**Descripción:** Implementación del SkillRegistry que existía solo como documentación (SKILL.md). El registro es modular (`.register(skill)` / `.execute(name, input, env)`). La skill `sociological-analysis` hace retrieval FTS5, llama al LLM con un prompt estructurado, y devuelve `{ analysis, frameworks_identified, key_concepts, citations, entities, confidence, grounding_ratio, uncertainty_flags }`. Nueva ruta `POST /skill` en el Worker con rate limiting y validación de injection.
-**También:** Fix de bug preexistente — `let docs` sin tipo en `index.ts` causaba `error TS7034`.
-
----
-
-### [FEAT] Sincronización Supabase → D1 (webhook automático)
-
-**Archivos:** `workers/sociologia/src/sync.ts`, `lib/d1Sync.ts`, `app/api/admin/publicaciones/[id]/route.ts`
-**Problema:** El Worker de IA solo tenía acceso a los 1,288 documentos del corpus académico en D1, pero no a los artículos del propio sitio (almacenados en Supabase/PostgreSQL).
-**Solución:**
-- `sync.ts`: Endpoint `POST /sync` en el Worker, autenticado con HMAC(ADMIN_SECRET, "d1-sync-v1"). Acepta `{ action: "upsert"|"delete", slug, titulo, contenido, etiquetas, categoria, fuente }`. Hace strip de HTML, UPSERT/DELETE en `documentos` con `tipo='publicacion'`, y rebuild del índice FTS5.
-- `lib/d1Sync.ts`: Cliente Next.js server-side que computa el HMAC y llama al Worker. Fallos son no-bloqueantes (catch vacío + console.error).
-- `app/api/admin/publicaciones/[id]/route.ts`: Después de cada `prisma.publicacion.update`, llama a `syncPublicacionToD1` según el nuevo estado `publicado`. Fire-and-forget (`.catch(() => {})`).
-**Estado:** Requiere redeploy del Worker para activarse en producción. Los artículos ya publicados necesitan sync inicial (ver CLAUDE.md §13).
-
----
-
-### [FIX] maxLength del textarea AsistenteChat era 2000, Worker limita a 500
-
-**Archivo:** `components/AsistenteChat.tsx`
-**Problema:** El textarea tenía `maxLength={2000}` pero el Worker rechaza queries > 500 caracteres. Los últimos 1500 chars eran silenciosamente cortados (o el Worker devolvía error).
-**Solución:** Cambiar a `maxLength={LIMITE_CHARS}` donde `LIMITE_CHARS = 500`.
-
----
-
-### [FEAT] UX: contador de caracteres + botón "limpiar conversación"
-
-**Archivo:** `components/AsistenteChat.tsx`
-**Descripción:**
-- Contador de caracteres visible cuando el usuario escribe. Se torna rojo al 90% del límite (450+ chars).
-- Botón de papelera en el header del chat (visible cuando hay mensajes). Limpia `mensajes` al hacer click.
+| 2026-05-25 | 58a8d21 | feat: SkillRegistry + sync Supabase→D1 + UX chat fixes | ✅ |
+| 2026-05-25 | cc398bc | feat: integrar skill en chat principal + límite 1500 chars | ✅ |
+| 2026-05-25 | 57781c2 | chore: sincronizar package-lock.json con next@14.2.29 | ✅ |
+| 2026-05-25 | 2a0df77 | feat: endpoint POST /api/admin/sync-d1-all — sincronización masiva a D1 | ✅ |
+| 2026-05-25 | 70354be | feat: botón sync artículos al asistente IA en panel admin | ✅ |
 
 ---
 
@@ -252,7 +275,9 @@ git revert <hash>
 
 # Volver a un punto específico (destructivo - solo si es urgente)
 git reset --hard <hash>
-git push --force origin claude/elegant-bardeen-HHEmr
+git push --force origin main
 ```
 
 **IMPORTANTE:** Siempre usar `git revert` (no destructivo) en lugar de `git reset --hard` a menos que sea absolutamente necesario.
+
+**Último punto estable conocido:** `aad1718` (Worker v2 en producción, sin skills ni sync)
