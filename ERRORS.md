@@ -318,6 +318,7 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 | 2026-05-25 | 7cc31ab | security: auditoría fase 1 — 6 correcciones críticas/altas/medias | ✅ |
 | 2026-05-25 | 46ba9ff | upgrade Next.js 14→15 + fix async params/cookies API (17 CVEs corregidos) | ✅ |
 | 2026-05-25 | 95bbb1b | security phase 2: IP hashing, DOCX magic bytes, track rate limit | ✅ |
+| 2026-05-25 | (sesión 6) | feat: paginación dinámica home+publicaciones, sección Servicios/Consultoría, APIs CRUD + cotizaciones con rate limiting, honeypot, sanitización | ✅ |
 
 ---
 

@@ -39,6 +39,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Fix auth bypass (POST /api/publicaciones) | Producción | `await verifySessionToken()` corregido |
 | ✅ Security hardening — Fase 1 | Producción | PREMIUM_TOKEN eliminado, output validation IA, bot detection, scan paths, sesión 24h, .gitignore |
 | ✅ Security hardening — Fase 2 | Producción | IPs hasheadas en EventoSeguridad, magic bytes DOCX, rate limit /api/track |
+| ✅ Paginación dinámica home + /publicaciones | Rama feature | 4/página en home (searchParams), 8/página en /publicaciones. Componente `Paginacion.tsx` reutilizable. |
+| ✅ Sección Servicios de Consultoría | Rama feature | `/servicios` + modal cotización + APIs CRUD admin + modelos Servicio/SolicitudCotizacion en Supabase |
 | ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
 
 ---
@@ -146,6 +148,17 @@ Los nuevos artículos se guardan como borrador por defecto (`publicado: false`).
 | `workers/sociologia/src/skills/sociological-analysis.ts` | Skill principal: prompt estructurado, frameworks, citas, incertidumbre |
 | `lib/d1Sync.ts` | Cliente Next.js → Worker sync (HMAC + fetch, fire-and-forget) |
 | `app/admin/page.tsx` | Panel admin con botón "Sincronizar artículos" para sync masivo |
+| `app/servicios/page.tsx` | Página pública de servicios de consultoría — server component |
+| `components/ServiciosConFormulario.tsx` | Grid de tarjetas + modal de cotización — client component |
+| `app/api/servicios/route.ts` | GET público: lista servicios activos con cache |
+| `app/api/cotizaciones/route.ts` | POST público: enviar solicitud con rate limit + honeypot + sanitización |
+| `app/api/admin/servicios/route.ts` | GET/POST admin: listar y crear servicios |
+| `app/api/admin/servicios/[id]/route.ts` | GET/PUT/DELETE admin: CRUD individual de servicios |
+| `app/api/admin/cotizaciones/route.ts` | GET admin: listar solicitudes con filtro de estado |
+| `app/api/admin/cotizaciones/[id]/route.ts` | PATCH/DELETE admin: actualizar estado o eliminar solicitud |
+| `app/admin/servicios/page.tsx` | Admin CRUD de servicios (crear/editar/ocultar/eliminar con modal) |
+| `app/admin/cotizaciones/page.tsx` | Admin gestión de solicitudes con filtros y cambio de estado |
+| `components/Paginacion.tsx` | Componente reutilizable de paginación con elipsis y accesibilidad |
 
 ---
 
@@ -159,6 +172,8 @@ Comic         → VistaComic
 Recurso       → VistaRecurso
 RateLimitDb   → rate limiting persistente para rutas Next.js
 EventoSeguridad → log de eventos de seguridad
+Servicio      → SolicitudCotizacion (campos: titulo, slug, descripcion, detalle, categoria, icono, activo, orden)
+SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
 ```
 
 ---
@@ -253,10 +268,10 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
 | Security hardening | ✅ Completo (fase 1+2) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h |
 
-**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones.
+**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones. Para la sección de servicios: agregar los servicios desde `/admin/servicios`.
 
 ---
 
-*Última actualización: 2026-05-25 (sesión 5 — upgrade Next.js 15.5.18 + React 19, 17 CVEs corregidos, security hardening fase 1+2, limpieza corpus D1 de 1,287→804 docs)*
-*Commit activo: `95bbb1b`*
-*Rama activa: `main`*
+*Última actualización: 2026-05-25 (sesión 6 — paginación dinámica home+/publicaciones, sección Servicios/Consultoría con CRUD admin, modelos Servicio/SolicitudCotizacion en Supabase, seguridad cotizaciones: rate limit + honeypot + sanitización)*
+*Commit activo: (sesión 6 — ver rama `claude/eager-mccarthy-4iwHN`)*
+*Rama activa: `claude/eager-mccarthy-4iwHN`*

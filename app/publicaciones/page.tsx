@@ -1,37 +1,66 @@
 import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
+import Paginacion from "@/components/Paginacion";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Publicaciones" };
 export const dynamic = "force-dynamic";
 
-export default async function PublicacionesPage() {
-  const publicaciones = await prisma.publicacion.findMany({
-    where: { publicado: true },
-    orderBy: { publicadoAt: "desc" },
-    include: {
-      categoria: true,
-      etiquetas: { include: { etiqueta: true } },
-      _count: { select: { comentarios: true, reacciones: true } },
-    },
-  });
+const POR_PAGINA = 8;
+
+export default async function PublicacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
+  const params = await searchParams;
+  const pagina = Math.max(1, parseInt(params.pagina ?? "1") || 1);
+
+  const [publicaciones, total] = await Promise.all([
+    prisma.publicacion.findMany({
+      where: { publicado: true },
+      orderBy: { publicadoAt: "desc" },
+      skip: (pagina - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+      include: {
+        categoria: true,
+        etiquetas: { include: { etiqueta: true } },
+        _count: { select: { comentarios: true, reacciones: true } },
+      },
+    }),
+    prisma.publicacion.count({ where: { publicado: true } }),
+  ]);
+
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Publicaciones</h1>
-      <p className="text-gray-500 mb-8">{publicaciones.length} publicaciones</p>
+      <div className="mb-8 border-b border-zinc-200 pb-6">
+        <h1 className="text-3xl font-serif font-semibold text-zinc-900">Publicaciones</h1>
+        <p className="text-zinc-400 text-sm mt-1">
+          {total} {total === 1 ? "publicación" : "publicaciones"}
+          {totalPaginas > 1 && ` · página ${pagina} de ${totalPaginas}`}
+        </p>
+      </div>
 
       {publicaciones.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">📭</p>
-          <p>No hay publicaciones todavía.</p>
+        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded">
+          <p className="text-sm">No hay publicaciones todavía.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2">
-          {publicaciones.map((p) => (
-            <PublicacionCard key={p.id} publicacion={p} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {publicaciones.map((p) => (
+              <PublicacionCard key={p.id} publicacion={p} />
+            ))}
+          </div>
+
+          <Paginacion
+            paginaActual={pagina}
+            totalPaginas={totalPaginas}
+            baseUrl="/publicaciones"
+          />
+        </>
       )}
     </div>
   );

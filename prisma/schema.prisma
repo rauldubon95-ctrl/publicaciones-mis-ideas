@@ -207,3 +207,43 @@ model RateLimitDb {
   @@index([clave])
   @@index([resetAt])
 }
+
+// Servicios de consultoría
+model Servicio {
+  id            String                @id @default(cuid())
+  titulo        String
+  slug          String                @unique
+  descripcion   String
+  detalle       String?
+  categoria     String
+  icono         String?
+  activo        Boolean               @default(true)
+  orden         Int                   @default(0)
+  creadoAt      DateTime              @default(now())
+  actualizadoAt DateTime              @updatedAt
+  cotizaciones  SolicitudCotizacion[]
+
+  @@index([activo])
+  @@index([orden])
+  @@index([categoria])
+}
+
+// Solicitudes de cotización
+model SolicitudCotizacion {
+  id           String    @id @default(cuid())
+  nombre       String
+  correo       String
+  organizacion String?
+  servicioId   String?
+  servicio     Servicio? @relation(fields: [servicioId], references: [id], onDelete: SetNull)
+  tipoServicio String?
+  descripcion  String
+  presupuesto  String?
+  estado       String    @default("PENDIENTE") // PENDIENTE | REVISADO | ARCHIVADO
+  ipHash       String?
+  creadoAt     DateTime  @default(now())
+
+  @@index([servicioId])
+  @@index([estado])
+  @@index([creadoAt])
+}

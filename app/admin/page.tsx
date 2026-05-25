@@ -80,6 +80,12 @@ export default function AdminPage() {
           <Link href="/admin/comics" className="btn-secondary">
             Cómics
           </Link>
+          <Link href="/admin/servicios" className="btn-secondary">
+            Servicios
+          </Link>
+          <Link href="/admin/cotizaciones" className="btn-secondary">
+            Cotizaciones
+          </Link>
           <Link href="/admin/metricas" className="btn-secondary">
             Métricas
           </Link>

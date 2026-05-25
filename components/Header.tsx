@@ -7,6 +7,7 @@ const nav = [
   { href: "/publicaciones", label: "Publicaciones" },
   { href: "/recursos", label: "Recursos" },
   { href: "/comics", label: "Cómics" },
+  { href: "/servicios", label: "Consultoría" },
 ];
 
 export default function Header() {
