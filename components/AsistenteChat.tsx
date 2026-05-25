@@ -20,7 +20,7 @@ export default function AsistenteChat() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [cargando, setCargando] = useState(false);
   const [restantes, setRestantes] = useState<number | null>(null);
-  const LIMITE_CHARS = 500;
+  const LIMITE_CHARS = 1500;
   const [tokenPremium, setTokenPremium] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

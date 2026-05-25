@@ -4,15 +4,9 @@
 // API 100% compatible con v1 (AsistenteChat.tsx no cambia)
 // ─────────────────────────────────────────────────────────────
 import type { Env, WorkerResponse } from "./types";
-import { analizarInyeccion, validarOutput } from "./security";
-import { recuperarDocumentos, calcularGrounding } from "./retrieval";
-import {
-  construirMensajes,
-  extraerFuentesTitulos,
-  construirAdvertencia,
-  determinarConfianza,
-  esSaludo,
-} from "./prompts";
+import { analizarInyeccion } from "./security";
+import { recuperarDocumentos } from "./retrieval";
+import { extraerFuentesTitulos, esSaludo } from "./prompts";
 import { checkRateLimit, validarTokenPremium, contarTokens } from "./ratelimit";
 import { emitirEvento } from "./telemetry";
 import { handleEmbedRequest } from "./embed-worker";
@@ -119,8 +113,8 @@ export default {
       return resp({ error: "Pregunta muy corta" }, 400, CORS, traceId);
     }
 
-    if (pregunta.length > 500) {
-      return resp({ error: "Pregunta demasiado larga (máx. 500 caracteres)" }, 400, CORS, traceId);
+    if (pregunta.length > 1500) {
+      return resp({ error: "Pregunta demasiado larga (máx. 1500 caracteres)" }, 400, CORS, traceId);
     }
 
     // ── 5. Detección de injection ────────────────────────────
@@ -171,20 +165,33 @@ export default {
       return resp(sinFuentes, 200, CORS, traceId);
     }
 
-    // ── 8. Construir prompt ──────────────────────────────────
-    const messages = construirMensajes(pregunta, docs, esPremium);
-    const tokensEntrada = contarTokens(messages.map((m) => m.content).join(" "));
-
-    // ── 9. Llamar al LLM ─────────────────────────────────────
+    // ── 8-11. Análisis via skill (grounding enforced, menos alucinación) ─
+    const tokensEntrada = contarTokens(pregunta + docs.map((d) => d.texto).join(" "));
     let respuestaLLM: string;
-    try {
-      const aiRes = await env.AI.run(MODEL, {
-        messages,
-        max_tokens: esPremium ? 1200 : 600,
-        temperature: 0.25,
-      } as Parameters<typeof env.AI.run>[1]) as { response?: string };
+    let groundingRatio: number;
+    let confianza: "alta" | "media" | "baja";
+    let advertencia: string | undefined;
+    let tokensSalida: number;
 
-      respuestaLLM = (aiRes.response ?? "").trim();
+    try {
+      const skillResult = await skillRegistry.execute(
+        "sociological-analysis",
+        { query: pregunta, context: docs, depth: esPremium ? "deep" : "standard" },
+        env
+      );
+
+      if (!skillResult.analysis) {
+        return resp({ error: "El modelo no generó una respuesta." }, 500, CORS, traceId);
+      }
+
+      respuestaLLM = skillResult.analysis;
+      groundingRatio = skillResult.grounding_ratio;
+      confianza =
+        skillResult.confidence >= 0.7 ? "alta"
+        : skillResult.confidence >= 0.4 ? "media"
+        : "baja";
+      advertencia = skillResult.uncertainty_flags[0] ?? undefined;
+      tokensSalida = contarTokens(respuestaLLM);
     } catch (err) {
       emitirEvento(
         { traceId, tipo: "error", timestamp: Date.now(), duracionMs: Date.now() - inicioMs, errorMsg: String(err) },
@@ -192,26 +199,6 @@ export default {
       );
       return resp({ error: "Error al procesar tu consulta. Inténtalo de nuevo." }, 500, CORS, traceId);
     }
-
-    if (!respuestaLLM) {
-      return resp({ error: "El modelo no generó una respuesta." }, 500, CORS, traceId);
-    }
-
-    // ── 10. Validar output ───────────────────────────────────
-    const validacion = validarOutput(respuestaLLM);
-    if (!validacion.seguro) {
-      emitirEvento(
-        { traceId, tipo: "output_invalid", timestamp: Date.now(), errorMsg: validacion.razon },
-        env, ctx
-      );
-      respuestaLLM = "No puedo proporcionar una respuesta en este momento. Reformula tu pregunta.";
-    }
-
-    // ── 11. Grounding y confianza ────────────────────────────
-    const groundingRatio = calcularGrounding(respuestaLLM, docs);
-    const confianza = determinarConfianza(groundingRatio, docs.length);
-    const advertencia = construirAdvertencia(groundingRatio);
-    const tokensSalida = contarTokens(respuestaLLM);
 
     // ── 12. Rate limit restante ──────────────────────────────
     let restantes: number | undefined;
@@ -241,7 +228,7 @@ export default {
     // ── 14. Respuesta ─────────────────────────────────────────
     const respuesta: WorkerResponse = {
       respuesta: respuestaLLM,
-      fuentes: extraerFuentesTitulos(docs), // compat v1
+      fuentes: extraerFuentesTitulos(docs),
       esPremium,
       confianza,
       traceId,
@@ -302,8 +289,8 @@ async function handleSkillRequest(
   if (!query || query.trim().length < 3) {
     return resp({ error: "query muy corta (mín. 3 caracteres)" }, 400, CORS, traceId);
   }
-  if (query.length > 500) {
-    return resp({ error: "query demasiado larga (máx. 500 caracteres)" }, 400, CORS, traceId);
+  if (query.length > 1500) {
+    return resp({ error: "query demasiado larga (máx. 1500 caracteres)" }, 400, CORS, traceId);
   }
 
   const seguridad = analizarInyeccion(query);
