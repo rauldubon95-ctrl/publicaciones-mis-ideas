@@ -25,9 +25,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | Componente | Estado | Notas |
 |---|---|---|
 | ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main` |
-| ✅ Cloudflare Worker v1 (retrieval básico) | Producción | Worker `sociologia`, LIKE query — **sigue desplegado** |
-| ⚠️ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | Código en main, NO desplegado | deploy-worker.yml falla: `CF_API_TOKEN` en GitHub tiene restricción de IP — solo funciona desde la PC del usuario, no desde GitHub Actions |
-| ✅ Sistema de premium token (admin sin límite) | Funcionando con Worker v1 | KV `premium_master_token` = HMAC(ADMIN_SECRET). `PREMIUM_TOKEN` eliminado de Vercel. Ver sección 5. |
+| ✅ Cloudflare Worker v2 (FTS5, seguridad, telemetría) | **PRODUCCIÓN** | Desplegado el 2026-05-25 via dashboard. FTS5 + HMAC + telemetría activos. |
+| ✅ Sistema de premium token (admin sin límite) | Funcionando con Worker v2 | HMAC(ADMIN_SECRET) directo — ya no depende de KV. Ver sección 5. |
 | ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en wrangler.toml — requiere crear índice con wrangler |
 | ✅ Agentes IA en GitHub Actions | En main | `.github/scripts/review.mjs` y `prioritize.mjs` — usan GitHub Models (gratis) |
 | ❌ Sistema de Skills / SkillRegistry | Solo documentación | SKILL.md existe, sin implementación de código |
@@ -113,7 +112,7 @@ El flujo actual (Worker v1 desplegado + KV sync):
 
 **Estado actual del KV:** `premium_master_token` = `HMAC(ADMIN_SECRET, "premium-bypass-v1")` — sincronizado manualmente el 2026-05-24. Si `ADMIN_SECRET` cambia, hay que actualizar el KV también.
 
-**Cuando Worker v2 se despliegue:** El paso 5 cambiará a HMAC directo (sin KV). La clave `premium_master_token` en KV quedará obsoleta y se podrá eliminar. El `ADMIN_SECRET` en el Worker secret de Cloudflare lo maneja todo automáticamente.
+**Worker v2 desplegado (2026-05-25):** El paso 5 ahora usa HMAC directo con `ADMIN_SECRET`. La clave `premium_master_token` en KV ya es obsoleta (se puede eliminar). El `ADMIN_SECRET` debe estar configurado como Worker secret en Cloudflare.
 
 **Bugs resueltos (2026-05-24):**
 - **Bug navegación**: `useEffect` solo corría al montar — ahora usa `usePathname` como dependencia
@@ -187,7 +186,7 @@ EventoSeguridad → log de eventos de seguridad
 
 ## 11. Reglas para sesiones IA futuras
 
-1. **Worker v2 NO está desplegado** — El código está en `main` pero Cloudflare sigue corriendo v1. Verificar con `workers_get_worker_code scriptName=sociologia` antes de asumir que v2 está activo.
+1. **Worker v2 ESTÁ desplegado** — Desplegado el 2026-05-25 via editor del dashboard de Cloudflare. Verificar con `workers_get_worker_code scriptName=sociologia` si hay dudas.
 2. **La tabla D1 real se llama `documentos`**, no `documents` ni `doc_chunks`.
 3. **No pushear a main sin confirmar con el usuario** — los deploys a Vercel son automáticos. El Worker NO despliega automático por el problema de CF_API_TOKEN.
 4. **Actualizar este archivo** cuando se agreguen variables de entorno, se cambie la arquitectura, o se complete una fase del roadmap.

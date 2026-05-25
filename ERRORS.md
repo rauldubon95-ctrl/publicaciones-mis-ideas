@@ -189,6 +189,10 @@ Todas las demás rutas POST continúan al flujo de query AI normal.
 | 2026-05-24 | 8d75108 | fix: compatibilidad v1/v2 — PREMIUM_TOKEN primero, HMAC como fallback | ✅ |
 | 2026-05-24 | 3ed231a | chore: actualizar compatibility_date del Worker a 2025-09-23 | ✅ |
 | 2026-05-24 | 8170347 | chore: forzar redeploy Vercel tras eliminar PREMIUM_TOKEN | ✅ |
+| 2026-05-25 | c0a03d1 | chore: trigger Worker v2 deploy (nuevo CF_API_TOKEN) | ✅ |
+| 2026-05-25 | 37f9ccc | chore: add .gitignore para build artifacts del Worker | ✅ |
+| 2026-05-25 | a3b8332 | fix: remove nodejs_compat — Worker usa solo Web APIs | ✅ |
+| 2026-05-25 | — | **deploy: Worker v2 activo en producción (subido via Cloudflare dashboard)** | ✅ |
 
 ---
 
