@@ -223,6 +223,62 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 
 ---
 
+## SESIÓN 2026-05-25 (sesión 5) — Auditoría de seguridad completa + upgrade Next.js 15
+
+---
+
+### [SECURITY] Auditoría fase 1 — 6 correcciones
+
+**Archivos:** `app/api/asistente/token/route.ts`, `workers/sociologia/src/skills/sociological-analysis.ts`, `lib/security.ts`, `app/api/admin/login/route.ts`, `.gitignore`
+**Correcciones:**
+1. Eliminado fallback a `PREMIUM_TOKEN` en endpoint de token premium — cerraba ruta de auth alternativa
+2. Output validation en skill IA — detecta y bloquea leakage del system prompt
+3. 6 patrones headless browser añadidos a `BOT_UA_PATTERNS` (HeadlessChrome, PhantomJS, Selenium, WebDriver, Puppeteer, Playwright)
+4. 14 scan paths nuevos (`.git/config`, `/debug`, `/telescope`, `/api/env`, etc.)
+5. Sesión admin reducida de 7 días → 24 horas
+6. `.gitignore` protege `.mcp.json` y `.claude/settings.local.json`
+**Commit:** `7cc31ab`
+
+---
+
+### [SECURITY] Upgrade Next.js 14.2.29 → 15.5.18 + React 19 (17 CVEs HIGH)
+
+**Archivos:** `package.json`, 15 archivos de rutas dinámicas
+**Problema:** `next@14.2.29` tenía 18 CVEs HIGH. El upgrade requirió migrar todos los `params` de rutas dinámicas a `Promise<{...}>` (cambio breaking en Next.js 15). `cookies()` también pasó a ser async.
+**Archivos migrados:**
+- 4 page components: `categorias/[slug]`, `publicaciones/[slug]`, `publicaciones/[slug]/pdf`, `recursos/[slug]`
+- 3 admin pages: `admin/editar/[id]`, `admin/recursos/editar/[id]`, `comics/[slug]`
+- 8 API routes handlers: publicaciones/[id], comics/[id], comics/[id]/paginas, comics/[id]/presigned-url, comentarios/[id], recursos/[id], recursos/[slug]/descargar, recursos/[slug]/html
+- 3 cookies() await: login, logout, admin/publicaciones
+**CVEs resueltos:** 17 HIGH. Queda 1 MODERATE en postcss (devDep, sin impacto en producción).
+**Commit:** `46ba9ff`
+
+---
+
+### [SECURITY] Auditoría fase 2 — 3 correcciones
+
+**Archivos:** `lib/security.ts`, `app/api/admin/upload-docx/route.ts`, `app/api/track/route.ts`
+**Correcciones:**
+1. IPs en `EventoSeguridad` ahora se hashean con SHA-256 (Web Crypto API, compatible con Edge Runtime) antes de guardar — privacidad de usuarios sin romper correlación de eventos
+2. Magic bytes DOCX: valida firma ZIP (`PK\x03\x04`) antes de procesar con mammoth — previene procesamiento de archivos malformados disfrazados de .docx
+3. Rate limit en `/api/track`: 60 req/15min por IP, fail-open para no bloquear tráfico legítimo
+**Commit:** `95bbb1b`
+
+---
+
+### [FEAT] Limpieza corpus D1 — de 1,287 a 804 documentos
+
+**Base de datos:** Cloudflare D1 `llm_sociolog`
+**Operaciones realizadas:**
+- Eliminados duplicados exactos (mismo texto, títulos con sufijos numéricos)
+- Eliminados documentos mal formateados, ilegibles o con garbage text
+- Eliminados documentos fuera del alcance temático (ciencias sociales latinoamericanas)
+- Renombrados 28 títulos confusos/crípticos con nombres descriptivos
+- FTS5 (`documentos_fts`) reconstruido tras la limpieza
+**Resultado:** 483 documentos eliminados (38% del corpus). 804 restantes + 15 publicaciones del sitio.
+
+---
+
 ## HISTORIAL DE COMMITS (se actualiza con cada commit)
 
 | Fecha | Hash | Descripción | Estado |
@@ -259,6 +315,9 @@ Archivo de trazabilidad de cambios críticos. Cada entrada tiene fecha, commit h
 | 2026-05-25 | 57781c2 | chore: sincronizar package-lock.json con next@14.2.29 | ✅ |
 | 2026-05-25 | 2a0df77 | feat: endpoint POST /api/admin/sync-d1-all — sincronización masiva a D1 | ✅ |
 | 2026-05-25 | 70354be | feat: botón sync artículos al asistente IA en panel admin | ✅ |
+| 2026-05-25 | 7cc31ab | security: auditoría fase 1 — 6 correcciones críticas/altas/medias | ✅ |
+| 2026-05-25 | 46ba9ff | upgrade Next.js 14→15 + fix async params/cookies API (17 CVEs corregidos) | ✅ |
+| 2026-05-25 | 95bbb1b | security phase 2: IP hashing, DOCX magic bytes, track rate limit | ✅ |
 
 ---
 

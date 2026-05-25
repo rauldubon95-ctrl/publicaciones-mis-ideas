@@ -10,7 +10,7 @@ Léelo completo antes de tocar cualquier archivo del proyecto.
 Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics y un asistente de IA sobre ciencias sociales latinoamericanas.
 
 **Stack:**
-- Frontend: Next.js 14.2.29 (App Router) desplegado en Vercel
+- Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma
 - Storage de imágenes: Supabase Storage (bucket `comics`)
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
@@ -24,7 +24,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 | Componente | Estado | Notas |
 |---|---|---|
-| ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main`, commit `70354be` |
+| ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main`, commit `95bbb1b`. Next.js 15.5.18 + React 19.1.0 |
 | ✅ Cloudflare Worker v3 (FTS5 + SkillRegistry + Sync) | **PRODUCCIÓN** | Desplegado via Git integration. root dir: `workers/sociologia`. Auto-deploy en cada push a `main` que toque esa carpeta. |
 | ✅ Skill `sociological-analysis` en chat principal | Producción | Toda consulta con docs usa el prompt estructurado de la skill. Reduce alucinaciones. Admin usa `depth=deep`. |
 | ✅ Sistema de premium token (admin sin límite) | Funcionando | HMAC(ADMIN_SECRET, "premium-bypass-v1") — sin KV, sin variables extra |
@@ -37,6 +37,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ❌ Sistema de agentes multi-Worker | Solo documentación | ARQUITECTURA.md §6 es visión futura, no existe código |
 | ✅ Fix esScanPath (404 en artículos) | Producción | `startsWith()` — slugs con "eval" ya no dan 404 |
 | ✅ Fix auth bypass (POST /api/publicaciones) | Producción | `await verifySessionToken()` corregido |
+| ✅ Security hardening — Fase 1 | Producción | PREMIUM_TOKEN eliminado, output validation IA, bot detection, scan paths, sesión 24h, .gitignore |
+| ✅ Security hardening — Fase 2 | Producción | IPs hasheadas en EventoSeguridad, magic bytes DOCX, rate limit /api/track |
 | ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
 
 ---
@@ -102,7 +104,7 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(
 
 **IMPORTANTE:** Los archivos en `migrations/d1/` describen una arquitectura futura con tablas `documents` y `doc_chunks`. Son incompatibles con la DB en producción. No ejecutar esos scripts contra `llm_sociolog`.
 
-Actualmente hay **1,288 documentos** del corpus académico + los artículos del sitio sincronizados via `/sync` (con `tipo='publicacion'`).
+Actualmente hay **804 documentos** del corpus académico (limpiados en sesión 5: de 1,287 → 804, se eliminaron duplicados y documentos mal formateados) + los artículos del sitio sincronizados via `/sync` (con `tipo='publicacion'`). FTS5 reconstruido tras la limpieza.
 
 ---
 
@@ -177,11 +179,12 @@ EventoSeguridad → log de eventos de seguridad
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| Limpieza del corpus D1 | 1,288 documentos sin curar. Algunos mal formateados o irrelevantes causan alucinaciones incluso con la skill activa. Limpiar la DB es el próximo paso de mayor impacto. | **Alta** |
+| Más limpieza del corpus D1 | 804 documentos restantes. Aun hay documentos de baja calidad. Continuar en sesiones siguientes con criterios más finos. | **Alta** |
+| Revocación de sesiones admin | Tokens HMAC estáticos: `HMAC(ADMIN_SECRET, "admin-session-v1")` produce el mismo token siempre. No hay forma de revocar una sesión sin cambiar `ADMIN_SECRET`. Considerar `jti` + tabla de sesiones activas. | Media |
+| CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Requiere migrar estilos inline (pdf/page.tsx tiene `<style>` embebido). | Media |
 | Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere `wrangler vectorize create` + pipeline de embeddings (`embed-worker.ts` ya existe). Sin esto, retrieval es solo FTS5+LIKE. | Media |
 | Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. El dashboard de observabilidad planificado requiere D1. | Media |
 | CF_API_TOKEN con restricción de IP | GitHub Actions no puede deployar el Worker. Crear nuevo token sin restricción de IP si se quiere restaurar deploy via Actions. Por ahora, Git integration de Cloudflare lo cubre. | Baja |
-| CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Contradice "CSP estricta". | Baja |
 | `config/prompts/v1.1.txt` desconectado | Worker usa SYSTEM_PROMPT hardcodeado en `prompts.ts`, no este archivo. | Baja |
 | ARQUITECTURA.md mezcla producción y visión | §2-§18 describen arquitectura futura, no actual. Confunde a sesiones IA. | Documental |
 | Solo 1 skill implementada | `sociological-analysis` es la única skill. La visión contempla múltiples skills especializadas. | Futura |
@@ -199,6 +202,7 @@ EventoSeguridad → log de eventos de seguridad
 7. **No hardcodear secretos en archivos** — usar siempre `${{ secrets.NOMBRE }}` en workflows y `process.env.NOMBRE` en código.
 8. **Si `ADMIN_SECRET` cambia**, actualizar en: (a) Vercel env vars, (b) Worker secret en Cloudflare. No hay KV ni PREMIUM_TOKEN que tocar.
 9. **El chat usa la skill en TODAS las respuestas con docs** — No llamar al LLM directamente desde `index.ts`. El prompt estructurado de la skill es el único punto de generación.
+10. **Next.js 15 — params y cookies son async** — En rutas dinámicas, `params` es `Promise<{...}>` y debe ser `await`eado. `cookies()` también devuelve una `Promise` y debe ser `await`eada. Toda función que recibe `params` o llama a `cookies()` debe ser `async`.
 
 ---
 
@@ -244,14 +248,15 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Skill system modular | ✅ En producción | Solo 1 skill. Faltan skills de análisis histórico, político, etc. |
 | Skill integrada en chat principal | ✅ En producción | La skill ya reduce alucinaciones en el chat |
 | Sync bidireccional con Supabase | ✅ En producción | — |
-| Corpus curado de calidad | ❌ Pendiente | **Próximo paso más impactante** — 1,288 docs sin filtrar |
+| Corpus curado de calidad | 🔄 En progreso | 804 docs (limpiado de 1,287). Continuar en próximas sesiones. |
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
-| Security hardening | ✅ Mayormente listo | 15 vulnerabilidades corregidas, HMAC auth, rate limiting |
+| Security hardening | ✅ Completo (fase 1+2) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h |
 
-**Próximo paso recomendado:** Limpieza del corpus D1. Es el cambio de mayor impacto para la calidad del asistente sin requerir nueva infraestructura. Eliminar documentos mal formateados, duplicados o fuera de alcance temático.
+**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones.
 
 ---
 
-*Última actualización: 2026-05-25 (sesión 4 — skill en chat principal, sync masivo, UX 1500 chars, Git integration Cloudflare)*
+*Última actualización: 2026-05-25 (sesión 5 — upgrade Next.js 15.5.18 + React 19, 17 CVEs corregidos, security hardening fase 1+2, limpieza corpus D1 de 1,287→804 docs)*
+*Commit activo: `95bbb1b`*
 *Rama activa: `main`*
