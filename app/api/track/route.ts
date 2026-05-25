@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimitDb, getIp } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +25,16 @@ function hashIp(ip: string, contenidoId: string): string {
 const VENTANA_MS = 4 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
+  const ip = getIp(req);
+  const rate = await checkRateLimitDb(ip, "track", {
+    maxIntentos: 60,
+    ventanaMs: 15 * 60 * 1000,
+    failBehavior: "open",
+  });
+  if (!rate.permitido) {
+    return NextResponse.json({ ok: false }, { status: 429 });
+  }
+
   try {
     const body = await req.json() as {
       tipo?: string;
@@ -39,10 +50,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    const ip = req.headers.get("x-vercel-forwarded-for")
-      ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
-      ?? req.headers.get("x-real-ip")
-      ?? "unknown";
     const pais = req.headers.get("x-vercel-ip-country") ?? null;
     const ua = req.headers.get("user-agent") ?? "";
     const dispositivo = detectarDispositivo(ua);

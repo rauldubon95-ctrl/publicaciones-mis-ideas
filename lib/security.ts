@@ -29,6 +29,13 @@ export function getIp(req: NextRequest): string {
 // ──────────────────────────────────────────
 // Registro de evento de seguridad
 // ──────────────────────────────────────────
+async function hashIpForLog(ip: string): Promise<string> {
+  if (ip === "unknown") return "unknown";
+  const data = new TextEncoder().encode(ip);
+  const buf = await globalThis.crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
 export async function registrarEvento(
   tipo: TipoEvento,
   ip: string,
@@ -39,7 +46,7 @@ export async function registrarEvento(
     await prisma.eventoSeguridad.create({
       data: {
         tipo,
-        ip,
+        ip: await hashIpForLog(ip),
         ruta: ruta ?? null,
         detalles: detalles ? JSON.stringify(detalles) : null,
       },

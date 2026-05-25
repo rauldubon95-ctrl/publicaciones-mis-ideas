@@ -39,8 +39,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ contenido: markdown, titulo });
   }
 
-  // Archivos Word: convertir HTML → Markdown
-  const buffer = Buffer.from(await file.arrayBuffer());
+  // Archivos Word: verificar magic bytes (DOCX = ZIP = PK\x03\x04) antes de procesar
+  const rawBuffer = await file.arrayBuffer();
+  const magic = new Uint8Array(rawBuffer, 0, 4);
+  if (magic[0] !== 0x50 || magic[1] !== 0x4B || magic[2] !== 0x03 || magic[3] !== 0x04) {
+    return NextResponse.json({ error: "Archivo inválido — no es un .docx real" }, { status: 400 });
+  }
+  const buffer = Buffer.from(rawBuffer);
 
   const result = await mammoth.convertToHtml(
     { buffer },
