@@ -15,21 +15,37 @@ async function hmacHex(secret: string, message: string): Promise<string> {
     .join("");
 }
 
-export async function createSessionToken(secret: string): Promise<string> {
-  return hmacHex(secret, "admin-session-v1");
+// Formato del cookie: "v2.{jti}.{hmac}"
+// jti = UUID v4 (sin puntos), hmac = HMAC(secret, "v2." + jti)
+export async function createSessionToken(
+  secret: string
+): Promise<{ token: string; jti: string }> {
+  const jti = crypto.randomUUID();
+  const sig = await hmacHex(secret, "v2." + jti);
+  return { token: `v2.${jti}.${sig}`, jti };
 }
 
+// Extrae el jti si la firma HMAC es válida; retorna false si no
+export async function parseSessionToken(
+  cookieValue: string,
+  secret: string
+): Promise<string | false> {
+  if (!cookieValue.startsWith("v2.")) return false;
+  const secondDot = cookieValue.indexOf(".", 3);
+  if (secondDot === -1) return false;
+  const jti = cookieValue.slice(3, secondDot);
+  const sig = cookieValue.slice(secondDot + 1);
+  if (!jti || !sig) return false;
+  const expected = await hmacHex(secret, "v2." + jti);
+  return safeCompare(sig, expected) ? jti : false;
+}
+
+// Mantiene la interfaz boolean para el middleware (Edge runtime, sin DB)
 export async function verifySessionToken(
   cookieValue: string,
   secret: string
 ): Promise<boolean> {
-  const expected = await createSessionToken(secret);
-  if (cookieValue.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
+  return (await parseSessionToken(cookieValue, secret)) !== false;
 }
 
 export function safeCompare(a: string, b: string): boolean {
