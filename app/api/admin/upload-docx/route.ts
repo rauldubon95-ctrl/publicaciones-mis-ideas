@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySessionToken } from "@/lib/auth";
+import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import mammoth from "mammoth";
 import TurndownService from "turndown";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const secret = process.env.ADMIN_SECRET;
-  const token = cookieStore.get("admin_auth")?.value;
-  if (!secret || !token || !(await verifySessionToken(token, secret))) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
   let formData: FormData;
   try {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeCompare } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   // Protección con token interno — solo el middleware puede llamar este endpoint
   const token = req.headers.get("x-internal-token");
   const esperado = process.env.INTERNAL_EVENT_TOKEN;
-  if (!esperado || !token || token !== esperado) {
+  if (!esperado || !token || !safeCompare(token, esperado)) {
     return new NextResponse(null, { status: 204 });
   }
 

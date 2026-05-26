@@ -247,3 +247,12 @@ model SolicitudCotizacion {
   @@index([estado])
   @@index([creadoAt])
 }
+
+model SesionAdmin {
+  jti        String    @id
+  creadaAt   DateTime  @default(now())
+  expiraAt   DateTime
+  revocadaAt DateTime?
+
+  @@index([expiraAt])
+}

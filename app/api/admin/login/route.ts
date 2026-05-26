@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { safeCompare, createSessionToken } from "@/lib/auth";
 import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -51,7 +52,13 @@ export async function POST(req: NextRequest) {
 
   await registrarEvento("LOGIN_EXITOSO", ip, "/api/admin/login");
 
-  const sessionToken = await createSessionToken(secret);
+  const { token: sessionToken, jti } = await createSessionToken(secret);
+  await prisma.sesionAdmin.create({
+    data: {
+      jti,
+      expiraAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
 
   const cookieStore = await cookies();
   cookieStore.set("admin_auth", sessionToken, {

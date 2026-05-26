@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeCompare } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,7 @@ export async function GET(req: NextRequest) {
   // Solo accesible con token interno o desde Vercel Cron
   const token = req.headers.get("x-health-token");
   const esperado = process.env.HEALTH_TOKEN;
-  if (!esperado || !token || token !== esperado) {
+  if (!esperado || !token || !safeCompare(token, esperado)) {
     return NextResponse.json({ status: "ok" });
   }
 
