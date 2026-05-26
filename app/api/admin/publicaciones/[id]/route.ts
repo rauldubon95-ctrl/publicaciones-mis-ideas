@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySessionToken } from "@/lib/auth";
+import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
 import { syncPublicacionToD1 } from "@/lib/d1Sync";
 
-async function isAuthorized(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const secret = process.env.ADMIN_SECRET;
-  const token = cookieStore.get("admin_auth")?.value;
-  if (!secret || !token) return false;
-  return await verifySessionToken(token, secret);
-}
-
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthorized())) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!(await isAdminAuthorized())) return unauthorizedResponse();
   const { id } = await params;
 
   let body: unknown;
@@ -97,9 +86,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthorized())) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!(await isAdminAuthorized())) return unauthorizedResponse();
   const { id } = await params;
 
   await prisma.publicacion.delete({ where: { id } });
