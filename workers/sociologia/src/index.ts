@@ -8,14 +8,18 @@ import { analizarInyeccion } from "./security";
 import { recuperarDocumentos } from "./retrieval";
 import { extraerFuentesTitulos, esSaludo } from "./prompts";
 import { checkRateLimit, validarTokenPremium, contarTokens } from "./ratelimit";
-import { emitirEvento } from "./telemetry";
+import { emitirEvento, handleTelemetriaRequest } from "./telemetry";
 import { handleEmbedRequest } from "./embed-worker";
 import { SkillRegistry } from "./skills/registry";
 import { SociologicalAnalysisSkill } from "./skills/sociological-analysis";
+import { HistoricalAnalysisSkill } from "./skills/historical-analysis";
+import { PoliticalAnalysisSkill } from "./skills/political-analysis";
 import { handleSyncRequest } from "./sync";
 
 const skillRegistry = new SkillRegistry();
 skillRegistry.register(new SociologicalAnalysisSkill());
+skillRegistry.register(new HistoricalAnalysisSkill());
+skillRegistry.register(new PoliticalAnalysisSkill());
 
 // Orígenes permitidos (mismos que el Worker v1)
 const ORIGENES_PERMITIDOS = [
@@ -43,11 +47,16 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
+    const pathname = new URL(request.url).pathname;
+
+    // ── Telemetría (GET, autenticado) ────────────────────────
+    if (pathname === "/telemetria" || pathname.endsWith("/telemetria")) {
+      return handleTelemetriaRequest(request, env, CORS);
+    }
+
     if (request.method !== "POST") {
       return resp({ error: "Método no permitido" }, 405, CORS);
     }
-
-    const pathname = new URL(request.url).pathname;
 
     // ── Sync Supabase → D1 (server-to-server, no rate limit) ─
     if (pathname === "/sync" || pathname.endsWith("/sync")) {
@@ -165,7 +174,7 @@ export default {
       return resp(sinFuentes, 200, CORS, traceId);
     }
 
-    // ── 8-11. Análisis via skill (grounding enforced, menos alucinación) ─
+    // ── 8-11. Análisis via skill (routing automático por dominio) ──
     const tokensEntrada = contarTokens(pregunta + docs.map((d) => d.texto).join(" "));
     let respuestaLLM: string;
     let groundingRatio: number;
@@ -174,8 +183,9 @@ export default {
     let tokensSalida: number;
 
     try {
+      const skillElegida = detectarSkill(pregunta);
       const skillResult = await skillRegistry.execute(
-        "sociological-analysis",
+        skillElegida,
         { query: pregunta, context: docs, depth: esPremium ? "deep" : "standard" },
         env
       );
@@ -316,6 +326,32 @@ async function handleSkillRequest(
   } catch (err) {
     return resp({ error: String(err) }, 500, CORS, traceId);
   }
+}
+
+// Detecta el dominio académico de la pregunta y elige la skill más adecuada.
+// Usa scoring por keywords — sin LLM, sin latencia extra.
+function detectarSkill(pregunta: string): string {
+  const lower = pregunta.toLowerCase();
+
+  const kHistorico = [
+    "historia", "históric", "período", "siglo", "coloni", "independenci",
+    "revolución", "dictadura", "golpe de estado", "transición democrática",
+    "1800", "1900", "siglo xix", "siglo xx", "guerra civil", "caudillo",
+    "liberalism", "oligarqu", "reforma agrar", "industrializac",
+  ];
+  const kPolitico = [
+    "polític", "partido", "gobierno", "democracia", "elecciones", "estado",
+    "régimen", "movimiento social", "hegemonía", "populismo", "autoritarismo",
+    "soberanía", "legislativo", "ejecutivo", "judicial", "izquierda", "derecha",
+    "neoliberal", "sociedad civil", "ciudadanía", "poder político",
+  ];
+
+  const scoreH = kHistorico.filter((kw) => lower.includes(kw)).length;
+  const scoreP = kPolitico.filter((kw) => lower.includes(kw)).length;
+
+  if (scoreH >= 2 && scoreH > scoreP) return "historical-analysis";
+  if (scoreP >= 2 && scoreP > scoreH) return "political-analysis";
+  return "sociological-analysis";
 }
 
 function resp(

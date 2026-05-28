@@ -16,6 +16,7 @@ on:
 permissions:
   issues: write
   contents: read
+  models: read
 
 jobs:
   revisar:
