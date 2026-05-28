@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       // Bloquea scripts, acceso al DOM padre y cualquier recurso externo no declarado
-      "Content-Security-Policy": "default-src 'self' 'unsafe-inline'; script-src 'none'; object-src 'none'; base-uri 'none';",
+      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; object-src 'none'; base-uri 'none';",
       "X-Frame-Options": "SAMEORIGIN",
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "no-referrer",

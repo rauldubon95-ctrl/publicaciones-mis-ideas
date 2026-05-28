@@ -92,6 +92,9 @@ export default function AdminPage() {
           <Link href="/admin/observabilidad" className="btn-secondary">
             IA Observabilidad
           </Link>
+          <Link href="/admin/tableros" className="btn-secondary">
+            Dashboards
+          </Link>
           <Link href="/admin/seguridad" className="btn-secondary">
             Seguridad
           </Link>

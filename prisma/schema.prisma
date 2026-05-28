@@ -248,6 +248,23 @@ model SolicitudCotizacion {
   @@index([creadoAt])
 }
 
+model Tablero {
+  id            String   @id @default(cuid())
+  titulo        String
+  slug          String   @unique
+  descripcion   String?
+  categoria     String?
+  archivoUrl    String   // URL pública en Supabase Storage
+  archivoNombre String   // Nombre original del archivo .xlsx
+  preview       String   @db.Text // JSON: {sheetName, headers, rows, totalRows}
+  publicado     Boolean  @default(false)
+  orden         Int      @default(0)
+  creadoAt      DateTime @default(now())
+  actualizadoAt DateTime @updatedAt
+
+  @@index([publicado, orden])
+}
+
 model SesionAdmin {
   jti        String    @id
   creadaAt   DateTime  @default(now())

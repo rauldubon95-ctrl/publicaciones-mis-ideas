@@ -8,6 +8,7 @@ const nav = [
   { href: "/publicaciones", label: "Publicaciones" },
   { href: "/recursos", label: "Recursos" },
   { href: "/comics", label: "Cómics" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/servicios", label: "Consultoría" },
 ];
 

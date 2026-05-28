@@ -53,18 +53,18 @@ export default async function RecursoPage({ params }: Props) {
         </div>
       </header>
 
-      {/* Visor HTML — iframe completamente sandboxed */}
+      {/* Visor HTML — iframe con scripts habilitados (HTML propio del autor) */}
       <div className="border border-zinc-200 bg-white overflow-hidden" style={{ height: "75vh" }}>
         <iframe
           src={`/api/recursos/${slug}/html`}
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts allow-forms"
           className="w-full h-full border-0"
           title={recurso.titulo}
         />
       </div>
 
       <p className="text-xs text-zinc-300 mt-2 text-center">
-        Los scripts están desactivados por seguridad · Solo lectura
+        Contenido interactivo · Solo lectura
       </p>
     </div>
   );
