@@ -217,14 +217,21 @@ async function main() {
   }
 
   console.log(`📊 Analizando ${diff.split("\n").length} líneas de diff...`);
-  const respuesta = await llamarModelo(diff, archivos);
+
+  let respuesta;
+  try {
+    respuesta = await llamarModelo(diff, archivos);
+  } catch (err) {
+    console.error(`⚠️ Error al llamar al modelo IA: ${err.message}`);
+    console.log("La revisión no pudo completarse, pero el workflow continúa.");
+    return;
+  }
 
   const mejoras = parsearMejoras(respuesta);
   console.log(`\n💡 ${mejoras.length} mejoras encontradas\n`);
 
   for (let i = 0; i < mejoras.length; i++) {
     await crearIssue(mejoras[i], i + 1);
-    // Pequeña pausa para no saturar la API de GitHub
     await new Promise(r => setTimeout(r, 500));
   }
 

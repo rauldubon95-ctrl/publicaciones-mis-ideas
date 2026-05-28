@@ -39,6 +39,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Fix auth bypass (POST /api/publicaciones) | Producción | `await verifySessionToken()` corregido |
 | ✅ Security hardening — Fase 1 | Producción | PREMIUM_TOKEN eliminado, output validation IA, bot detection, scan paths, sesión 24h, .gitignore |
 | ✅ Security hardening — Fase 2 | Producción | IPs hasheadas en EventoSeguridad, magic bytes DOCX, rate limit /api/track |
+| ✅ Security hardening — Fase 3 | Producción | RLS en 18 tablas Supabase, políticas mínimas de acceso, función search_path fijo, bucket listing eliminado, IDs Cloudflare removidos de CLAUDE.md |
 | ✅ Paginación dinámica home + /publicaciones | Rama feature | 4/página en home (searchParams), 8/página en /publicaciones. Componente `Paginacion.tsx` reutilizable. |
 | ✅ Sección Servicios de Consultoría | Rama feature | `/servicios` + modal cotización + APIs CRUD admin + modelos Servicio/SolicitudCotizacion en Supabase |
 | ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
@@ -67,8 +68,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 | Variable/Binding | Tipo | Descripción |
 |---|---|---|
-| `DB` | D1 binding | `llm_sociolog` (ID: `ea9cad56-9b03-4af7-b15b-4e923bbc66c7`) |
-| `RATE_LIMIT` | KV binding | `RATE_LIMIT` (ID: `2f279c63ddbf45f19aaf55a02d290b47`) |
+| `DB` | D1 binding | `llm_sociolog` — ID en `workers/sociologia/wrangler.toml` |
+| `RATE_LIMIT` | KV binding | Namespace `RATE_LIMIT` — ID en `workers/sociologia/wrangler.toml` |
 | `AI` | Workers AI binding | Modelo `@cf/meta/llama-3.1-8b-instruct` |
 | `ADMIN_SECRET` | Worker secret | Mismo valor que en Vercel — valida token premium Y autentica `/sync` |
 
@@ -77,7 +78,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | Secret | Descripción |
 |---|---|
 | `CF_API_TOKEN` | API token de Cloudflare (con restricción de IP activa — NO funciona desde GitHub Actions) |
-| `CF_ACCOUNT_ID` | Account ID de Cloudflare (`bd4339c839af269af51cdc263cd45588`) |
+| `CF_ACCOUNT_ID` | Account ID de Cloudflare — configurado como GitHub Secret, nunca hardcodear aquí |
 
 **Nota:** El deploy del Worker ya no depende de GitHub Actions. La integración Git de Cloudflare (root: `workers/sociologia`) maneja el auto-deploy al pushear a `main`.
 
@@ -266,12 +267,12 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Corpus curado de calidad | 🔄 En progreso | 804 docs (limpiado de 1,287). Continuar en próximas sesiones. |
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
-| Security hardening | ✅ Completo (fase 1+2) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h |
+| Security hardening | ✅ Completo (fase 1+2+3) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h, RLS 18 tablas Supabase, bucket listing bloqueado |
 
 **Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones. Para la sección de servicios: agregar los servicios desde `/admin/servicios`.
 
 ---
 
-*Última actualización: 2026-05-25 (sesión 6 — paginación dinámica home+/publicaciones, sección Servicios/Consultoría con CRUD admin, modelos Servicio/SolicitudCotizacion en Supabase, seguridad cotizaciones: rate limit + honeypot + sanitización)*
-*Commit activo: (sesión 6 — ver rama `claude/eager-mccarthy-4iwHN`)*
-*Rama activa: `claude/eager-mccarthy-4iwHN`*
+*Última actualización: 2026-05-28 (sesión 7 — security hardening fase 3: RLS habilitado en 9 tablas + políticas adecuadas, políticas para 6 tablas sin cobertura, función update_actualizado_at con search_path fijo, política de listado de bucket comics eliminada, IDs de Cloudflare removidos de CLAUDE.md, manejo de errores en code-review.yml)*
+*Commit activo: (sesión 7 — ver rama `claude/magical-ritchie-FKB4d`)*
+*Rama activa: `claude/magical-ritchie-FKB4d`*
