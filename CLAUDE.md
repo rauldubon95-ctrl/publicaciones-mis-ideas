@@ -9,6 +9,9 @@ Léelo completo antes de tocar cualquier archivo del proyecto.
 
 Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics y un asistente de IA sobre ciencias sociales latinoamericanas.
 
+**Dominio:** `rauldubon.org` (comprado en Cloudflare — pendiente de conectar a Vercel)
+**Marca:** "Raúl Dubón" (reemplazó "Mis Ideas" en sesión 8)
+
 **Stack:**
 - Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma
@@ -16,7 +19,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `main` (sin feature branch activa al cierre de sesión 2026-05-25)
+**Rama de desarrollo activa:** `claude/fervent-feynman-Moqn8` (sesión 8)
 
 ---
 
@@ -196,8 +199,9 @@ SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
 | Item | Detalle | Prioridad |
 |---|---|---|
 | Más limpieza del corpus D1 | 804 documentos restantes. Aun hay documentos de baja calidad. Continuar en sesiones siguientes con criterios más finos. | **Alta** |
-| Revocación de sesiones admin | Tokens HMAC estáticos: `HMAC(ADMIN_SECRET, "admin-session-v1")` produce el mismo token siempre. No hay forma de revocar una sesión sin cambiar `ADMIN_SECRET`. Considerar `jti` + tabla de sesiones activas. | Media |
-| CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Requiere migrar estilos inline (pdf/page.tsx tiene `<style>` embebido). | Media |
+| ~~Revocación de sesiones admin~~ | **YA IMPLEMENTADO** — `sesionAdmin` table en Prisma con `jti`, `revocadaAt` y `expiraAt`. Logout hace UPDATE `revocadaAt`. `adminAuth.ts` verifica ambos. CLAUDE.md tenía info desactualizada. | ✅ Resuelto |
+| CSP con `unsafe-inline` en script-src | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware Next.js. `style-src` también tiene unsafe-inline por el `<style>` embebido en `pdf/page.tsx`. | **Alta** |
+| `xlsx` vulnerabilidad HIGH sin fix | `app/api/admin/tableros/route.ts` usa `xlsx` (sheetJS). Prototype Pollution + ReDoS. Sin fix disponible en npm. Solo accesible por admin auth. Considerar reemplazar con `exceljs`. | Media |
 | Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere `wrangler vectorize create` + pipeline de embeddings (`embed-worker.ts` ya existe). Sin esto, retrieval es solo FTS5+LIKE. | Media |
 | Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. El dashboard de observabilidad planificado requiere D1. | Media |
 | CF_API_TOKEN con restricción de IP | GitHub Actions no puede deployar el Worker. Crear nuevo token sin restricción de IP si se quiere restaurar deploy via Actions. Por ahora, Git integration de Cloudflare lo cubre. | Baja |
@@ -268,11 +272,14 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
 | Security hardening | ✅ Completo (fase 1+2+3) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h, RLS 18 tablas Supabase, bucket listing bloqueado |
+| Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
 
-**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones. Para la sección de servicios: agregar los servicios desde `/admin/servicios`.
+**Próximo paso recomendado:** Conectar dominio rauldubon.org a Vercel. Actualizar NEXT_PUBLIC_APP_URL en Vercel una vez conectado. Ver guía en la respuesta de la sesión 8.
+
+**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 
 ---
 
-*Última actualización: 2026-05-28 (sesión 7 — security hardening fase 3: RLS habilitado en 9 tablas + políticas adecuadas, políticas para 6 tablas sin cobertura, función update_actualizado_at con search_path fijo, política de listado de bucket comics eliminada, IDs de Cloudflare removidos de CLAUDE.md, manejo de errores en code-review.yml)*
-*Commit activo: (sesión 7 — ver rama `claude/magical-ritchie-FKB4d`)*
-*Rama activa: `claude/magical-ritchie-FKB4d`*
+*Última actualización: 2026-05-30 (sesión 8 — cambio de marca a Raúl Dubón, auditoría de seguridad, guía dominio rauldubon.org)*
+*Commit activo: (sesión 8 — ver rama `claude/fervent-feynman-Moqn8`)*
+*Rama activa: `claude/fervent-feynman-Moqn8`*

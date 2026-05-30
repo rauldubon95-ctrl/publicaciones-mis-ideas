@@ -21,11 +21,12 @@ skillRegistry.register(new SociologicalAnalysisSkill());
 skillRegistry.register(new HistoricalAnalysisSkill());
 skillRegistry.register(new PoliticalAnalysisSkill());
 
-// Orígenes permitidos (mismos que el Worker v1)
+// Orígenes permitidos
 const ORIGENES_PERMITIDOS = [
+  "https://rauldubon.org",
+  "https://www.rauldubon.org",
   "https://publicaciones-mis-ideas.vercel.app",
   "http://localhost:3000",
-  "https://mis-ideas.vercel.app",
 ];
 
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";

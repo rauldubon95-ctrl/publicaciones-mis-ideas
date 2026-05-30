@@ -44,7 +44,7 @@ export default async function HomePage({
       {paginaSegura === 1 && (
         <section className="mb-16 border-b border-zinc-200 pb-12">
           <h1 className="text-5xl font-serif font-semibold text-zinc-900 mb-4 leading-tight">
-            Mis Ideas
+            Raúl Dubón
           </h1>
           <p className="text-base text-zinc-500 max-w-xl leading-relaxed">
             Un espacio para divulgar reflexiones, proyectos e ideas que vale la pena compartir.

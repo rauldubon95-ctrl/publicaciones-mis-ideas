@@ -5,12 +5,12 @@ import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
 
 export const metadata: Metadata = {
-  title: { default: "Mis Ideas", template: "%s | Mis Ideas" },
-  description: "Espacio de divulgación de reflexiones, proyectos e ideas",
+  title: { default: "Raúl Dubón", template: "%s | Raúl Dubón" },
+  description: "Espacio de divulgación académica, proyectos e ideas de Raúl Dubón",
   openGraph: {
     type: "website",
     locale: "es_ES",
-    siteName: "Mis Ideas",
+    siteName: "Raúl Dubón",
   },
 };
 
