@@ -5,12 +5,16 @@ import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org"),
   title: { default: "Raúl Dubón", template: "%s | Raúl Dubón" },
   description: "Espacio de divulgación académica, proyectos e ideas de Raúl Dubón",
   openGraph: {
     type: "website",
     locale: "es_ES",
     siteName: "Raúl Dubón",
+  },
+  alternates: {
+    canonical: "/",
   },
 };
 
