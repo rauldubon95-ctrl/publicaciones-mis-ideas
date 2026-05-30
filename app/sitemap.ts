@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { slug: true, actualizadoAt: true },
   });
 
-  const recursos = await prisma.recurso.findMany({
+  const recursos = await prisma.recursoHtml.findMany({
     where: { publicado: true },
     select: { slug: true, actualizadoAt: true },
   });
