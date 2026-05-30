@@ -26,6 +26,7 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
       `connect-src 'self' https://${SUPABASE_HOST} https://sociologia.raul-dubon95.workers.dev`,
+      "frame-src 'self' https://view.officeapps.live.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
