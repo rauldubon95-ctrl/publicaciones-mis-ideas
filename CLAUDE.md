@@ -9,6 +9,9 @@ Léelo completo antes de tocar cualquier archivo del proyecto.
 
 Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics y un asistente de IA sobre ciencias sociales latinoamericanas.
 
+**Dominio:** `rauldubon.org` (comprado en Cloudflare — pendiente de conectar a Vercel)
+**Marca:** "Raúl Dubón" (reemplazó "Mis Ideas" en sesión 8)
+
 **Stack:**
 - Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma
@@ -16,7 +19,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `main` (sin feature branch activa al cierre de sesión 2026-05-25)
+**Rama de desarrollo activa:** `claude/fervent-feynman-Moqn8` (sesión 8)
 
 ---
 
@@ -268,11 +271,14 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
 | Security hardening | ✅ Completo (fase 1+2+3) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h, RLS 18 tablas Supabase, bucket listing bloqueado |
+| Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
 
-**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones. Para la sección de servicios: agregar los servicios desde `/admin/servicios`.
+**Próximo paso recomendado:** Conectar dominio rauldubon.org a Vercel. Actualizar NEXT_PUBLIC_APP_URL en Vercel una vez conectado. Ver guía en la respuesta de la sesión 8.
+
+**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 
 ---
 
-*Última actualización: 2026-05-28 (sesión 7 — security hardening fase 3: RLS habilitado en 9 tablas + políticas adecuadas, políticas para 6 tablas sin cobertura, función update_actualizado_at con search_path fijo, política de listado de bucket comics eliminada, IDs de Cloudflare removidos de CLAUDE.md, manejo de errores en code-review.yml)*
-*Commit activo: (sesión 7 — ver rama `claude/magical-ritchie-FKB4d`)*
-*Rama activa: `claude/magical-ritchie-FKB4d`*
+*Última actualización: 2026-05-30 (sesión 8 — cambio de marca a Raúl Dubón, auditoría de seguridad, guía dominio rauldubon.org)*
+*Commit activo: (sesión 8 — ver rama `claude/fervent-feynman-Moqn8`)*
+*Rama activa: `claude/fervent-feynman-Moqn8`*
