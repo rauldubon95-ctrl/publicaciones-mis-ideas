@@ -199,8 +199,9 @@ SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
 | Item | Detalle | Prioridad |
 |---|---|---|
 | Más limpieza del corpus D1 | 804 documentos restantes. Aun hay documentos de baja calidad. Continuar en sesiones siguientes con criterios más finos. | **Alta** |
-| Revocación de sesiones admin | Tokens HMAC estáticos: `HMAC(ADMIN_SECRET, "admin-session-v1")` produce el mismo token siempre. No hay forma de revocar una sesión sin cambiar `ADMIN_SECRET`. Considerar `jti` + tabla de sesiones activas. | Media |
-| CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Requiere migrar estilos inline (pdf/page.tsx tiene `<style>` embebido). | Media |
+| ~~Revocación de sesiones admin~~ | **YA IMPLEMENTADO** — `sesionAdmin` table en Prisma con `jti`, `revocadaAt` y `expiraAt`. Logout hace UPDATE `revocadaAt`. `adminAuth.ts` verifica ambos. CLAUDE.md tenía info desactualizada. | ✅ Resuelto |
+| CSP con `unsafe-inline` en script-src | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware Next.js. `style-src` también tiene unsafe-inline por el `<style>` embebido en `pdf/page.tsx`. | **Alta** |
+| `xlsx` vulnerabilidad HIGH sin fix | `app/api/admin/tableros/route.ts` usa `xlsx` (sheetJS). Prototype Pollution + ReDoS. Sin fix disponible en npm. Solo accesible por admin auth. Considerar reemplazar con `exceljs`. | Media |
 | Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere `wrangler vectorize create` + pipeline de embeddings (`embed-worker.ts` ya existe). Sin esto, retrieval es solo FTS5+LIKE. | Media |
 | Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. El dashboard de observabilidad planificado requiere D1. | Media |
 | CF_API_TOKEN con restricción de IP | GitHub Actions no puede deployar el Worker. Crear nuevo token sin restricción de IP si se quiere restaurar deploy via Actions. Por ahora, Git integration de Cloudflare lo cubre. | Baja |
