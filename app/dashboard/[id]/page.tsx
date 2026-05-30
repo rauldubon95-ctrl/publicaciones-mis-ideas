@@ -33,6 +33,7 @@ export default function TableroPage() {
   const [tablero, setTablero] = useState<Tablero | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [vista, setVista] = useState<"tabla" | "dashboard">("tabla");
 
   useEffect(() => {
     fetch(`/api/dashboard/${id}`)
@@ -89,7 +90,7 @@ export default function TableroPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 text-xs text-zinc-400">
             <span>{tablero.archivoNombre}</span>
-            {preview && (
+            {preview && vista === "tabla" && (
               <span>
                 {preview.totalRows > 500
                   ? `Mostrando 500 de ${preview.totalRows} filas`
@@ -110,8 +111,24 @@ export default function TableroPage() {
         </div>
       </header>
 
-      {/* Tabla */}
-      {preview ? (
+      {/* Toggle de vista */}
+      <div className="flex items-center gap-1 mb-5 bg-zinc-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setVista("tabla")}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "tabla" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+        >
+          Tabla de datos
+        </button>
+        <button
+          onClick={() => setVista("dashboard")}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "dashboard" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+        >
+          Dashboard (gráficas)
+        </button>
+      </div>
+
+      {/* Vista: Tabla */}
+      {vista === "tabla" && (preview ? (
         <div>
           {preview.sheetName && (
             <p className="text-xs text-zinc-400 mb-2">Hoja: <strong>{preview.sheetName}</strong></p>
@@ -154,6 +171,18 @@ export default function TableroPage() {
         </div>
       ) : (
         <p className="text-zinc-400 text-sm">Sin vista previa disponible.</p>
+      ))}
+
+      {/* Vista: Dashboard con Office Online */}
+      {vista === "dashboard" && (
+        <div className="border border-zinc-200 rounded-xl overflow-hidden" style={{ height: "75vh" }}>
+          <iframe
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(tablero.archivoUrl)}`}
+            className="w-full h-full border-0"
+            title={`${tablero.titulo} — Dashboard`}
+            allow="fullscreen"
+          />
+        </div>
       )}
     </div>
   );

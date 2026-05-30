@@ -24,7 +24,7 @@ export default async function RecursoPage({ params }: Props) {
   if (!recurso) notFound();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
@@ -53,8 +53,8 @@ export default async function RecursoPage({ params }: Props) {
         </div>
       </header>
 
-      {/* Visor HTML — iframe con scripts habilitados (HTML propio del autor) */}
-      <div className="border border-zinc-200 bg-white overflow-hidden" style={{ height: "75vh" }}>
+      {/* Visor HTML */}
+      <div className="border border-zinc-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 13rem)" }}>
         <iframe
           src={`/api/recursos/${slug}/html`}
           sandbox="allow-same-origin allow-scripts allow-forms"

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (
     typeof titulo !== "string" || !titulo.trim() || titulo.length > 200 ||
     typeof descripcion !== "string" || !descripcion.trim() ||
-    typeof contenido !== "string" || !contenido.trim() || contenido.length > 2_000_000
+    typeof contenido !== "string" || !contenido.trim() || contenido.length > 8_000_000
   ) {
     return NextResponse.json({ error: "Campos inválidos" }, { status: 400 });
   }

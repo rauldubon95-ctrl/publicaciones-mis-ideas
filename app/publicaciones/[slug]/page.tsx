@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import ReaccionButtons from "@/components/ReaccionButtons";
 import TrackView from "@/components/TrackView";
 import TarjetaAutor from "@/components/TarjetaAutor";
@@ -155,7 +156,22 @@ export default async function PublicacionPage({ params }: Props) {
 
       {/* Contenido */}
       <div className="prose prose-zinc prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700 max-w-none mb-12">
-        <ReactMarkdown>{publicacion.contenido}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            table: ({ ...props }) => (
+              <div className="overflow-x-auto my-6">
+                <table className="w-full text-sm border-collapse" {...props} />
+              </div>
+            ),
+            thead: ({ ...props }) => <thead className="bg-zinc-100" {...props} />,
+            th: ({ ...props }) => <th className="text-left px-4 py-2.5 font-semibold border border-zinc-200 text-zinc-700 text-xs uppercase tracking-wider" {...props} />,
+            td: ({ ...props }) => <td className="px-4 py-2 border border-zinc-200 text-zinc-600 align-top" {...props} />,
+            tr: ({ ...props }) => <tr className="even:bg-zinc-50" {...props} />,
+          }}
+        >
+          {publicacion.contenido}
+        </ReactMarkdown>
       </div>
 
       <hr className="border-zinc-100 mb-10" />
