@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getStripe } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Gracias por tu apoyo",
@@ -8,30 +8,27 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ id?: string }>;
 }
 
 export default async function GraciasPage({ searchParams }: Props) {
-  const { session_id } = await searchParams;
+  const { id } = await searchParams;
 
   let pagado = false;
   let monto = 0;
   let nombre = "";
 
-  if (session_id && /^cs_[a-zA-Z0-9_]+$/.test(session_id)) {
+  if (id && /^[a-z0-9]+$/.test(id)) {
     try {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(session_id);
-      pagado =
-        session.payment_status === "paid" ||
-        session.payment_status === "no_payment_required";
-      monto = session.amount_total ?? 0;
-      nombre =
-        session.customer_details?.name ??
-        (session.metadata?.nombre as string | undefined) ??
-        "";
+      const donacion = await prisma.donacion.update({
+        where: { id, estado: "PENDIENTE" },
+        data: { estado: "COMPLETADO" },
+      });
+      pagado = true;
+      monto = donacion.monto;
+      nombre = donacion.nombre ?? "";
     } catch {
-      // session_id inválido o expirado — no mostrar error crítico
+      // ID inválido o donación ya procesada
     }
   }
 
@@ -96,7 +93,7 @@ export default async function GraciasPage({ searchParams }: Props) {
       <p className="text-zinc-500 leading-relaxed mb-2">
         Tu donación de{" "}
         <span className="font-semibold text-zinc-800">${montoDolares} USD</span>{" "}
-        ha sido procesada con éxito.
+        ha sido procesada con éxito vía PayPal.
       </p>
       <p className="text-zinc-500 text-sm leading-relaxed mb-10">
         Tu contribución ayuda a mantener este espacio independiente y de

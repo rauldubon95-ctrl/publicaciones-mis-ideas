@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getStripe } from "@/lib/stripe";
 import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
@@ -60,9 +59,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const paypalEmail = process.env.PAYPAL_DONATION_EMAIL;
+  if (!paypalEmail) {
+    return NextResponse.json(
+      { error: "Método de pago no disponible en este momento." },
+      { status: 503 }
+    );
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-  // Crear registro PENDIENTE en DB antes de llamar a Stripe
   const donacion = await prisma.donacion.create({
     data: {
       monto,
@@ -73,50 +79,14 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const stripe = getStripe();
+  const montoDolares = (monto / 100).toFixed(2);
+  const paypalUrl = new URL("https://www.paypal.com/donate");
+  paypalUrl.searchParams.set("business", paypalEmail);
+  paypalUrl.searchParams.set("amount", montoDolares);
+  paypalUrl.searchParams.set("currency_code", "USD");
+  paypalUrl.searchParams.set("item_name", "Donación — Raúl Dubón");
+  paypalUrl.searchParams.set("return", `${appUrl}/donar/gracias?id=${donacion.id}`);
+  paypalUrl.searchParams.set("cancel_return", `${appUrl}/donar`);
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      currency: "usd",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: monto,
-            product_data: {
-              name: "Donación a Raúl Dubón",
-              description:
-                "Apoya el proyecto de publicaciones académicas independientes.",
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${appUrl}/donar/gracias?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/donar`,
-      customer_email: correo || undefined,
-      metadata: {
-        donacionId: donacion.id,
-      },
-    });
-
-    // Guardar el stripeId de la sesión para referencia cruzada
-    await prisma.donacion.update({
-      where: { id: donacion.id },
-      data: { stripeId: session.id },
-    });
-
-    return NextResponse.json({ url: session.url });
-  } catch (err) {
-    console.error("Stripe checkout error:", err);
-    await prisma.donacion.update({
-      where: { id: donacion.id },
-      data: { estado: "CANCELADO" },
-    });
-    return NextResponse.json(
-      { error: "Error al conectar con el sistema de pagos. Intenta de nuevo." },
-      { status: 502 }
-    );
-  }
+  return NextResponse.json({ url: paypalUrl.toString() });
 }
