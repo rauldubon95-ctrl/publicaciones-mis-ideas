@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import FormularioDonacion from "@/components/FormularioDonacion";
+import BotonesPayPal from "@/components/BotonesPayPal";
 
 export const metadata: Metadata = {
   title: "Apoya este proyecto",
@@ -38,7 +38,7 @@ export default function DonarPage() {
 
       {/* Formulario de donación */}
       <div className="border border-zinc-200 rounded-2xl p-7 bg-white shadow-sm">
-        <FormularioDonacion />
+        <BotonesPayPal />
       </div>
 
       {/* Formas de apoyar sin dinero */}
