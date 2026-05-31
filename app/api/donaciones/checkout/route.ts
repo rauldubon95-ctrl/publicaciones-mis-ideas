@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { crearOrdenPayPal } from "@/lib/paypal";
 import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
@@ -59,14 +60,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const paypalEmail = process.env.PAYPAL_DONATION_EMAIL;
-  if (!paypalEmail) {
-    return NextResponse.json(
-      { error: "Método de pago no disponible en este momento." },
-      { status: 503 }
-    );
-  }
-
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   const donacion = await prisma.donacion.create({
@@ -79,14 +72,28 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const montoDolares = (monto / 100).toFixed(2);
-  const paypalUrl = new URL("https://www.paypal.com/donate");
-  paypalUrl.searchParams.set("business", paypalEmail);
-  paypalUrl.searchParams.set("amount", montoDolares);
-  paypalUrl.searchParams.set("currency_code", "USD");
-  paypalUrl.searchParams.set("item_name", "Donación — Raúl Dubón");
-  paypalUrl.searchParams.set("return", `${appUrl}/donar/gracias?id=${donacion.id}`);
-  paypalUrl.searchParams.set("cancel_return", `${appUrl}/donar`);
+  try {
+    const { id: paypalOrderId, approvalUrl } = await crearOrdenPayPal(
+      monto,
+      `${appUrl}/donar/gracias?donacion_id=${donacion.id}`,
+      `${appUrl}/donar`
+    );
 
-  return NextResponse.json({ url: paypalUrl.toString() });
+    await prisma.donacion.update({
+      where: { id: donacion.id },
+      data: { stripeId: paypalOrderId },
+    });
+
+    return NextResponse.json({ url: approvalUrl });
+  } catch (err) {
+    console.error("PayPal checkout error:", err);
+    await prisma.donacion.update({
+      where: { id: donacion.id },
+      data: { estado: "CANCELADO" },
+    });
+    return NextResponse.json(
+      { error: "Error al conectar con PayPal. Intenta de nuevo." },
+      { status: 502 }
+    );
+  }
 }
