@@ -221,20 +221,10 @@ export default function FormularioDonacion() {
           </>
         ) : (
           <>
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082H9.824l-1.108 7.01h3.237c.524 0 .968-.382 1.05-.9l.893-5.654c.082-.518.527-.9 1.05-.9h.663c4.298 0 7.664-1.748 8.647-6.797.27-1.39.106-2.56-.834-3.554z" />
             </svg>
-            Donar con Stripe
+            Donar con PayPal
           </>
         )}
       </button>
@@ -254,7 +244,7 @@ export default function FormularioDonacion() {
             d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
           />
         </svg>
-        <span>Pago seguro vía Stripe · No guardamos datos de tarjeta</span>
+        <span>Pago seguro vía PayPal · No guardamos datos de tarjeta</span>
       </div>
     </form>
   );
