@@ -11,7 +11,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    value: "camera=(), microphone=(), geolocation=(), payment=(self \"https://www.paypal.com\")",
   },
   {
     key: "Strict-Transport-Security",
@@ -21,12 +21,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' https://www.paypal.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
-      `connect-src 'self' https://${SUPABASE_HOST} https://sociologia.raul-dubon95.workers.dev`,
-      "frame-src 'self' https://view.officeapps.live.com",
+      `img-src 'self' data: blob: https://${SUPABASE_HOST} https://www.paypal.com`,
+      `connect-src 'self' https://${SUPABASE_HOST} https://sociologia.raul-dubon95.workers.dev https://www.paypal.com https://api.paypal.com`,
+      "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
