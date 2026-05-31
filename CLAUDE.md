@@ -49,7 +49,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Sistema de suscripción por correo (Resend) | Rama feature sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. Requiere `RESEND_API_KEY` + `FROM_EMAIL` en Vercel. |
 | ✅ Centro de Categorías Dinámico | Rama feature sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap automático en `/categorias/[slug]`. |
 | ✅ Admin hardening — Fase 4 | Rama feature sesión 9 | Enlace `/admin` eliminado de `Header.tsx`. Acceso solo vía URL directa `/admin` + middleware HMAC. |
-| ✅ Arquitectura donaciones (Stripe pendiente) | Rama feature sesión 9 | Tabla `Donacion` en Prisma/Supabase. Página `/donar` con "Próximamente". Enlace en Footer. |
+| ✅ Integración Stripe — donaciones activas | Rama feature sesión 10 | Checkout, webhook, panel admin `/admin/donaciones`. Requiere `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel. |
 | ✅ Analítica de audiencia — base preparada | Rama feature sesión 9 | Tabla `EmailEnvio` para tracking. Panel `/admin/suscriptores` con stats: activos, pendientes, crecimiento mensual. |
 
 ---
@@ -73,6 +73,9 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 | `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
 | `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
+| `STRIPE_SECRET_KEY` | sk_test_... o sk_live_... — backend Stripe Checkout | Sí (donaciones) |
+| `STRIPE_WEBHOOK_SECRET` | whsec_... del webhook configurado en Stripe Dashboard | Sí (donaciones) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | pk_test_... o pk_live_... — reservado para uso futuro (Stripe Elements) | Recomendado |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -179,7 +182,14 @@ Los nuevos artículos se guardan como borrador por defecto (`publicado: false`).
 | `components/SubscriptionForm.tsx` | Formulario de suscripción con honeypot y doble confirmación |
 | `components/CentroCategoriasGrid.tsx` | Grid dinámico de categorías (automático desde DB) |
 | `lib/resend.ts` | Cliente Resend + plantillas HTML de confirmación y nueva publicación |
-| `app/donar/page.tsx` | Página de donaciones "Próximamente" (arquitectura Stripe preparada) |
+| `app/donar/page.tsx` | Página pública de donaciones con formulario Stripe Checkout |
+| `app/donar/gracias/page.tsx` | Página de confirmación de pago (verifica sesión Stripe server-side, robots noindex) |
+| `app/api/donaciones/checkout/route.ts` | POST: crea sesión Stripe Checkout + registro en `Donacion` (rate limit + honeypot) |
+| `app/api/donaciones/webhook/route.ts` | POST: webhook Stripe — verifica firma y actualiza estado de `Donacion` |
+| `app/api/admin/donaciones/route.ts` | GET admin: lista donaciones con filtro de estado + total recaudado |
+| `app/admin/donaciones/page.tsx` | Panel admin de donaciones con tabla, filtros y stats |
+| `components/FormularioDonacion.tsx` | Client component: selector de monto, monto personalizado, honeypot, redirect a Stripe |
+| `lib/stripe.ts` | Singleton lazy de cliente Stripe (no lanza error en build si falta key) |
 
 ---
 
@@ -295,18 +305,18 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
 | Sistema de suscripción por correo | ✅ Aplicado (sesión 9) | Double Opt-In vía Resend. Ver variables `RESEND_API_KEY` y `FROM_EMAIL`. Ver §FASE 2 configuración DNS. |
 | Centro de Categorías Dinámico | ✅ Aplicado (sesión 9) | Grid automático, campos `icono`+`imagen` en Categoria, SEO completo en `/categorias/[slug]` |
-| Arquitectura Donaciones (Stripe) | ✅ Estructura lista (sesión 9) | Tabla `Donacion` en DB, página `/donar`, falta activar Stripe |
+| Integración Stripe — Donaciones | ✅ Activo (sesión 10) | Checkout redirect, webhook con firma HMAC, panel admin `/admin/donaciones`, tabla `Donacion` actualizada por webhooks |
 
 **Próximos pasos recomendados:**
 1. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
-2. Cuando llegue el momento: activar Stripe en `/donar` y conectar con tabla `Donacion`
-3. Reemplazar `xlsx` por `exceljs` para eliminar la vulnerabilidad HIGH en `/admin/tableros`
+2. Configurar webhook en Stripe Dashboard: `POST https://rauldubon.org/api/donaciones/webhook` — eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+3. Reemplazar `xlsx` por `exceljs` para eliminar la vulnerabilidad HIGH en `/admin/tableros` (ya en rama feature)
 4. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
 
 **Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 
 ---
 
-*Última actualización: 2026-05-31 (sesión 9 — auditoría arquitectónica, Resend+suscripciones, categorías dinámicas, hardening admin, arquitectura donaciones)*
-*Commit activo: (sesión 9 — ver rama `claude/beautiful-goodall-Ep1bN`)*
-*Rama activa: `claude/beautiful-goodall-Ep1bN`*
+*Última actualización: 2026-05-31 (sesión 10 — integración Stripe Checkout para donaciones, panel admin donaciones, página /donar/gracias)*
+*Commit activo: (sesión 10 — ver rama `claude/friendly-planck-Nmy2A`)*
+*Rama activa: `claude/friendly-planck-Nmy2A`*

@@ -116,6 +116,16 @@ const SECCIONES = [
       </svg>
     ),
   },
+  {
+    href: "/admin/donaciones",
+    label: "Donaciones",
+    desc: "Historial de donaciones recibidas vía Stripe",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function AdminPage() {
@@ -124,6 +134,7 @@ export default function AdminPage() {
   const [cargando, setCargando] = useState(true);
   const [sincronizando, setSincronizando] = useState(false);
   const [resultadoSync, setResultadoSync] = useState<string | null>(null);
+  const [totalDonado, setTotalDonado] = useState<number>(0);
 
   useEffect(() => {
     fetch("/api/admin/publicaciones")
@@ -134,6 +145,15 @@ export default function AdminPage() {
       .then((data) => { if (data) setPublicaciones(data); })
       .finally(() => setCargando(false));
   }, [router]);
+
+  useEffect(() => {
+    fetch("/api/admin/donaciones")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { totalRecaudado: number } | null) => {
+        if (d) setTotalDonado(d.totalRecaudado);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -206,6 +226,19 @@ export default function AdminPage() {
           </Link>
         ))}
       </div>
+
+      {/* Stat de donaciones */}
+      {totalDonado > 0 && (
+        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between gap-4">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">${(totalDonado / 100).toFixed(2)} USD</span>
+            {" "}recaudados en donaciones completadas
+          </p>
+          <a href="/admin/donaciones" className="text-xs text-amber-700 hover:underline shrink-0">
+            Ver historial →
+          </a>
+        </div>
+      )}
 
       {/* Sync IA */}
       <div className="mb-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-4">
