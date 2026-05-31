@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { capturarOrdenPayPal } from "@/lib/paypal";
 
 export const metadata: Metadata = {
   title: "Gracias por tu apoyo",
@@ -8,27 +9,32 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ donacion_id?: string; token?: string }>;
 }
 
 export default async function GraciasPage({ searchParams }: Props) {
-  const { id } = await searchParams;
+  const { donacion_id, token: paypalOrderId } = await searchParams;
 
   let pagado = false;
   let monto = 0;
   let nombre = "";
 
-  if (id && /^[a-z0-9]+$/.test(id)) {
+  // PayPal devuelve ?token={orderId} al redirigir de vuelta
+  if (donacion_id && paypalOrderId) {
     try {
-      const donacion = await prisma.donacion.update({
-        where: { id, estado: "PENDIENTE" },
-        data: { estado: "COMPLETADO" },
-      });
-      pagado = true;
-      monto = donacion.monto;
-      nombre = donacion.nombre ?? "";
+      const captura = await capturarOrdenPayPal(paypalOrderId);
+      if (captura.completado) {
+        const montoCentavos = Math.round(parseFloat(captura.monto) * 100);
+        await prisma.donacion.update({
+          where: { id: donacion_id, estado: "PENDIENTE" },
+          data: { estado: "COMPLETADO" },
+        });
+        pagado = true;
+        monto = montoCentavos;
+        nombre = captura.nombre;
+      }
     } catch {
-      // ID inválido o donación ya procesada
+      // Error de captura — mostrar pantalla de error
     }
   }
 
