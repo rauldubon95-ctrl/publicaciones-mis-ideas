@@ -2,11 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils";
+import { checkRateLimitDb, getIp } from "@/lib/security";
 
-export async function GET() {
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 50;
+
+export async function GET(req: NextRequest) {
+  const ip = getIp(req);
+  const rl = await checkRateLimitDb(ip, "/api/publicaciones", {
+    maxIntentos: 30,
+    ventanaMs: 60 * 1000,
+    failBehavior: "open",
+  });
+  if (!rl.permitido) {
+    return NextResponse.json(
+      { error: "Demasiadas solicitudes. Espera un momento." },
+      { status: 429 }
+    );
+  }
+
+  const params = req.nextUrl.searchParams;
+  const limit = Math.min(parseInt(params.get("limit") ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT, MAX_LIMIT);
+  const page = Math.max(parseInt(params.get("page") ?? "1", 10) || 1, 1);
+  const skip = (page - 1) * limit;
+
   const publicaciones = await prisma.publicacion.findMany({
     where: { publicado: true },
     orderBy: { publicadoAt: "desc" },
+    take: limit,
+    skip,
     include: {
       categoria: true,
       etiquetas: { include: { etiqueta: true } },

@@ -99,6 +99,25 @@ async function computarHmacPremium(secret: string): Promise<string> {
     .join("");
 }
 
+// Límite global de solicitudes por minuto en todo el Worker.
+// Protege contra ataques coordinados con muchas IPs distintas.
+// La clave expira a los 70s para evitar contadores huérfanos.
+const LIMITE_GLOBAL_RPM = 200;
+
+export async function checkGlobalRateLimit(env: Env): Promise<boolean> {
+  const minuto = new Date().toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+  const clave = `global:rpm:${minuto}`;
+  try {
+    const raw = await env.RATE_LIMIT.get(clave);
+    const contador = raw ? parseInt(raw, 10) : 0;
+    if (contador >= LIMITE_GLOBAL_RPM) return false;
+    await env.RATE_LIMIT.put(clave, String(contador + 1), { expirationTtl: 70 });
+    return true;
+  } catch {
+    return true; // fail-open: si KV cae, no bloquear globalmente
+  }
+}
+
 // Contar tokens aproximados (~4 chars/token para español)
 export function contarTokens(texto: string): number {
   return Math.ceil(texto.length / 4);

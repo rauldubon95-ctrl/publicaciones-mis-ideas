@@ -7,7 +7,7 @@ import type { Env, WorkerResponse } from "./types";
 import { analizarInyeccion } from "./security";
 import { recuperarDocumentos } from "./retrieval";
 import { extraerFuentesTitulos, esSaludo } from "./prompts";
-import { checkRateLimit, validarTokenPremium, contarTokens } from "./ratelimit";
+import { checkRateLimit, validarTokenPremium, contarTokens, checkGlobalRateLimit } from "./ratelimit";
 import { emitirEvento, handleTelemetriaRequest } from "./telemetry";
 import { handleEmbedRequest } from "./embed-worker";
 import { SkillRegistry } from "./skills/registry";
@@ -83,6 +83,15 @@ export default {
       request.headers.get("CF-Connecting-IP") ??
       request.headers.get("X-Forwarded-For")?.split(",")[0].trim() ??
       "unknown";
+
+    // ── 1b. Límite global (protección ante ataques distribuidos) ─
+    const globalOk = await checkGlobalRateLimit(env);
+    if (!globalOk) {
+      return resp(
+        { error: "Servicio temporalmente saturado", mensaje: "El asistente está recibiendo demasiadas consultas. Inténtalo en un minuto." },
+        503, CORS, traceId
+      );
+    }
 
     // ── 2. Token premium ─────────────────────────────────────
     const tokenHeader = request.headers.get("X-Premium-Token");
