@@ -49,7 +49,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Sistema de suscripción por correo (Resend) | Rama feature sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. Requiere `RESEND_API_KEY` + `FROM_EMAIL` en Vercel. |
 | ✅ Centro de Categorías Dinámico | Rama feature sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap automático en `/categorias/[slug]`. |
 | ✅ Admin hardening — Fase 4 | Rama feature sesión 9 | Enlace `/admin` eliminado de `Header.tsx`. Acceso solo vía URL directa `/admin` + middleware HMAC. |
-| ✅ Donaciones via PayPal Hosted Button | Producción sesión 11 | Botón hospedado de PayPal en `/donar`. Sin backend propio — PayPal maneja el checkout completo. Requiere `NEXT_PUBLIC_PAYPAL_CLIENT_ID` + `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` en Vercel. |
+| ✅ Donaciones via PayPal Orders API v2 | Producción sesión 11 | Formulario propio con montos predefinidos. Backend crea orden, PayPal redirige al donante, se captura y registra en DB. `landing_page: NO_PREFERENCE` permite pagar con tarjeta O con cuenta PayPal. |
 | ⚠️ Stripe — desactivado (no opera en El Salvador) | Código presente pero sin uso | La cuenta receptora necesita estar en un país soportado por Stripe. El código queda por si se obtiene entidad en país soportado. Las variables de Stripe siguen en Vercel pero no se usan. |
 | ✅ Hardening rendimiento — Fase 5 | Producción sesión 11 | Rate limit 30 req/min en `/api/publicaciones`, `/api/servicios`, `/api/dashboard`. Paginación en `/api/publicaciones` (máx. 100). Límite global 200 req/min en Worker IA. |
 | ✅ Analítica de audiencia — base preparada | Rama feature sesión 9 | Tabla `EmailEnvio` para tracking. Panel `/admin/suscriptores` con stats: activos, pendientes, crecimiento mensual. |
@@ -78,10 +78,9 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `STRIPE_SECRET_KEY` | **SIN USO ACTIVO** — Stripe no opera en El Salvador. Variable presente en Vercel. | No (inactivo) |
 | `STRIPE_WEBHOOK_SECRET` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
-| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Client ID público del botón hospedado de PayPal. Visible en el script tag que PayPal genera. | Sí (donaciones) |
-| `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` | ID del botón hospedado creado en PayPal Business (`KMVU3UCV6KUJQ`). | Sí (donaciones) |
-| `PAYPAL_CLIENT_ID` | **PENDIENTE** — Client ID de la cuenta Business de PayPal (para Orders API v2). Raúl lo tiene pero no está configurado aún. Necesario para tracking de donaciones en DB. | Futuro |
-| `PAYPAL_CLIENT_SECRET` | **PENDIENTE** — Secret de la cuenta Business de PayPal. NUNCA exponer al cliente. Raúl lo tiene guardado. Necesario para Orders API v2. | Futuro |
+| `PAYPAL_CLIENT_ID` | Client ID de la cuenta Business de PayPal (Orders API v2). Server-side únicamente. | Sí (donaciones) |
+| `PAYPAL_CLIENT_SECRET` | Secret de la cuenta Business de PayPal. NUNCA con prefijo `NEXT_PUBLIC_`. | Sí (donaciones) |
+| `PAYPAL_ENV` | `live` para producción, `sandbox` para pruebas. Si no está definida, usa sandbox por defecto. | Sí (donaciones) |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -313,19 +312,19 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Sistema de suscripción por correo | ✅ Aplicado (sesión 9) | Double Opt-In vía Resend. Ver variables `RESEND_API_KEY` y `FROM_EMAIL`. Ver §FASE 2 configuración DNS. |
 | Centro de Categorías Dinámico | ✅ Aplicado (sesión 9) | Grid automático, campos `icono`+`imagen` en Categoria, SEO completo en `/categorias/[slug]` |
 | Integración Stripe — Donaciones | ⚠️ Desactivado (sesión 11) | Stripe no opera en El Salvador para cuentas receptoras. Código presente, variables en Vercel, pero sin uso. |
-| Integración PayPal — Donaciones | ✅ Activo (sesión 11) | Botón hospedado de PayPal en `/donar`. Sin tracking en DB por ahora. Siguiente paso: Orders API v2 con las credenciales Business que Raúl ya tiene. |
+| Integración PayPal — Donaciones | ✅ Activo (sesión 11) | Orders API v2 en producción. Formulario propio ($3/$5/$10/$25), backend crea orden, donante elige cuenta PayPal O tarjeta (`landing_page: NO_PREFERENCE`), se registra en DB. |
 
 **Próximos pasos recomendados:**
-1. **PayPal Orders API v2** — Raúl tiene las credenciales Business (Client ID + Secret). Con ellas se puede crear órdenes con monto específico desde el backend, y las donaciones aparecerán en `/admin/donaciones` automáticamente. Variables a configurar: `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` (server-side, nunca NEXT_PUBLIC_).
-2. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
-3. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
+1. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
+2. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
+3. Notificación por correo al admin cuando llega una nueva donación
 
 **Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` reemplazado por `exceljs` (sesión 9).
 
 ---
 
-*Última actualización: 2026-05-31 (sesión 11 — PayPal Hosted Button, hardening rendimiento, rate limit rutas públicas)*
-*Commit activo: `dad759b` (main — PayPal Hosted Button activo)*
+*Última actualización: 2026-05-31 (sesión 11 — PayPal Orders API v2 operativo, landing_page corregido)*
+*Commit activo: `7910b73` (main — PayPal Orders API v2 con tarjeta y cuenta PayPal)*
 *Rama activa: `claude/friendly-planck-Nmy2A`*
 
 ## 15. Estado de donaciones (sesión 11)
@@ -333,30 +332,28 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 ### Por qué se abandonó Stripe
 Stripe no permite cuentas receptoras en El Salvador. El código de Stripe (checkout, webhook, admin) sigue presente en el repo pero sin uso activo. Las variables `STRIPE_*` siguen en Vercel pero no se llaman.
 
-### Sistema actual: PayPal Hosted Button
-- Botón creado desde PayPal Business Dashboard de Raúl
-- `hostedButtonId`: `KMVU3UCV6KUJQ`
-- El checkout completo ocurre en PayPal — sin backend propio
-- Las donaciones NO se registran automáticamente en `/admin/donaciones` (limitación del botón hospedado)
+### Sistema actual: PayPal Orders API v2 ✅ OPERATIVO
+- Formulario propio en `/donar` con montos $3/$5/$10/$25 (componente `FormularioDonacion.tsx`)
+- Backend en `app/api/donaciones/checkout/route.ts` crea la orden vía `lib/paypal.ts`
+- `landing_page: "NO_PREFERENCE"` — el donante puede elegir cuenta PayPal O tarjeta de crédito/débito
+- Al completar, PayPal redirige a `/donar/gracias?donacion_id=...&token=...`
+- El backend captura el pago y actualiza la `Donacion` a estado `COMPLETADO`
+- Las donaciones aparecen en `/admin/donaciones` automáticamente
 
-### Variables en Vercel (configuradas)
-- `NEXT_PUBLIC_PAYPAL_CLIENT_ID` ✅
-- `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` ✅ (`KMVU3UCV6KUJQ`)
-- `PAYPAL_DONATION_EMAIL` — ya no se usa, puede borrarse
+### Variables en Vercel (configuradas ✅)
+- `PAYPAL_CLIENT_ID` — Client ID de la cuenta Business (server-side)
+- `PAYPAL_CLIENT_SECRET` — Secret de la cuenta Business (server-side, NUNCA con NEXT_PUBLIC_)
+- `PAYPAL_ENV=live` — apunta al servidor de producción real de PayPal
 
-### Credenciales PayPal Business (Raúl las tiene, NO están en Vercel aún)
-- **Client ID** (API Key de PayPal Business) — guardada por Raúl
-- **Client Secret** (clave secreta de PayPal Business) — guardada por Raúl
-- Estas credenciales son para la **Orders API v2** — permiten crear órdenes con monto específico desde el backend y registrar donaciones en DB automáticamente
-- Cuando se implemente Orders API v2: variables server-side `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` (NUNCA con prefijo `NEXT_PUBLIC_`)
+### Variables eliminadas de Vercel
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID` — eliminada (era del botón hospedado)
+- `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` — eliminada (era del botón hospedado)
+- `PAYPAL_DONATION_EMAIL` — eliminada (ya no se usa)
 
-### Próximo paso para donaciones
-Implementar PayPal Orders API v2 con las credenciales Business de Raúl:
-1. El formulario actual (`BotonesPayPal.tsx`) se reemplaza con un formulario propio de monto
-2. El backend crea la orden via `POST https://api-m.paypal.com/v2/checkout/orders`
-3. El usuario aprueba en PayPal y regresa a `/donar/gracias`
-4. El backend captura el pago y registra en `Donacion` tabla
-5. Las donaciones aparecen en `/admin/donaciones` automáticamente
+### IMPORTANTE: credenciales Live vs Sandbox
+- Las credenciales en Vercel deben ser de la pestaña **"Live"** en developer.paypal.com
+- Si se ponen credenciales Sandbox con `PAYPAL_ENV=live`, la autenticación falla con error 401
+- Si se necesita probar sin dinero real: usar credenciales Sandbox + `PAYPAL_ENV=sandbox`
 
 ## 16. Hardening de rendimiento (sesión 11)
 - Rate limit 30 req/min por IP en: `/api/publicaciones`, `/api/servicios`, `/api/dashboard`
