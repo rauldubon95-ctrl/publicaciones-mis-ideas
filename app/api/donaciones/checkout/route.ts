@@ -9,10 +9,10 @@ export async function POST(req: NextRequest) {
   const ip = getIp(req);
 
   const rl = await checkRateLimitDb(ip, "/api/donaciones/checkout", {
-    maxIntentos: 5,
-    ventanaMs: 30 * 60 * 1000,
-    bloqueoMs: 60 * 60 * 1000,
-    failBehavior: "close",
+    maxIntentos: 30,
+    ventanaMs: 60 * 60 * 1000,
+    bloqueoMs: 30 * 60 * 1000,
+    failBehavior: "open",
   });
 
   if (!rl.permitido) {
