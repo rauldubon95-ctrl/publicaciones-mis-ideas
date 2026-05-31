@@ -19,7 +19,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `claude/beautiful-goodall-Ep1bN` (sesión 9)
+**Rama de desarrollo activa:** `claude/friendly-planck-Nmy2A` (sesión 11)
 
 ---
 
@@ -49,7 +49,9 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Sistema de suscripción por correo (Resend) | Rama feature sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. Requiere `RESEND_API_KEY` + `FROM_EMAIL` en Vercel. |
 | ✅ Centro de Categorías Dinámico | Rama feature sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap automático en `/categorias/[slug]`. |
 | ✅ Admin hardening — Fase 4 | Rama feature sesión 9 | Enlace `/admin` eliminado de `Header.tsx`. Acceso solo vía URL directa `/admin` + middleware HMAC. |
-| ✅ Integración Stripe — donaciones activas | Rama feature sesión 10 | Checkout, webhook, panel admin `/admin/donaciones`. Requiere `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel. |
+| ✅ Donaciones via PayPal Hosted Button | Producción sesión 11 | Botón hospedado de PayPal en `/donar`. Sin backend propio — PayPal maneja el checkout completo. Requiere `NEXT_PUBLIC_PAYPAL_CLIENT_ID` + `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` en Vercel. |
+| ⚠️ Stripe — desactivado (no opera en El Salvador) | Código presente pero sin uso | La cuenta receptora necesita estar en un país soportado por Stripe. El código queda por si se obtiene entidad en país soportado. Las variables de Stripe siguen en Vercel pero no se usan. |
+| ✅ Hardening rendimiento — Fase 5 | Producción sesión 11 | Rate limit 30 req/min en `/api/publicaciones`, `/api/servicios`, `/api/dashboard`. Paginación en `/api/publicaciones` (máx. 100). Límite global 200 req/min en Worker IA. |
 | ✅ Analítica de audiencia — base preparada | Rama feature sesión 9 | Tabla `EmailEnvio` para tracking. Panel `/admin/suscriptores` con stats: activos, pendientes, crecimiento mensual. |
 
 ---
@@ -73,9 +75,13 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 | `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
 | `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
-| `STRIPE_SECRET_KEY` | sk_test_... o sk_live_... — backend Stripe Checkout | Sí (donaciones) |
-| `STRIPE_WEBHOOK_SECRET` | whsec_... del webhook configurado en Stripe Dashboard | Sí (donaciones) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | pk_test_... o pk_live_... — reservado para uso futuro (Stripe Elements) | Recomendado |
+| `STRIPE_SECRET_KEY` | **SIN USO ACTIVO** — Stripe no opera en El Salvador. Variable presente en Vercel. | No (inactivo) |
+| `STRIPE_WEBHOOK_SECRET` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Client ID público del botón hospedado de PayPal. Visible en el script tag que PayPal genera. | Sí (donaciones) |
+| `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` | ID del botón hospedado creado en PayPal Business (`KMVU3UCV6KUJQ`). | Sí (donaciones) |
+| `PAYPAL_CLIENT_ID` | **PENDIENTE** — Client ID de la cuenta Business de PayPal (para Orders API v2). Raúl lo tiene pero no está configurado aún. Necesario para tracking de donaciones en DB. | Futuro |
+| `PAYPAL_CLIENT_SECRET` | **PENDIENTE** — Secret de la cuenta Business de PayPal. NUNCA exponer al cliente. Raúl lo tiene guardado. Necesario para Orders API v2. | Futuro |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -182,14 +188,15 @@ Los nuevos artículos se guardan como borrador por defecto (`publicado: false`).
 | `components/SubscriptionForm.tsx` | Formulario de suscripción con honeypot y doble confirmación |
 | `components/CentroCategoriasGrid.tsx` | Grid dinámico de categorías (automático desde DB) |
 | `lib/resend.ts` | Cliente Resend + plantillas HTML de confirmación y nueva publicación |
-| `app/donar/page.tsx` | Página pública de donaciones con formulario Stripe Checkout |
-| `app/donar/gracias/page.tsx` | Página de confirmación de pago (verifica sesión Stripe server-side, robots noindex) |
-| `app/api/donaciones/checkout/route.ts` | POST: crea sesión Stripe Checkout + registro en `Donacion` (rate limit + honeypot) |
-| `app/api/donaciones/webhook/route.ts` | POST: webhook Stripe — verifica firma y actualiza estado de `Donacion` |
+| `app/donar/page.tsx` | Página pública de donaciones — renderiza `BotonesPayPal` |
+| `app/donar/gracias/page.tsx` | Página de confirmación — maneja retorno de PayPal via `?id={donacion_id}`, robots noindex |
+| `app/api/donaciones/checkout/route.ts` | POST: construye URL de PayPal con `PAYPAL_DONATION_EMAIL` (rate limit + honeypot). NOTA: este endpoint era para el redirect simple; con el botón hospedado ya no se llama. |
+| `app/api/donaciones/webhook/route.ts` | POST: webhook Stripe (código presente, sin uso activo — Stripe desactivado) |
 | `app/api/admin/donaciones/route.ts` | GET admin: lista donaciones con filtro de estado + total recaudado |
 | `app/admin/donaciones/page.tsx` | Panel admin de donaciones con tabla, filtros y stats |
-| `components/FormularioDonacion.tsx` | Client component: selector de monto, monto personalizado, honeypot, redirect a Stripe |
-| `lib/stripe.ts` | Singleton lazy de cliente Stripe (no lanza error en build si falta key) |
+| `components/BotonesPayPal.tsx` | Client component: carga el SDK de PayPal y renderiza el botón hospedado. Usa `NEXT_PUBLIC_PAYPAL_CLIENT_ID` y `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID`. |
+| `components/FormularioDonacion.tsx` | INACTIVO — era para Stripe. No se usa. No borrar hasta tener PayPal Orders API. |
+| `lib/stripe.ts` | Singleton lazy de Stripe (presente, sin uso activo) |
 
 ---
 
@@ -305,46 +312,55 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
 | Sistema de suscripción por correo | ✅ Aplicado (sesión 9) | Double Opt-In vía Resend. Ver variables `RESEND_API_KEY` y `FROM_EMAIL`. Ver §FASE 2 configuración DNS. |
 | Centro de Categorías Dinámico | ✅ Aplicado (sesión 9) | Grid automático, campos `icono`+`imagen` en Categoria, SEO completo en `/categorias/[slug]` |
-| Integración Stripe — Donaciones | ✅ Activo (sesión 10) | Checkout redirect, webhook con firma HMAC, panel admin `/admin/donaciones`, tabla `Donacion` actualizada por webhooks |
+| Integración Stripe — Donaciones | ⚠️ Desactivado (sesión 11) | Stripe no opera en El Salvador para cuentas receptoras. Código presente, variables en Vercel, pero sin uso. |
+| Integración PayPal — Donaciones | ✅ Activo (sesión 11) | Botón hospedado de PayPal en `/donar`. Sin tracking en DB por ahora. Siguiente paso: Orders API v2 con las credenciales Business que Raúl ya tiene. |
 
 **Próximos pasos recomendados:**
-1. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
-2. Configurar webhook en Stripe Dashboard: `POST https://rauldubon.org/api/donaciones/webhook` — eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
-3. Reemplazar `xlsx` por `exceljs` para eliminar la vulnerabilidad HIGH en `/admin/tableros` (ya en rama feature)
-4. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
+1. **PayPal Orders API v2** — Raúl tiene las credenciales Business (Client ID + Secret). Con ellas se puede crear órdenes con monto específico desde el backend, y las donaciones aparecerán en `/admin/donaciones` automáticamente. Variables a configurar: `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` (server-side, nunca NEXT_PUBLIC_).
+2. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
+3. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
 
-**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
+**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` reemplazado por `exceljs` (sesión 9).
 
 ---
 
-*Última actualización: 2026-05-31 (sesión 10 — integración Stripe Checkout para donaciones, panel admin donaciones, página /donar/gracias)*
-*Commit activo: `4753d28` (merge a main — rama `claude/friendly-planck-Nmy2A` fusionada)*
-*Rama activa: `main` (todo en producción en rauldubon.org)*
+*Última actualización: 2026-05-31 (sesión 11 — PayPal Hosted Button, hardening rendimiento, rate limit rutas públicas)*
+*Commit activo: `dad759b` (main — PayPal Hosted Button activo)*
+*Rama activa: `claude/friendly-planck-Nmy2A`*
 
-## 15. Estado de la integración Stripe (sesión 10)
+## 15. Estado de donaciones (sesión 11)
 
-### Implementado y en producción
-- Formulario `/donar` con montos $3/$5/$10/$25 + monto libre
-- `POST /api/donaciones/checkout` → crea sesión Stripe + registro `Donacion PENDIENTE`
-- `POST /api/donaciones/webhook` → verifica firma HMAC, actualiza estado en DB
-- `GET /api/admin/donaciones` → lista + total recaudado
-- Panel `/admin/donaciones` con tabla, filtros y stats
-- Página `/donar/gracias` verifica sesión Stripe server-side (robots noindex)
-- Card "Donaciones" en `/admin` con total recaudado
-- `lib/stripe.ts` singleton lazy del cliente Stripe
+### Por qué se abandonó Stripe
+Stripe no permite cuentas receptoras en El Salvador. El código de Stripe (checkout, webhook, admin) sigue presente en el repo pero sin uso activo. Las variables `STRIPE_*` siguen en Vercel pero no se llaman.
 
-### Variables configuradas en Vercel
-- `STRIPE_SECRET_KEY` ✅ configurada (modo prueba `sk_test_...`)
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` ✅ configurada
-- `STRIPE_WEBHOOK_SECRET` ✅ configurada (`whsec_...`)
+### Sistema actual: PayPal Hosted Button
+- Botón creado desde PayPal Business Dashboard de Raúl
+- `hostedButtonId`: `KMVU3UCV6KUJQ`
+- El checkout completo ocurre en PayPal — sin backend propio
+- Las donaciones NO se registran automáticamente en `/admin/donaciones` (limitación del botón hospedado)
 
-### Webhook de Stripe configurado
-- URL: `https://rauldubon.org/api/donaciones/webhook`
-- Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
-- Modo: **prueba** (test mode)
+### Variables en Vercel (configuradas)
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID` ✅
+- `NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_ID` ✅ (`KMVU3UCV6KUJQ`)
+- `PAYPAL_DONATION_EMAIL` — ya no se usa, puede borrarse
 
-### Pendiente para próxima sesión
-- Verificar flujo completo con tarjeta de prueba `4242 4242 4242 4242` (esperar 30 min por rate limit)
-- Si el pago llega a `/donar/gracias` y aparece en `/admin/donaciones` como COMPLETADO → todo OK
-- Completar verificación de cuenta en Stripe para pasar a producción (live)
-- Cuando la cuenta esté verificada: cambiar las 3 variables en Vercel a claves `sk_live_`, `pk_live_`, `whsec_live_` + crear webhook nuevo en Stripe live mode
+### Credenciales PayPal Business (Raúl las tiene, NO están en Vercel aún)
+- **Client ID** (API Key de PayPal Business) — guardada por Raúl
+- **Client Secret** (clave secreta de PayPal Business) — guardada por Raúl
+- Estas credenciales son para la **Orders API v2** — permiten crear órdenes con monto específico desde el backend y registrar donaciones en DB automáticamente
+- Cuando se implemente Orders API v2: variables server-side `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` (NUNCA con prefijo `NEXT_PUBLIC_`)
+
+### Próximo paso para donaciones
+Implementar PayPal Orders API v2 con las credenciales Business de Raúl:
+1. El formulario actual (`BotonesPayPal.tsx`) se reemplaza con un formulario propio de monto
+2. El backend crea la orden via `POST https://api-m.paypal.com/v2/checkout/orders`
+3. El usuario aprueba en PayPal y regresa a `/donar/gracias`
+4. El backend captura el pago y registra en `Donacion` tabla
+5. Las donaciones aparecen en `/admin/donaciones` automáticamente
+
+## 16. Hardening de rendimiento (sesión 11)
+- Rate limit 30 req/min por IP en: `/api/publicaciones`, `/api/servicios`, `/api/dashboard`
+- Paginación en `/api/publicaciones`: parámetros `?limit=` (máx 100) y `?page=`
+- Worker IA: límite global 200 req/min via KV (`checkGlobalRateLimit` en `ratelimit.ts`)
+- CSP actualizado para permitir PayPal: `script-src`, `frame-src`, `connect-src`, `img-src`
+- `Permissions-Policy`: `payment` ahora permite `https://www.paypal.com`
