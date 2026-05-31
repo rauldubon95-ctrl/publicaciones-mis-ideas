@@ -318,5 +318,33 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 ---
 
 *Última actualización: 2026-05-31 (sesión 10 — integración Stripe Checkout para donaciones, panel admin donaciones, página /donar/gracias)*
-*Commit activo: (sesión 10 — ver rama `claude/friendly-planck-Nmy2A`)*
-*Rama activa: `claude/friendly-planck-Nmy2A`*
+*Commit activo: `4753d28` (merge a main — rama `claude/friendly-planck-Nmy2A` fusionada)*
+*Rama activa: `main` (todo en producción en rauldubon.org)*
+
+## 15. Estado de la integración Stripe (sesión 10)
+
+### Implementado y en producción
+- Formulario `/donar` con montos $3/$5/$10/$25 + monto libre
+- `POST /api/donaciones/checkout` → crea sesión Stripe + registro `Donacion PENDIENTE`
+- `POST /api/donaciones/webhook` → verifica firma HMAC, actualiza estado en DB
+- `GET /api/admin/donaciones` → lista + total recaudado
+- Panel `/admin/donaciones` con tabla, filtros y stats
+- Página `/donar/gracias` verifica sesión Stripe server-side (robots noindex)
+- Card "Donaciones" en `/admin` con total recaudado
+- `lib/stripe.ts` singleton lazy del cliente Stripe
+
+### Variables configuradas en Vercel
+- `STRIPE_SECRET_KEY` ✅ configurada (modo prueba `sk_test_...`)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` ✅ configurada
+- `STRIPE_WEBHOOK_SECRET` ✅ configurada (`whsec_...`)
+
+### Webhook de Stripe configurado
+- URL: `https://rauldubon.org/api/donaciones/webhook`
+- Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+- Modo: **prueba** (test mode)
+
+### Pendiente para próxima sesión
+- Verificar flujo completo con tarjeta de prueba `4242 4242 4242 4242` (esperar 30 min por rate limit)
+- Si el pago llega a `/donar/gracias` y aparece en `/admin/donaciones` como COMPLETADO → todo OK
+- Completar verificación de cuenta en Stripe para pasar a producción (live)
+- Cuando la cuenta esté verificada: cambiar las 3 variables en Vercel a claves `sk_live_`, `pk_live_`, `whsec_live_` + crear webhook nuevo en Stripe live mode
