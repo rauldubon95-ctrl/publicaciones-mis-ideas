@@ -41,7 +41,7 @@ export default async function PdfPage({ params }: Props) {
       <div className="pdf-page">
         {/* Encabezado del documento */}
         <header className="pdf-header">
-          <div className="pdf-site-name">Mis Ideas</div>
+          <div className="pdf-site-name">Raúl Dubón</div>
           {publicacion.categoria && (
             <div className="pdf-category">{publicacion.categoria.nombre.toUpperCase()}</div>
           )}
@@ -67,7 +67,7 @@ export default async function PdfPage({ params }: Props) {
 
         {/* Pie de página */}
         <footer className="pdf-footer">
-          <span>Mis Ideas</span>
+          <span>Raúl Dubón</span>
           <span>{publicacion.publicadoAt ? formatFecha(publicacion.publicadoAt) : ""}</span>
         </footer>
       </div>

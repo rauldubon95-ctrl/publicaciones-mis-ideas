@@ -9,6 +9,9 @@ Léelo completo antes de tocar cualquier archivo del proyecto.
 
 Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics y un asistente de IA sobre ciencias sociales latinoamericanas.
 
+**Dominio:** `rauldubon.org` (comprado en Cloudflare — pendiente de conectar a Vercel)
+**Marca:** "Raúl Dubón" (reemplazó "Mis Ideas" en sesión 8)
+
 **Stack:**
 - Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma
@@ -16,7 +19,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `main` (sin feature branch activa al cierre de sesión 2026-05-25)
+**Rama de desarrollo activa:** `claude/beautiful-goodall-Ep1bN` (sesión 9)
 
 ---
 
@@ -43,6 +46,11 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Paginación dinámica home + /publicaciones | Rama feature | 4/página en home (searchParams), 8/página en /publicaciones. Componente `Paginacion.tsx` reutilizable. |
 | ✅ Sección Servicios de Consultoría | Rama feature | `/servicios` + modal cotización + APIs CRUD admin + modelos Servicio/SolicitudCotizacion en Supabase |
 | ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
+| ✅ Sistema de suscripción por correo (Resend) | Rama feature sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. Requiere `RESEND_API_KEY` + `FROM_EMAIL` en Vercel. |
+| ✅ Centro de Categorías Dinámico | Rama feature sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap automático en `/categorias/[slug]`. |
+| ✅ Admin hardening — Fase 4 | Rama feature sesión 9 | Enlace `/admin` eliminado de `Header.tsx`. Acceso solo vía URL directa `/admin` + middleware HMAC. |
+| ✅ Arquitectura donaciones (Stripe pendiente) | Rama feature sesión 9 | Tabla `Donacion` en Prisma/Supabase. Página `/donar` con "Próximamente". Enlace en Footer. |
+| ✅ Analítica de audiencia — base preparada | Rama feature sesión 9 | Tabla `EmailEnvio` para tracking. Panel `/admin/suscriptores` con stats: activos, pendientes, crecimiento mensual. |
 
 ---
 
@@ -63,6 +71,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `PREMIUM_TOKEN` | **ELIMINADO** — removido el 2026-05-24. No reconfigurar. | No |
 | `HEALTH_TOKEN` | Token para endpoint `/api/health` con métricas completas | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
+| `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
+| `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -160,14 +170,24 @@ Los nuevos artículos se guardan como borrador por defecto (`publicado: false`).
 | `app/admin/servicios/page.tsx` | Admin CRUD de servicios (crear/editar/ocultar/eliminar con modal) |
 | `app/admin/cotizaciones/page.tsx` | Admin gestión de solicitudes con filtros y cambio de estado |
 | `components/Paginacion.tsx` | Componente reutilizable de paginación con elipsis y accesibilidad |
+| `app/api/subscribe/route.ts` | POST público: registrar suscripción (rate limit + honeypot + doble opt-in) |
+| `app/api/subscribe/confirm/route.ts` | GET: confirmar suscripción por token → redirige a `/suscribir/confirmado` |
+| `app/api/subscribe/unsubscribe/route.ts` | GET: cancelar suscripción por token → redirige a `/suscribir/cancelado` |
+| `app/api/admin/suscriptores/route.ts` | GET admin: stats + lista de suscriptores + crecimiento mensual |
+| `app/api/admin/suscriptores/notificar/route.ts` | POST admin: enviar notificación de nueva publicación a suscriptores activos |
+| `app/admin/suscriptores/page.tsx` | Panel admin de suscriptores con analítica |
+| `components/SubscriptionForm.tsx` | Formulario de suscripción con honeypot y doble confirmación |
+| `components/CentroCategoriasGrid.tsx` | Grid dinámico de categorías (automático desde DB) |
+| `lib/resend.ts` | Cliente Resend + plantillas HTML de confirmación y nueva publicación |
+| `app/donar/page.tsx` | Página de donaciones "Próximamente" (arquitectura Stripe preparada) |
 
 ---
 
 ## 8. Prisma schema — modelos principales
 
 ```
-Publicacion   → VistaPublicacion, DescargaPdf, Comentario, Reaccion
-Categoria     → Publicacion (relación)
+Publicacion   → VistaPublicacion, DescargaPdf, Comentario, Reaccion, EmailEnvio
+Categoria     → Publicacion (campos sesión 9: +icono, +imagen)
 Etiqueta      → PublicacionEtiqueta → Publicacion
 Comic         → VistaComic
 Recurso       → VistaRecurso
@@ -175,6 +195,9 @@ RateLimitDb   → rate limiting persistente para rutas Next.js
 EventoSeguridad → log de eventos de seguridad
 Servicio      → SolicitudCotizacion (campos: titulo, slug, descripcion, detalle, categoria, icono, activo, orden)
 SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
+Subscription  → (sesión 9) email, nombre, status, token, confirmedAt, unsubscribedAt
+EmailEnvio    → (sesión 9) asunto, publicacionId, totalEnviados, totalAbiertos
+Donacion      → (sesión 9) monto, moneda, stripeId, estado — arquitectura Stripe preparada
 ```
 
 ---
@@ -196,8 +219,9 @@ SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
 | Item | Detalle | Prioridad |
 |---|---|---|
 | Más limpieza del corpus D1 | 804 documentos restantes. Aun hay documentos de baja calidad. Continuar en sesiones siguientes con criterios más finos. | **Alta** |
-| Revocación de sesiones admin | Tokens HMAC estáticos: `HMAC(ADMIN_SECRET, "admin-session-v1")` produce el mismo token siempre. No hay forma de revocar una sesión sin cambiar `ADMIN_SECRET`. Considerar `jti` + tabla de sesiones activas. | Media |
-| CSP con `unsafe-inline` | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Requiere migrar estilos inline (pdf/page.tsx tiene `<style>` embebido). | Media |
+| ~~Revocación de sesiones admin~~ | **YA IMPLEMENTADO** — `sesionAdmin` table en Prisma con `jti`, `revocadaAt` y `expiraAt`. Logout hace UPDATE `revocadaAt`. `adminAuth.ts` verifica ambos. CLAUDE.md tenía info desactualizada. | ✅ Resuelto |
+| CSP con `unsafe-inline` en script-src | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware Next.js. `style-src` también tiene unsafe-inline por el `<style>` embebido en `pdf/page.tsx`. | **Alta** |
+| `xlsx` vulnerabilidad HIGH sin fix | `app/api/admin/tableros/route.ts` usa `xlsx` (sheetJS). Prototype Pollution + ReDoS. Sin fix disponible en npm. Solo accesible por admin auth. Considerar reemplazar con `exceljs`. | Media |
 | Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere `wrangler vectorize create` + pipeline de embeddings (`embed-worker.ts` ya existe). Sin esto, retrieval es solo FTS5+LIKE. | Media |
 | Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. El dashboard de observabilidad planificado requiere D1. | Media |
 | CF_API_TOKEN con restricción de IP | GitHub Actions no puede deployar el Worker. Crear nuevo token sin restricción de IP si se quiere restaurar deploy via Actions. Por ahora, Git integration de Cloudflare lo cubre. | Baja |
@@ -267,12 +291,22 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Corpus curado de calidad | 🔄 En progreso | 804 docs (limpiado de 1,287). Continuar en próximas sesiones. |
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
-| Security hardening | ✅ Completo (fase 1+2+3) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h, RLS 18 tablas Supabase, bucket listing bloqueado |
+| Security hardening | ✅ Completo (fase 1+2+3+4) | 17 CVEs Next.js, IPs hasheadas, magic bytes DOCX, PREMIUM_TOKEN eliminado, RLS 21 tablas Supabase, enlace `/admin` eliminado del Header público |
+| Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
+| Sistema de suscripción por correo | ✅ Aplicado (sesión 9) | Double Opt-In vía Resend. Ver variables `RESEND_API_KEY` y `FROM_EMAIL`. Ver §FASE 2 configuración DNS. |
+| Centro de Categorías Dinámico | ✅ Aplicado (sesión 9) | Grid automático, campos `icono`+`imagen` en Categoria, SEO completo en `/categorias/[slug]` |
+| Arquitectura Donaciones (Stripe) | ✅ Estructura lista (sesión 9) | Tabla `Donacion` en DB, página `/donar`, falta activar Stripe |
 
-**Próximo paso recomendado:** Continuar limpieza del corpus D1 (804 docs restantes) y resolver la deuda de revocación de sesiones. Para la sección de servicios: agregar los servicios desde `/admin/servicios`.
+**Próximos pasos recomendados:**
+1. Configurar `RESEND_API_KEY` y `FROM_EMAIL` en Vercel (ver guía DNS abajo)
+2. Conectar dominio `rauldubon.org` a Vercel + actualizar `NEXT_PUBLIC_APP_URL`
+3. Agregar íconos/imágenes a las categorías desde la DB (campo `icono` en tabla `Categoria`)
+4. Cuando llegue el momento: activar Stripe en `/donar` y conectar con tabla `Donacion`
+
+**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 
 ---
 
-*Última actualización: 2026-05-28 (sesión 7 — security hardening fase 3: RLS habilitado en 9 tablas + políticas adecuadas, políticas para 6 tablas sin cobertura, función update_actualizado_at con search_path fijo, política de listado de bucket comics eliminada, IDs de Cloudflare removidos de CLAUDE.md, manejo de errores en code-review.yml)*
-*Commit activo: (sesión 7 — ver rama `claude/magical-ritchie-FKB4d`)*
-*Rama activa: `claude/magical-ritchie-FKB4d`*
+*Última actualización: 2026-05-31 (sesión 9 — auditoría arquitectónica, Resend+suscripciones, categorías dinámicas, hardening admin, arquitectura donaciones)*
+*Commit activo: (sesión 9 — ver rama `claude/beautiful-goodall-Ep1bN`)*
+*Rama activa: `claude/beautiful-goodall-Ep1bN`*

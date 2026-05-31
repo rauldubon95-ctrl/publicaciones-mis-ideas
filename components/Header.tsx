@@ -29,7 +29,7 @@ export default function Header() {
     <header className="bg-white border-b border-zinc-200 sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="font-serif font-semibold text-lg text-brand-800 tracking-tight">
-          Mis Ideas
+          Raúl Dubón
         </Link>
 
         {/* Nav escritorio */}
@@ -47,12 +47,6 @@ export default function Header() {
               {label}
             </Link>
           ))}
-          <Link
-            href="/admin"
-            className="ml-4 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-          >
-            Admin
-          </Link>
         </nav>
 
         {/* Botón hamburguesa — solo móvil */}
@@ -90,12 +84,6 @@ export default function Header() {
               {label}
             </Link>
           ))}
-          <Link
-            href="/admin"
-            className="px-3 py-2.5 rounded text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-          >
-            Admin
-          </Link>
         </nav>
       )}
     </header>

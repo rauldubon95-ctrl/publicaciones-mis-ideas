@@ -24,10 +24,11 @@ model Publicacion {
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
   etiquetas   PublicacionEtiqueta[]
-  comentarios Comentario[]
-  reacciones  Reaccion[]
-  vistas      VistaPublicacion[]
-  descargas   DescargaPdf[]
+  comentarios   Comentario[]
+  reacciones    Reaccion[]
+  vistas        VistaPublicacion[]
+  descargas     DescargaPdf[]
+  enviosEmail   EmailEnvio[]
 }
 
 model Categoria {
@@ -35,6 +36,8 @@ model Categoria {
   nombre        String        @unique
   slug          String        @unique
   descripcion   String?
+  icono         String?       // Emoji o identificador de ícono (ej: "📚")
+  imagen        String?       // URL de imagen representativa de la categoría
   publicaciones Publicacion[]
 }
 
@@ -272,4 +275,51 @@ model SesionAdmin {
   revocadaAt DateTime?
 
   @@index([expiraAt])
+}
+
+// ─── Suscriptores de correo (Double Opt-In) ───────────────────────────────────
+model Subscription {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  nombre         String?
+  // PENDING = esperando confirmación | ACTIVE = confirmado | UNSUBSCRIBED = cancelado
+  status         String    @default("PENDING")
+  // Token único para confirmar y para el enlace de cancelación en cada correo
+  token          String    @unique @default(cuid())
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  creadoAt       DateTime  @default(now())
+
+  @@index([status])
+  @@index([token])
+  @@index([creadoAt])
+}
+
+// ─── Registro de envíos masivos (Fase 7 — analítica de audiencia) ─────────────
+model EmailEnvio {
+  id            String       @id @default(cuid())
+  asunto        String
+  publicacionId String?
+  publicacion   Publicacion? @relation(fields: [publicacionId], references: [id], onDelete: SetNull)
+  totalEnviados Int          @default(0)
+  totalAbiertos Int          @default(0)
+  creadoAt      DateTime     @default(now())
+
+  @@index([publicacionId])
+  @@index([creadoAt])
+}
+
+// ─── Donaciones — arquitectura preparada, Stripe pendiente (Fase 5) ──────────
+model Donacion {
+  id        String   @id @default(cuid())
+  monto     Int      // en centavos (ej: 500 = $5.00)
+  moneda    String   @default("USD")
+  nombre    String?
+  correo    String?
+  stripeId  String?  @unique // checkout session ID de Stripe
+  estado    String   @default("PENDIENTE") // PENDIENTE | COMPLETADO | FALLIDO | CANCELADO
+  creadoAt  DateTime @default(now())
+
+  @@index([estado])
+  @@index([creadoAt])
 }

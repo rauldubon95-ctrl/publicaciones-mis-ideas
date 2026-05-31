@@ -34,6 +34,8 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   );
   const [estado, setEstado] = useState<"idle" | "guardando" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [notificando, setNotificando] = useState(false);
+  const [resultadoNotif, setResultadoNotif] = useState<string | null>(null);
   const [subiendoWord, setSubiendoWord] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +103,30 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Error desconocido");
       setEstado("error");
+    }
+  }
+
+  async function handleNotificar() {
+    if (!publicacion) return;
+    if (!confirm("¿Enviar esta publicación a todos los suscriptores activos?")) return;
+    setNotificando(true);
+    setResultadoNotif(null);
+    try {
+      const res = await fetch("/api/admin/suscriptores/notificar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicacionId: publicacion.id }),
+      });
+      const data = await res.json() as { enviados?: number; fallidos?: number; error?: string };
+      if (!res.ok) {
+        setResultadoNotif(`Error: ${data.error ?? "No se pudo enviar."}`);
+      } else {
+        setResultadoNotif(`✓ ${data.enviados ?? 0} correos enviados${data.fallidos ? ` · ${data.fallidos} fallidos` : ""}`);
+      }
+    } catch {
+      setResultadoNotif("Error de conexión.");
+    } finally {
+      setNotificando(false);
     }
   }
 
@@ -245,6 +271,31 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
           </label>
         </div>
       </div>
+
+      {/* Notificar suscriptores — solo en edición de artículo publicado */}
+      {esEdicion && publicacion.publicado && (
+        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-zinc-800">Notificar suscriptores</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Envía esta publicación por correo a todos los suscriptores activos.
+            </p>
+            {resultadoNotif && (
+              <p className={`text-xs mt-1 font-medium ${resultadoNotif.startsWith("✓") ? "text-emerald-700" : "text-red-600"}`}>
+                {resultadoNotif}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleNotificar}
+            disabled={notificando}
+            className="btn-secondary shrink-0 disabled:opacity-50 text-sm"
+          >
+            {notificando ? "Enviando…" : "Enviar correo"}
+          </button>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
