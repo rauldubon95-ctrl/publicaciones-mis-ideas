@@ -54,6 +54,7 @@ export async function crearOrdenPayPal(
         brand_name: "Raúl Dubón",
         user_action: "PAY_NOW",
         landing_page: "BILLING",
+        locale: "es-SV",
       },
     }),
   });
