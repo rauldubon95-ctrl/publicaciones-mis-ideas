@@ -19,7 +19,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `claude/fervent-feynman-Moqn8` (sesión 8)
+**Rama de desarrollo activa:** `claude/beautiful-goodall-Ep1bN` (sesión 9)
 
 ---
 
@@ -46,6 +46,11 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Paginación dinámica home + /publicaciones | Rama feature | 4/página en home (searchParams), 8/página en /publicaciones. Componente `Paginacion.tsx` reutilizable. |
 | ✅ Sección Servicios de Consultoría | Rama feature | `/servicios` + modal cotización + APIs CRUD admin + modelos Servicio/SolicitudCotizacion en Supabase |
 | ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
+| ✅ Sistema de suscripción por correo (Resend) | Rama feature sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. Requiere `RESEND_API_KEY` + `FROM_EMAIL` en Vercel. |
+| ✅ Centro de Categorías Dinámico | Rama feature sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap automático en `/categorias/[slug]`. |
+| ✅ Admin hardening — Fase 4 | Rama feature sesión 9 | Enlace `/admin` eliminado de `Header.tsx`. Acceso solo vía URL directa `/admin` + middleware HMAC. |
+| ✅ Arquitectura donaciones (Stripe pendiente) | Rama feature sesión 9 | Tabla `Donacion` en Prisma/Supabase. Página `/donar` con "Próximamente". Enlace en Footer. |
+| ✅ Analítica de audiencia — base preparada | Rama feature sesión 9 | Tabla `EmailEnvio` para tracking. Panel `/admin/suscriptores` con stats: activos, pendientes, crecimiento mensual. |
 
 ---
 
@@ -66,6 +71,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `PREMIUM_TOKEN` | **ELIMINADO** — removido el 2026-05-24. No reconfigurar. | No |
 | `HEALTH_TOKEN` | Token para endpoint `/api/health` con métricas completas | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
+| `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
+| `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -163,14 +170,24 @@ Los nuevos artículos se guardan como borrador por defecto (`publicado: false`).
 | `app/admin/servicios/page.tsx` | Admin CRUD de servicios (crear/editar/ocultar/eliminar con modal) |
 | `app/admin/cotizaciones/page.tsx` | Admin gestión de solicitudes con filtros y cambio de estado |
 | `components/Paginacion.tsx` | Componente reutilizable de paginación con elipsis y accesibilidad |
+| `app/api/subscribe/route.ts` | POST público: registrar suscripción (rate limit + honeypot + doble opt-in) |
+| `app/api/subscribe/confirm/route.ts` | GET: confirmar suscripción por token → redirige a `/suscribir/confirmado` |
+| `app/api/subscribe/unsubscribe/route.ts` | GET: cancelar suscripción por token → redirige a `/suscribir/cancelado` |
+| `app/api/admin/suscriptores/route.ts` | GET admin: stats + lista de suscriptores + crecimiento mensual |
+| `app/api/admin/suscriptores/notificar/route.ts` | POST admin: enviar notificación de nueva publicación a suscriptores activos |
+| `app/admin/suscriptores/page.tsx` | Panel admin de suscriptores con analítica |
+| `components/SubscriptionForm.tsx` | Formulario de suscripción con honeypot y doble confirmación |
+| `components/CentroCategoriasGrid.tsx` | Grid dinámico de categorías (automático desde DB) |
+| `lib/resend.ts` | Cliente Resend + plantillas HTML de confirmación y nueva publicación |
+| `app/donar/page.tsx` | Página de donaciones "Próximamente" (arquitectura Stripe preparada) |
 
 ---
 
 ## 8. Prisma schema — modelos principales
 
 ```
-Publicacion   → VistaPublicacion, DescargaPdf, Comentario, Reaccion
-Categoria     → Publicacion (relación)
+Publicacion   → VistaPublicacion, DescargaPdf, Comentario, Reaccion, EmailEnvio
+Categoria     → Publicacion (campos sesión 9: +icono, +imagen)
 Etiqueta      → PublicacionEtiqueta → Publicacion
 Comic         → VistaComic
 Recurso       → VistaRecurso
@@ -178,6 +195,9 @@ RateLimitDb   → rate limiting persistente para rutas Next.js
 EventoSeguridad → log de eventos de seguridad
 Servicio      → SolicitudCotizacion (campos: titulo, slug, descripcion, detalle, categoria, icono, activo, orden)
 SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
+Subscription  → (sesión 9) email, nombre, status, token, confirmedAt, unsubscribedAt
+EmailEnvio    → (sesión 9) asunto, publicacionId, totalEnviados, totalAbiertos
+Donacion      → (sesión 9) monto, moneda, stripeId, estado — arquitectura Stripe preparada
 ```
 
 ---
@@ -271,15 +291,22 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Corpus curado de calidad | 🔄 En progreso | 804 docs (limpiado de 1,287). Continuar en próximas sesiones. |
 | Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
 | Dashboard de observabilidad | ❌ Pendiente | Telemetría existe en KV; dashboard no construido |
-| Security hardening | ✅ Completo (fase 1+2+3) | 17 CVEs Next.js corregidos, IPs hasheadas, magic bytes DOCX, rate limit track, PREMIUM_TOKEN eliminado, sesión 24h, RLS 18 tablas Supabase, bucket listing bloqueado |
+| Security hardening | ✅ Completo (fase 1+2+3+4) | 17 CVEs Next.js, IPs hasheadas, magic bytes DOCX, PREMIUM_TOKEN eliminado, RLS 21 tablas Supabase, enlace `/admin` eliminado del Header público |
 | Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page. Worker CORS actualizado con rauldubon.org |
+| Sistema de suscripción por correo | ✅ Aplicado (sesión 9) | Double Opt-In vía Resend. Ver variables `RESEND_API_KEY` y `FROM_EMAIL`. Ver §FASE 2 configuración DNS. |
+| Centro de Categorías Dinámico | ✅ Aplicado (sesión 9) | Grid automático, campos `icono`+`imagen` en Categoria, SEO completo en `/categorias/[slug]` |
+| Arquitectura Donaciones (Stripe) | ✅ Estructura lista (sesión 9) | Tabla `Donacion` en DB, página `/donar`, falta activar Stripe |
 
-**Próximo paso recomendado:** Conectar dominio rauldubon.org a Vercel. Actualizar NEXT_PUBLIC_APP_URL en Vercel una vez conectado. Ver guía en la respuesta de la sesión 8.
+**Próximos pasos recomendados:**
+1. Configurar `RESEND_API_KEY` y `FROM_EMAIL` en Vercel (ver guía DNS abajo)
+2. Conectar dominio `rauldubon.org` a Vercel + actualizar `NEXT_PUBLIC_APP_URL`
+3. Agregar íconos/imágenes a las categorías desde la DB (campo `icono` en tabla `Categoria`)
+4. Cuando llegue el momento: activar Stripe en `/donar` y conectar con tabla `Donacion`
 
 **Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 
 ---
 
-*Última actualización: 2026-05-30 (sesión 8 — cambio de marca a Raúl Dubón, auditoría de seguridad, guía dominio rauldubon.org)*
-*Commit activo: (sesión 8 — ver rama `claude/fervent-feynman-Moqn8`)*
-*Rama activa: `claude/fervent-feynman-Moqn8`*
+*Última actualización: 2026-05-31 (sesión 9 — auditoría arquitectónica, Resend+suscripciones, categorías dinámicas, hardening admin, arquitectura donaciones)*
+*Commit activo: (sesión 9 — ver rama `claude/beautiful-goodall-Ep1bN`)*
+*Rama activa: `claude/beautiful-goodall-Ep1bN`*

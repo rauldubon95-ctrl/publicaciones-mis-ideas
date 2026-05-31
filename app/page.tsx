@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
+import CentroCategoriasGrid from "@/components/CentroCategoriasGrid";
+import SubscriptionForm from "@/components/SubscriptionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,7 @@ export default async function HomePage({
     }),
     prisma.publicacion.count({ where: { publicado: true } }),
     prisma.categoria.findMany({
+      orderBy: { nombre: "asc" },
       include: {
         _count: { select: { publicaciones: { where: { publicado: true } } } },
       },
@@ -115,6 +118,26 @@ export default async function HomePage({
           </>
         )}
       </section>
+
+      {/* Centro de categorías — debajo de la paginación, solo página 1 */}
+      {paginaSegura === 1 && (
+        <CentroCategoriasGrid categorias={categorias} />
+      )}
+
+      {/* Suscripción por correo */}
+      {paginaSegura === 1 && (
+        <section className="mt-16 border-t border-zinc-100 pt-12">
+          <div className="max-w-md">
+            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">
+              Recibe nuevas publicaciones
+            </h2>
+            <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
+              Suscríbete para recibir un correo cuando publique algo nuevo. Sin spam, cancelación inmediata.
+            </p>
+            <SubscriptionForm />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
