@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const BUCKET_DATOS = "datos";
 
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
   }
 
   const ext = archivo.name.split(".").pop()?.toLowerCase();
-  if (!["xlsx", "xls"].includes(ext ?? "")) {
-    return NextResponse.json({ error: "Solo se aceptan archivos .xlsx o .xls" }, { status: 400 });
+  if (ext !== "xlsx") {
+    return NextResponse.json({ error: "Solo se aceptan archivos .xlsx" }, { status: 400 });
   }
   if (archivo.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: "El archivo no puede superar 10 MB" }, { status: 400 });
@@ -63,10 +63,36 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await archivo.arrayBuffer());
   let preview: { sheetName: string; headers: string[]; rows: (string | number | boolean | null)[][]; totalRows: number };
   try {
-    const wb = XLSX.read(buffer, { type: "buffer", cellDates: true });
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(ws, { header: 1, defval: null });
+    const workbook = new ExcelJS.Workbook();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(buffer as any);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) throw new Error("El archivo no contiene hojas");
+
+    const sheetName = worksheet.name;
+    const rawData: (string | number | boolean | null)[][] = [];
+
+    worksheet.eachRow((row) => {
+      const rowValues = row.values as (ExcelJS.CellValue | undefined)[];
+      // row.values is 1-indexed; slice(1) gives 0-indexed array
+      const cells = rowValues.slice(1).map((v): string | number | boolean | null => {
+        if (v === null || v === undefined) return null;
+        if (typeof v === "number" || typeof v === "boolean") return v;
+        if (typeof v === "string") return v;
+        if (v instanceof Date) return v.toISOString().split("T")[0];
+        if (typeof v === "object" && "result" in v) {
+          const r = (v as { result: ExcelJS.CellValue }).result;
+          if (r === null || r === undefined) return null;
+          if (typeof r === "number" || typeof r === "boolean") return r;
+          return String(r);
+        }
+        if (typeof v === "object" && "richText" in v) {
+          return (v as ExcelJS.CellRichTextValue).richText.map((rt) => rt.text).join("");
+        }
+        return String(v);
+      });
+      rawData.push(cells);
+    });
 
     const headers = (rawData[0] ?? []).map((h) => String(h ?? ""));
     const rows = rawData.slice(1).filter((r) => r.some((c) => c !== null && c !== ""));

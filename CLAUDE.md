@@ -298,10 +298,10 @@ La visión en ARQUITECTURA.md planteaba un sistema RAG completo con retrieval se
 | Arquitectura Donaciones (Stripe) | ✅ Estructura lista (sesión 9) | Tabla `Donacion` en DB, página `/donar`, falta activar Stripe |
 
 **Próximos pasos recomendados:**
-1. Configurar `RESEND_API_KEY` y `FROM_EMAIL` en Vercel (ver guía DNS abajo)
-2. Conectar dominio `rauldubon.org` a Vercel + actualizar `NEXT_PUBLIC_APP_URL`
-3. Agregar íconos/imágenes a las categorías desde la DB (campo `icono` en tabla `Categoria`)
-4. Cuando llegue el momento: activar Stripe en `/donar` y conectar con tabla `Donacion`
+1. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
+2. Cuando llegue el momento: activar Stripe en `/donar` y conectar con tabla `Donacion`
+3. Reemplazar `xlsx` por `exceljs` para eliminar la vulnerabilidad HIGH en `/admin/tableros`
+4. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
 
 **Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8). `xlsx` con vulnerabilidad HIGH sin fix disponible (solo en ruta admin auth-protegida).
 

@@ -2,6 +2,15 @@ import { Resend } from "resend";
 
 export const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const FROM = process.env.FROM_EMAIL ?? "Raúl Dubón <noreply@rauldubon.org>";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org";
 
@@ -50,7 +59,7 @@ function baseLayout(contenido: string): string {
 
 export function htmlConfirmacion(token: string, nombre?: string | null): string {
   const url = `${BASE_URL}/api/subscribe/confirm?token=${encodeURIComponent(token)}`;
-  const saludo = nombre ? `Hola <strong>${nombre}</strong>,` : "Hola,";
+  const saludo = nombre ? `Hola <strong>${escapeHtml(nombre)}</strong>,` : "Hola,";
   return baseLayout(`
     <p style="font-size:16px;color:#3f3f46;margin:0 0 16px;">${saludo}</p>
     <p style="font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 24px;">
@@ -83,9 +92,9 @@ export function htmlNuevaPublicacion(
   token: string,
   nombre?: string | null
 ): string {
-  const articuloUrl = `${BASE_URL}/publicaciones/${slug}`;
+  const articuloUrl = `${BASE_URL}/publicaciones/${encodeURIComponent(slug)}`;
   const unsubscribeUrl = `${BASE_URL}/api/subscribe/unsubscribe?token=${encodeURIComponent(token)}`;
-  const saludo = nombre ? `Hola <strong>${nombre}</strong>,` : "Hola,";
+  const saludo = nombre ? `Hola <strong>${escapeHtml(nombre)}</strong>,` : "Hola,";
   return baseLayout(`
     <p style="font-size:16px;color:#3f3f46;margin:0 0 16px;">${saludo}</p>
     <p style="font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 24px;">
