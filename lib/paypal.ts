@@ -53,7 +53,7 @@ export async function crearOrdenPayPal(
         cancel_url: cancelUrl,
         brand_name: "Raúl Dubón",
         user_action: "PAY_NOW",
-        landing_page: "LOGIN",
+        landing_page: "NO_PREFERENCE",
       },
     }),
   });
