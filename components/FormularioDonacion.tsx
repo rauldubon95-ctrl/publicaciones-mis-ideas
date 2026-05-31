@@ -178,7 +178,7 @@ export default function FormularioDonacion() {
             className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
           />
           <p className="text-xs text-zinc-400 mt-1">
-            Solo para que Stripe pueda enviarte el recibo.
+            Para recibir confirmación de tu donación.
           </p>
         </div>
       </div>
