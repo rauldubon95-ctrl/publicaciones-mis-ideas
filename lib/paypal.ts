@@ -18,7 +18,10 @@ async function getToken(): Promise<string> {
     body: "grant_type=client_credentials",
     cache: "no-store",
   });
-  if (!res.ok) throw new Error("PayPal auth fallida");
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`PayPal auth fallida (${res.status}): ${body}`);
+  }
   const data = (await res.json()) as { access_token: string };
   return data.access_token;
 }
@@ -50,7 +53,7 @@ export async function crearOrdenPayPal(
         cancel_url: cancelUrl,
         brand_name: "Raúl Dubón",
         user_action: "PAY_NOW",
-        landing_page: "LOGIN",
+        landing_page: "NO_PREFERENCE",
       },
     }),
   });
