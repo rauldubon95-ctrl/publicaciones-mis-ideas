@@ -10,7 +10,7 @@ Léelo completo antes de tocar cualquier archivo del proyecto.
 Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics y un asistente de IA sobre ciencias sociales latinoamericanas.
 
 **Dominio:** `rauldubon.org` (comprado en Cloudflare — pendiente de conectar a Vercel)
-**Marca:** "Raúl Dubón" (reemplazó "Mis Ideas" en sesión 8)
+**Marca:** "Raúl Dubón" — aplicada en layout, Header, Footer, AsistenteChat, Worker CORS, metadata.
 
 **Stack:**
 - Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
@@ -27,29 +27,27 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 | Componente | Estado | Notas |
 |---|---|---|
-| ✅ Next.js app (publicaciones, admin, métricas) | Producción | En Vercel, rama `main`, commit `74cf3c9`. Next.js 15.5.18 + React 19.1.0 |
-| ✅ Cloudflare Worker v3 (FTS5 + SkillRegistry + Sync) | **PRODUCCIÓN** | Desplegado via Git integration. root dir: `workers/sociologia`. Auto-deploy en cada push a `main` que toque esa carpeta. |
-| ✅ Skills: sociological, historical, political analysis | Producción | 3 skills activas en `workers/sociologia/src/skills/`. Toda consulta con docs usa prompt estructurado. |
-| ✅ Sistema de premium token (admin sin límite) | Funcionando | HMAC(SESSION_SIGNING_SECRET \|\| ADMIN_SECRET, "premium-bypass-v1") — sin KV |
-| ✅ SkillRegistry modular | Producción | `POST /skill` — ruta para análisis estructurado externo |
-| ✅ Sync Supabase → D1 (automático) | Producción | Al publicar/despublicar desde admin → `lib/d1Sync.ts` → Worker `/sync` |
-| ✅ Sync masivo (todos los artículos) | Producción | Botón en `/admin` → `POST /api/admin/sync-d1-all` |
-| ✅ UX Chat: contador + papelera | Producción | Límite 1500 chars, contador rojo al 90%, botón para limpiar conversación |
-| ❌ Vectorize (retrieval semántico) | No activo | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create` |
-| ✅ Agentes IA en GitHub Actions | En main | `review.mjs` y `prioritize.mjs` — GitHub Models (gratis) |
-| ✅ Security hardening — Fase 1–4 | Producción | RLS 21 tablas Supabase, IPs hasheadas, magic bytes DOCX, PREMIUM_TOKEN eliminado, enlace /admin oculto del Header |
-| ✅ Secretos separados — Hardening Fase 5 | Producción sesión 12 | `ADMIN_SECRET` dividido en `ADMIN_PASSWORD` + `SESSION_SIGNING_SECRET` + `D1_SYNC_SECRET`. `lib/secrets.ts` centraliza con fallback. |
-| ✅ Stripe — eliminado del codebase | Sesión 12 | Código de Stripe borrado del repo. Variables `STRIPE_*` se pueden quitar de Vercel. |
-| ✅ PayPal webhook con firma criptográfica | Producción sesión 12 | `verificarFirmaWebhookPayPal()` en `lib/paypal.ts`. `PAYPAL_WEBHOOK_ID` configurado en Vercel. Idempotencia via `WebhookEventoProcesado`. |
-| ✅ Notificación por correo al admin — donaciones | Producción sesión 12 | Resend envía correo a `ADMIN_EMAIL` al capturar cada donación. |
-| ✅ Monetización de contenido premium | Producción sesión 12 | Artículos de pago: muro de pago, compra via PayPal, magic link por correo, cookie de acceso 1 año. Panel `/admin/compras`. |
-| ✅ Paginación dinámica home + /publicaciones | Producción | 4/página en home (searchParams), 8/página en /publicaciones. Componente `Paginacion.tsx` reutilizable. |
-| ✅ Sección Servicios de Consultoría | Producción | `/servicios` + modal cotización + APIs CRUD admin + modelos Servicio/SolicitudCotizacion en Supabase |
-| ✅ Sistema de suscripción por correo (Resend) | Producción sesión 9 | Double Opt-In, cancelación por token, plantillas HTML, rate limit, panel admin `/admin/suscriptores`. |
-| ✅ Centro de Categorías Dinámico | Producción sesión 9 | Grid automático en home. Campos `icono`+`imagen` en `Categoria`. OG tags, paginación y sitemap. |
-| ✅ Donaciones via PayPal Orders API v2 | Producción sesión 11 | Formulario propio con montos predefinidos. `landing_page: BILLING`, `locale: es_MX`. Webhook con firma. |
-| ✅ Hardening rendimiento — Fase 6 | Producción sesión 11 | Rate limit 30 req/min en `/api/publicaciones`, `/api/servicios`, `/api/dashboard`. Paginación. Límite global 200 req/min Worker IA. |
-| ✅ CLAUDE.md memoria institucional | Activo | Este archivo — actualizar en cada sesión |
+| ✅ Next.js app | Producción | Vercel, `main`, commit `62a53a4`. Next.js 15.5.18 + React 19.1.0 |
+| ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. |
+| ✅ Skills: sociológica, histórica, política | Producción | `sociological-analysis`, `historical-analysis`, `political-analysis` en SkillRegistry |
+| ✅ Sync Supabase → D1 | Producción | Automático al publicar/despublicar + botón sync masivo en admin |
+| ✅ Token premium (admin sin límite IA) | Producción | HMAC(SESSION_SIGNING_SECRET \|\| ADMIN_SECRET, "premium-bypass-v1") |
+| ✅ Secretos separados | Producción sesión 12 | `ADMIN_PASSWORD` + `SESSION_SIGNING_SECRET` + `D1_SYNC_SECRET`. `lib/secrets.ts` con fallback a `ADMIN_SECRET`. |
+| ✅ Telemetría IA | Producción | KV, 7 días historial. Panel `/admin/observabilidad`. Requiere `D1_SYNC_SECRET` igual en Vercel y Worker. |
+| ✅ Monetización de contenido premium | Producción sesión 12 | Artículos de pago, muro de pago, compra PayPal, magic link correo, cookie acceso 1 año |
+| ✅ PayPal Orders API v2 — Donaciones | Producción | `FormularioDonacion.tsx`: montos $3/$5/$10/$25 + personalizado. Webhook firmado. |
+| ✅ PayPal Orders API v2 — Compras premium | Producción sesión 12 | `MuroPago.tsx`: pago por artículo individual. `custom_id="contenido:<pedidoId>"` en webhook. |
+| ✅ Notificación admin por donación/compra | Producción sesión 12 | Resend envía correo a `ADMIN_EMAIL` al capturar cada pago. |
+| ✅ Webhook PayPal con firma criptográfica | Producción sesión 12 | `verificarFirmaWebhookPayPal()`. Idempotencia via `WebhookEventoProcesado`. |
+| ✅ Paginación | Producción | `Paginacion.tsx`: home (4/pág) + `/publicaciones` (8/pág) |
+| ✅ Servicios de Consultoría | Producción | `/servicios` + modal cotización + CRUD admin |
+| ✅ Suscripción por correo | Producción | Double Opt-In, Resend, panel `/admin/suscriptores` |
+| ✅ Categorías dinámicas | Producción | Grid automático, `icono`+`imagen`, SEO en `/categorias/[slug]` |
+| ✅ Security hardening fases 1–5 | Producción | RLS 21 tablas Supabase, IPs hasheadas, secretos separados, middleware, scan paths |
+| ✅ Agentes IA GitHub Actions | Producción | `code-review.yml` + `prioritize.yml` — GitHub Models (gratis) |
+| ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
+| ❌ Multi-worker / orquestación | **En planificación sesión 13** | Ver §17. Solo existe 1 worker hoy. |
+| ❌ Vectorize (retrieval semántico) | Pendiente | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create`. |
 
 ---
 
@@ -57,60 +55,47 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 ### Vercel (Next.js)
 
-| Variable | Descripción | Requerida |
+| Variable | Descripción | Estado |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string (pooled) de Supabase | Sí |
-| `DIRECT_URL` | PostgreSQL direct connection string de Supabase | Sí |
-| `ADMIN_SECRET` | **LEGACY** — fallback si no están las variables separadas. Mantener hasta migrar completamente. | Legacy |
-| `ADMIN_PASSWORD` | Contraseña que el humano escribe en `/admin/login`. | Sí (post-sesión 12) |
-| `SESSION_SIGNING_SECRET` | Secreto largo (≥32 chars) que firma cookies admin y el token premium del asistente IA. Debe coincidir con el secret del Worker. | Sí (post-sesión 12) |
-| `D1_SYNC_SECRET` | Secreto largo (≥32 chars) que autentica `/sync` y `/telemetria` del Worker. Debe coincidir con el secret del Worker. | Sí (post-sesión 12) |
-| `NEXT_PUBLIC_APP_URL` | URL pública del sitio (ej: `https://...vercel.app`) | Sí |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase | Sí |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key de Supabase | Sí |
-| `SUPABASE_URL` | Igual que `NEXT_PUBLIC_SUPABASE_URL` pero server-side | Sí (storage admin) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key de Supabase (no exponer al cliente) | Sí (storage admin) |
-| `HEALTH_TOKEN` | Token para endpoint `/api/health` con métricas completas | Recomendado |
+| `DATABASE_URL` | PostgreSQL connection string (pooled) Supabase | ✅ Configurada |
+| `DIRECT_URL` | PostgreSQL direct connection string Supabase | ✅ Configurada |
+| `ADMIN_SECRET` | **LEGACY** — fallback si no están las nuevas variables separadas | Legacy |
+| `ADMIN_PASSWORD` | Contraseña que el humano escribe en `/admin/login` | ✅ Sesión 12 |
+| `SESSION_SIGNING_SECRET` | Firma cookies admin + token premium IA. Debe coincidir con Worker. | ✅ Sesión 12 |
+| `D1_SYNC_SECRET` | Autentica `/sync` y `/telemetria` del Worker. Debe coincidir con Worker. | ✅ Sesión 12 |
+| `NEXT_PUBLIC_APP_URL` | URL pública del sitio | ✅ Configurada |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL proyecto Supabase | ✅ Configurada |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key Supabase | ✅ Configurada |
+| `SUPABASE_URL` | URL Supabase server-side | ✅ Configurada |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key Supabase (solo server) | ✅ Configurada |
+| `RESEND_API_KEY` | API Key Resend (correos: suscripciones, notificaciones, magic links) | ✅ Configurada |
+| `FROM_EMAIL` | Remitente, ej: `Raúl Dubón <noreply@rauldubon.org>` | ✅ Configurada |
+| `ADMIN_EMAIL` | Correo que recibe notificaciones de donaciones/compras. Default: `raul.dubon95@gmail.com` | ✅ Configurada |
+| `PAYPAL_CLIENT_ID` | Client ID Business PayPal (server-side) | ✅ Configurada |
+| `PAYPAL_CLIENT_SECRET` | Secret Business PayPal. NUNCA `NEXT_PUBLIC_`. | ✅ Configurada |
+| `PAYPAL_ENV` | `live` producción / `sandbox` pruebas | ✅ `live` |
+| `PAYPAL_WEBHOOK_ID` | ID webhook en PayPal Dashboard | ✅ Sesión 12 |
+| `HEALTH_TOKEN` | Token para `/api/health` con métricas completas | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
-| `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones, notificaciones, magic links) | Sí |
-| `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí |
-| `ADMIN_EMAIL` | Correo del admin que recibe notificación de donaciones y compras. Default: `raul.dubon95@gmail.com`. | Recomendado |
-| `PAYPAL_CLIENT_ID` | Client ID de la cuenta Business de PayPal (Orders API v2). Server-side únicamente. | Sí |
-| `PAYPAL_CLIENT_SECRET` | Secret de la cuenta Business de PayPal. NUNCA con prefijo `NEXT_PUBLIC_`. | Sí |
-| `PAYPAL_ENV` | `live` para producción, `sandbox` para pruebas. | Sí |
-| `PAYPAL_WEBHOOK_ID` | Webhook ID de PayPal Dashboard. Sin esto, el webhook rechaza todos los eventos. | Sí |
-| `PREMIUM_TOKEN` | **ELIMINADO** — removido el 2026-05-24. No reconfigurar. | No |
-| `STRIPE_SECRET_KEY` | **ELIMINADO** sesión 12 — código de Stripe borrado del repo. Quitar de Vercel. | No |
-| `STRIPE_WEBHOOK_SECRET` | **ELIMINADO** sesión 12 — quitar de Vercel. | No |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **ELIMINADO** sesión 12 — quitar de Vercel. | No |
+| `PREMIUM_TOKEN` | **ELIMINADO** 2026-05-24. No reconfigurar. | ❌ |
+| `STRIPE_*` | **ELIMINADOS** sesión 12. Quitar de Vercel. | ❌ |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
 | Variable/Binding | Tipo | Descripción |
 |---|---|---|
-| `DB` | D1 binding | `llm_sociolog` — ID en `workers/sociologia/wrangler.toml` |
-| `RATE_LIMIT` | KV binding | Namespace `RATE_LIMIT` — ID en `workers/sociologia/wrangler.toml` |
-| `AI` | Workers AI binding | Modelo `@cf/meta/llama-3.1-8b-instruct` |
-| `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback si no están `SESSION_SIGNING_SECRET` y `D1_SYNC_SECRET`. |
-| `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium del chat IA. **Mismo valor que en Vercel.** |
-| `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que en Vercel.** |
-
-**CRÍTICO:** Si `D1_SYNC_SECRET` está en Vercel pero NO en el Worker, la telemetría de IA falla con 401. Los tres secrets deben coincidir en ambos lados.
-
-### GitHub Secrets (Actions)
-
-| Secret | Descripción |
-|---|---|
-| `CF_API_TOKEN` | API token de Cloudflare (con restricción de IP activa — NO funciona desde GitHub Actions) |
-| `CF_ACCOUNT_ID` | Account ID de Cloudflare — configurado como GitHub Secret, nunca hardcodear aquí |
-
-**Nota:** El deploy del Worker lo maneja la integración Git de Cloudflare (auto-deploy). `deploy-worker.yml` es redundante mientras CF_API_TOKEN tenga restricción de IP.
+| `DB` | D1 binding | `llm_sociolog` — ID en `wrangler.toml` |
+| `RATE_LIMIT` | KV binding | Rate limiting + telemetría |
+| `AI` | Workers AI binding | `@cf/meta/llama-3.1-8b-instruct` |
+| `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback |
+| `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium. **Mismo valor que Vercel.** ✅ Configurado sesión 13 |
+| `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que Vercel.** ✅ Configurado sesión 13 |
 
 ---
 
 ## 4. Schema D1 real (producción)
 
-La base de datos Cloudflare D1 se llama `llm_sociolog`. La tabla real es:
+Cloudflare D1: `llm_sociolog`. Tabla activa:
 
 ```sql
 CREATE TABLE documentos (
@@ -118,170 +103,183 @@ CREATE TABLE documentos (
   titulo TEXT NOT NULL,
   slug TEXT,
   texto TEXT NOT NULL,
-  tipo TEXT DEFAULT 'articulo',   -- 'articulo' = corpus académico, 'publicacion' = artículos del sitio
+  tipo TEXT DEFAULT 'articulo',   -- 'articulo' = corpus, 'publicacion' = artículos del sitio
   palabras TEXT,
   fuente TEXT
 );
-
-CREATE VIRTUAL TABLE documentos_fts USING fts5(
-  titulo, texto, palabras,
-  content='documentos', content_rowid='id'
-);
+CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content='documentos', content_rowid='id');
 ```
 
-**IMPORTANTE:** Los archivos en `migrations/d1/` describen una arquitectura futura con tablas `documents` y `doc_chunks`. Son incompatibles con la DB en producción. No ejecutar esos scripts contra `llm_sociolog`.
+**804 documentos** del corpus académico + artículos del sitio sincronizados (`tipo='publicacion'`).
 
-Actualmente hay **804 documentos** del corpus académico + los artículos del sitio sincronizados via `/sync` (con `tipo='publicacion'`).
+**NO ejecutar** los scripts de `migrations/d1/` — describen arquitectura futura incompatible con la DB de producción.
 
 ---
 
 ## 5. Mecanismo de token premium (asistente IA)
 
-El flujo actual (Worker v3 en producción):
-
-1. Admin se loguea → cookie `admin_auth` se establece
-2. `AsistenteChat.tsx` llama a `/api/asistente/token` en cada cambio de ruta
-3. Ese endpoint verifica la cookie y computa `HMAC(SESSION_SIGNING_SECRET || ADMIN_SECRET, "premium-bypass-v1")`
-4. El chat envía ese token en el header `X-Premium-Token`
-5. El Worker valida con el mismo HMAC usando `env.SESSION_SIGNING_SECRET ?? env.ADMIN_SECRET`
-
-**Si los secrets cambian:** actualizar en (a) Vercel env vars, (b) Worker secrets en Cloudflare dashboard. Ambos lados deben tener el mismo valor.
+1. Admin se loguea → cookie `admin_auth`
+2. `AsistenteChat.tsx` llama `/api/asistente/token` en cada cambio de ruta
+3. Endpoint verifica cookie → computa `HMAC(SESSION_SIGNING_SECRET || ADMIN_SECRET, "premium-bypass-v1")`
+4. Chat envía token en header `X-Premium-Token`
+5. Worker valida con mismo HMAC usando `env.SESSION_SIGNING_SECRET ?? env.ADMIN_SECRET`
 
 ---
 
-## 6. Cómo crear/ver artículos
+## 6. Artículos: normales y premium
 
-Los nuevos artículos se guardan como borrador por defecto (`publicado: false`). Para que sean visibles públicamente ir a Admin → editar el artículo → activar "Visible al público". Al publicar, el artículo se sincroniza automáticamente a D1.
+**Normales:** borrador por defecto. Admin → editar → activar "Visible al público" → sync automático a D1.
 
-**Artículos premium:** activar el toggle "Artículo de pago (premium)" en el editor, configurar precio en USD (mínimo $1.00) y opcionalmente un resumen público. El admin siempre ve el contenido completo (aparece una barra azul informativa). Los visitantes ven el resumen y el muro de pago.
+**Premium:** toggle "Artículo de pago" + precio USD (mínimo $1.00) + resumen público opcional. Al visitar el artículo:
+- **Admin:** ve contenido completo + barra azul informativa ("estás viendo como admin")
+- **Visitante sin pago:** ve resumen público (o primeros 800 chars) + `MuroPago.tsx`
+- **Visitante con pago:** accede via cookie `acc_<publicacionId[:16]>` o magic link `/leer/<token>`
 
 ---
 
 ## 7. Rutas críticas
 
+### Next.js — Páginas públicas
+
 | Ruta | Propósito |
 |---|---|
-| `app/api/publicaciones/route.ts` | GET: lista pública. POST: crear artículo (requiere cookie admin) |
-| `app/api/admin/publicaciones/[id]/route.ts` | PUT/DELETE admin de artículos + sync D1 automático |
-| `app/api/admin/sync-d1-all/route.ts` | POST: sincroniza TODOS los artículos publicados a D1 |
-| `app/api/admin/metricas/route.ts` | Dashboard de métricas (requiere auth) |
-| `app/api/track/route.ts` | Registro de vistas (llamado desde TrackView) |
-| `app/api/asistente/token/route.ts` | Genera token premium HMAC para admin |
-| `app/api/comprar/route.ts` | POST público: inicia compra de artículo premium → crea PedidoContenido + orden PayPal |
-| `app/comprar/exito/page.tsx` | Página de retorno de PayPal tras pago → captura orden, setea cookie, muestra confirmación |
-| `app/leer/[token]/page.tsx` | Magic link: valida tokenAcceso → setea cookie → redirige al artículo |
-| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal con verificación de firma. Discrimina donaciones vs compras de contenido. Idempotente via WebhookEventoProcesado. |
-| `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido con filtros + total recaudado |
-| `app/admin/compras/page.tsx` | Panel admin de compras de contenido premium |
-| `app/admin/observabilidad/page.tsx` | Telemetría del asistente IA (llama a `/api/admin/telemetria`) |
-| `app/api/admin/telemetria/route.ts` | Proxy autenticado → Worker `/telemetria` usando D1_SYNC_SECRET |
-| `workers/sociologia/src/index.ts` | Punto de entrada del Worker. Rutas: `/` (chat), `/skill`, `/sync`, `/embed`, `/telemetria` |
-| `workers/sociologia/src/retrieval.ts` | Búsqueda FTS5 + LIKE en D1 |
-| `workers/sociologia/src/ratelimit.ts` | Rate limiting en KV + validación premium HMAC |
-| `workers/sociologia/src/sync.ts` | Endpoint POST `/sync` — upsert/delete de artículos del sitio en D1 |
-| `workers/sociologia/src/skills/registry.ts` | SkillRegistry — registro y ejecución de skills |
-| `workers/sociologia/src/telemetry.ts` | Telemetría en KV + endpoint GET `/telemetria` |
-| `lib/d1Sync.ts` | Cliente Next.js → Worker sync (HMAC + fetch, fire-and-forget) |
-| `lib/secrets.ts` | Centraliza acceso a secretos con fallback a ADMIN_SECRET |
-| `lib/accesoContenido.ts` | Verifica/setea cookie de acceso a artículo premium (httpOnly, 1 año) |
-| `lib/paypal.ts` | Cliente PayPal: crear orden, capturar, verificar firma webhook |
-| `lib/resend.ts` | Cliente Resend + plantillas HTML: confirmación, notificación publicación, notificación donación, magic link acceso premium |
-| `components/MuroPago.tsx` | Muro de pago: muestra precio, formulario email/nombre, llama `/api/comprar`, redirige a PayPal |
-| `app/admin/page.tsx` | Panel admin principal |
-| `app/servicios/page.tsx` | Página pública de servicios de consultoría |
-| `app/api/subscribe/route.ts` | POST público: registrar suscripción (rate limit + honeypot + doble opt-in) |
-| `app/api/admin/suscriptores/route.ts` | GET admin: stats + lista de suscriptores |
-| `app/admin/suscriptores/page.tsx` | Panel admin de suscriptores con analítica |
-| `app/donar/page.tsx` | Página pública de donaciones |
-| `app/donar/gracias/page.tsx` | Confirmación de donación — captura orden PayPal, robots noindex |
-| `app/api/admin/donaciones/route.ts` | GET admin: lista donaciones con filtro + total recaudado |
-| `app/admin/donaciones/page.tsx` | Panel admin de donaciones |
+| `/` | Home paginado (4/pág) |
+| `/publicaciones` | Listado paginado (8/pág) |
+| `/publicaciones/[slug]` | Artículo individual (normal o premium) |
+| `/categorias/[slug]` | Categoría con artículos |
+| `/recursos` | Recursos descargables |
+| `/comics` | Tiras cómicas |
+| `/donar` | Donaciones vía PayPal (`FormularioDonacion.tsx`) |
+| `/servicios` | Servicios de consultoría |
+| `/comprar/exito` | Retorno de PayPal tras compra premium |
+| `/leer/[token]` | Magic link: valida token → cookie → redirige al artículo |
+| `/suscribir/*` | Formulario y confirmaciones de suscripción |
+
+### Next.js — Admin (todas requieren cookie `admin_auth`)
+
+| Ruta | Propósito |
+|---|---|
+| `/admin` | Dashboard principal con accesos rápidos |
+| `/admin/nueva` | Crear publicación |
+| `/admin/editar/[id]` | Editar publicación (incl. configuración premium) |
+| `/admin/comics` + `/nueva` + `/editar/[id]` | CRUD de cómics |
+| `/admin/recursos` + `/nueva` + `/editar/[id]` | CRUD de recursos |
+| `/admin/servicios` | CRUD de servicios de consultoría |
+| `/admin/cotizaciones` | Solicitudes de clientes |
+| `/admin/donaciones` | Historial de donaciones PayPal |
+| `/admin/compras` | Historial de compras de contenido premium |
+| `/admin/suscriptores` | Lista de correo + analítica |
+| `/admin/metricas` | Dashboard de vistas, descargas, reacciones |
+| `/admin/tableros` | Subir y publicar plantillas Excel |
+| `/admin/seguridad` | Log de eventos de seguridad |
+| `/admin/observabilidad` | Telemetría del asistente IA (7 días) |
+
+### Next.js — APIs relevantes
+
+| Ruta | Propósito |
+|---|---|
+| `app/api/comprar/route.ts` | POST: inicia compra premium → PedidoContenido + orden PayPal |
+| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina donación vs compra por `custom_id`. Idempotente. |
+| `app/api/donaciones/checkout/route.ts` | POST: crea orden PayPal para donación |
+| `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido + total recaudado |
+| `app/api/admin/telemetria/route.ts` | GET admin: proxy autenticado → Worker `/telemetria` |
+| `app/api/admin/sync-d1-all/route.ts` | POST: sincroniza todos los artículos publicados a D1 |
+| `app/api/track/route.ts` | POST: registra vista de artículo |
+| `app/api/subscribe/route.ts` | POST: registrar suscripción email |
+
+### Cloudflare Worker (`workers/sociologia/`)
+
+| Endpoint | Propósito |
+|---|---|
+| `POST /` | Chat IA: RAG + LLM + skills |
+| `POST /skill` | Análisis académico estructurado (externo) |
+| `POST /sync` | Upsert/delete artículo en D1 (autenticado con `D1_SYNC_SECRET`) |
+| `POST /embed` | Generar embeddings (admin, Phase 3) |
+| `GET /telemetria` | Métricas de uso IA (autenticado con `D1_SYNC_SECRET`) |
 
 ---
 
-## 8. Prisma schema — modelos principales
+## 8. Prisma schema — modelos activos
 
 ```
-Publicacion   → VistaPublicacion, DescargaPdf, Comentario, Reaccion, EmailEnvio, PedidoContenido
-               campos premium: esPremium Boolean @default(false), precioCentavos Int?, resumenPublico String?
-Categoria     → Publicacion (campos: +icono, +imagen)
-Etiqueta      → PublicacionEtiqueta → Publicacion
-Comic         → VistaComic
-Recurso       → VistaRecurso
-RateLimitDb   → rate limiting persistente para rutas Next.js
-EventoSeguridad → log de eventos de seguridad
-Servicio      → SolicitudCotizacion
-SolicitudCotizacion → estado: PENDIENTE | REVISADO | ARCHIVADO
-Subscription  → email, nombre, status, token, confirmedAt, unsubscribedAt
-EmailEnvio    → asunto, publicacionId, totalEnviados, totalAbiertos
-Donacion      → monto, moneda, paypalOrderId, estado (PENDIENTE/COMPLETADO/FALLIDO/CANCELADO)
-PedidoContenido → publicacionId, emailComprador, nombreComprador, montoCentavos, moneda,
-                  paypalOrderId (unique), estado, tokenAcceso (unique, cuid), ipHash,
+Publicacion     → campos premium: esPremium Boolean, precioCentavos Int?, resumenPublico String?
+                  relaciones: VistaPublicacion, DescargaPdf, Comentario, Reaccion, EmailEnvio, PedidoContenido
+Categoria       → campos: icono String?, imagen String?
+Etiqueta        → PublicacionEtiqueta → Publicacion
+Comic           → VistaComic
+Recurso         → VistaRecurso
+RateLimitDb     → rate limiting persistente
+EventoSeguridad → log de seguridad
+SesionAdmin     → jti, revocadaAt, expiraAt (revocación de sesiones)
+Servicio        → SolicitudCotizacion
+Subscription    → email, nombre, status, token, confirmedAt, unsubscribedAt
+EmailEnvio      → asunto, publicacionId, totalEnviados, totalAbiertos
+Donacion        → stripeId (campo legacy — guarda paypalOrderId), estado, monto, moneda
+PedidoContenido → publicacionId, emailComprador, montoCentavos, paypalOrderId (unique),
+                  estado (PENDIENTE/COMPLETADO/FALLIDO/CANCELADO), tokenAcceso (unique cuid),
                   creadoAt, completadoAt, ultimoAccesoAt
-WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento, procesadoAt — idempotencia de webhooks
+WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia de webhooks
 ```
 
----
-
-## 9. Workflows de GitHub Actions
-
-| Workflow | Trigger | Propósito | IA utilizada |
-|---|---|---|---|
-| `deploy-worker.yml` | Push a `main` con cambios en `workers/sociologia/**` | Intenta deploy del Worker (falla por CF_API_TOKEN con restricción de IP) | — |
-| `code-review.yml` | PR o cada lunes 8:00 UTC | Revisa código y crea Issues con etiquetas | GitHub Models (Llama 3.1 70B) — **gratis** |
-| `prioritize.yml` | Cada lunes 9:00 UTC | Prioriza Issues abiertos, crea reporte semanal | GitHub Models (Llama 3.1 70B) — **gratis** |
-
-**Nota:** El deploy real del Worker lo maneja la integración Git de Cloudflare (auto-deploy). `deploy-worker.yml` es redundante mientras CF_API_TOKEN tenga restricción de IP.
+**Nota:** El campo `stripeId` en `Donacion` es un nombre legacy. Actualmente guarda el `paypalOrderId`. No renombrar sin migración.
 
 ---
 
-## 10. Deuda técnica conocida (no resolver sin revisar aquí primero)
+## 9. Workflows GitHub Actions
+
+| Workflow | Trigger | Propósito |
+|---|---|---|
+| `deploy-worker.yml` | Push a `main` con cambios en `workers/sociologia/**` | Intenta deploy del Worker (falla por CF_API_TOKEN con IP restringida — Cloudflare Git integration lo cubre) |
+| `code-review.yml` | PR o lunes 8:00 UTC | Revisa código, crea Issues — GitHub Models gratis |
+| `prioritize.yml` | Lunes 9:00 UTC | Prioriza Issues, reporte semanal — GitHub Models gratis |
+
+---
+
+## 10. Deuda técnica conocida
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| Más limpieza del corpus D1 | 804 documentos restantes. Aún hay documentos de baja calidad. | **Alta** |
-| CSP con `unsafe-inline` en script-src | `next.config.mjs` tiene `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware Next.js. | **Alta** |
-| `xlsx` vulnerabilidad HIGH sin fix | `app/api/admin/tableros/route.ts` usa `xlsx` (sheetJS). Prototype Pollution + ReDoS. Solo accesible por admin auth. Considerar reemplazar con `exceljs`. | Media |
-| Vectorize desactivado | `[[vectorize]]` comentado en `wrangler.toml`. Requiere `wrangler vectorize create` + pipeline de embeddings. Sin esto, retrieval es solo FTS5+LIKE. | Media |
-| Telemetría en KV (no D1) | `telemetry.ts` escribe en KV. Los datos solo duran 7 días. Un dashboard persistente requeriría D1. | Media |
-| CF_API_TOKEN con restricción de IP | GitHub Actions no puede deployar el Worker. Crear nuevo token sin restricción de IP si se quiere restaurar deploy via Actions. | Baja |
-| `config/prompts/v1.1.txt` desconectado | Worker usa SYSTEM_PROMPT hardcodeado en `prompts.ts`, no este archivo. | Baja |
-| ARQUITECTURA.md mezcla producción y visión | §2-§18 describen arquitectura futura, no actual. Confunde a sesiones IA. | Documental |
-| FormularioDonacion.tsx inactivo | Era para Stripe. Código presente pero no se usa. Se puede borrar en sesión futura. | Baja |
+| CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. | **Alta** |
+| Más limpieza corpus D1 | 804 docs, aún hay documentos de baja calidad | Alta |
+| `xlsx` vulnerabilidad | `app/api/admin/tableros/route.ts` usa `xlsx` (Prototype Pollution + ReDoS). Solo admin. Considerar `exceljs`. | Media |
+| Vectorize desactivado | Retrieval es solo FTS5+LIKE. Requiere `wrangler vectorize create` + pipeline embeddings. | Media |
+| Telemetría en KV (no D1) | Datos de IA duran solo 7 días. Dashboard persistente requeriría D1. | Media |
+| Campo `stripeId` en Donacion | Nombre legacy: hoy guarda paypalOrderId. Renombrar requiere migración Supabase + Prisma. | Baja |
+| CF_API_TOKEN con restricción IP | GitHub Actions no puede deployar Worker. Cloudflare Git integration lo cubre por ahora. | Baja |
+| `config/prompts/v1.1.txt` desconectado | Worker usa SYSTEM_PROMPT en `prompts.ts`, no este archivo. | Baja |
+| Multi-worker / orquestación | Ver §17 — en planificación | Futura |
 
 ---
 
 ## 11. Reglas para sesiones IA futuras
 
-1. **Worker v3 ESTÁ en producción** — Auto-deploya en cada push a `main` que modifique `workers/sociologia/**`.
-2. **La tabla D1 real se llama `documentos`** — no `documents` ni `doc_chunks`. `tipo='articulo'` = corpus académico; `tipo='publicacion'` = artículos del sitio.
-3. **No pushear a main sin confirmar con el usuario** — Vercel auto-deploya Y Cloudflare auto-deploya el Worker.
-4. **Actualizar este archivo** cuando se agreguen variables de entorno, se cambie la arquitectura, o se complete una fase del roadmap.
-5. **La rama de desarrollo activa** puede cambiar por sesión. Verificar con `git branch --show-current` al inicio.
-6. **No hardcodear secretos en archivos** — usar siempre `${{ secrets.NOMBRE }}` en workflows y `process.env.NOMBRE` en código.
-7. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir en Vercel Y en el Worker.** Si solo se actualizan en uno, la telemetría y el token premium fallan.
-8. **El admin siempre ve el contenido completo de artículos premium** (por diseño). Una barra azul informativa lo indica. Para probar el muro de pago, usar ventana de incógnito.
-9. **El chat usa la skill en TODAS las respuestas con docs** — No llamar al LLM directamente desde `index.ts`. El prompt estructurado de la skill es el único punto de generación.
-10. **Next.js 15 — params y cookies son async** — `params` es `Promise<{...}>` y debe ser `await`eado. `cookies()` también devuelve `Promise`. Toda función que los use debe ser `async`.
-11. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado` para no procesar el mismo evento dos veces. Siempre verificar `verificarFirmaWebhookPayPal()` antes de procesar.
-12. **El precio de artículos premium siempre viene del servidor** — nunca del cliente. `app/api/comprar/route.ts` lo lee de la DB.
+1. **Worker `sociologia` está en producción** — Auto-deploy al pushear a `main` tocando `workers/sociologia/**`.
+2. **Tabla D1 real: `documentos`** — `tipo='articulo'` = corpus, `tipo='publicacion'` = artículos del sitio.
+3. **No pushear a `main` sin confirmar con el usuario** — Vercel Y Cloudflare auto-despliegan.
+4. **Actualizar este archivo** en cada sesión.
+5. **Verificar rama activa** al inicio: `git branch --show-current`.
+6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker. Si solo se actualiza en uno, la telemetría y el token premium fallan.
+7. **El admin siempre ve el contenido completo de artículos premium** (diseño intencional). Barra azul informativa lo indica. Para probar el muro de pago, usar ventana de incógnito.
+8. **El precio de artículos premium siempre viene del servidor** — nunca del cliente. `/api/comprar` lo lee de la DB.
+9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Siempre verificar firma antes de procesar.
+10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados. Toda función que los use debe ser `async`.
+11. **`FormularioDonacion.tsx` es el componente activo de donaciones** — no `BotonesPayPal`. Montos $3/$5/$10/$25 + personalizado.
+12. **3 skills activas en el Worker**: `sociological-analysis`, `historical-analysis`, `political-analysis`.
 
 ---
 
 ## 12. Comandos útiles
 
 ```bash
-# Verificar estado de la rama
-git log --oneline -10
-git status
+git log --oneline -10 && git status
 
-# Verificar que el Worker compila antes de pushear
+# TypeCheck Next.js
+npx tsc --noEmit
+
+# TypeCheck Worker
 cd workers/sociologia && npx tsc --noEmit
 
-# Deploy manual del Worker (solo si hay CF_API_TOKEN válido sin restricción de IP)
-cd workers/sociologia && npx wrangler deploy
-
-# Ver logs del Worker en tiempo real
+# Logs Worker en tiempo real
 cd workers/sociologia && npx wrangler tail
 ```
 
@@ -289,106 +287,91 @@ cd workers/sociologia && npx wrangler tail
 
 ## 13. Sync de artículos a D1
 
-El sync es automático al publicar/despublicar desde el panel admin. Para sincronizar todos los artículos a la vez:
-
-1. Ir a `/admin` (logueado como admin)
-2. Click en **"Sincronizar artículos"** en la sección "Asistente IA — sincronización"
-3. Esperar respuesta: `"✓ N de N artículos sincronizados al asistente IA"`
-
-El endpoint es `POST /api/admin/sync-d1-all` — requiere cookie `admin_auth` válida.
+Automático al publicar/despublicar. Para sincronizar todos:
+1. `/admin` → "Sincronizar artículos" → `POST /api/admin/sync-d1-all`
 
 ---
 
-## 14. Progreso hacia la visión original
+## 14. Sistema de monetización de contenido (sesión 12)
 
-| Componente de la visión | Estado | Brecha |
-|---|---|---|
-| Retrieval FTS5 (keyword) | ✅ En producción | — |
-| Retrieval semántico (Vectorize) | ❌ Pendiente | Requiere crear índice + pipeline de embeddings |
-| Skill system modular | ✅ En producción | 3 skills activas (sociológica, histórica, política) |
-| Skill integrada en chat principal | ✅ En producción | Reduce alucinaciones. Admin usa `depth=deep`. |
-| Sync bidireccional con Supabase | ✅ En producción | — |
-| Corpus curado de calidad | 🔄 En progreso | 804 docs (limpiado de 1,287). Continuar en próximas sesiones. |
-| Multi-agent / orquestación | ❌ Solo docs | Visión a largo plazo |
-| Dashboard de observabilidad | ✅ Funcional | `/admin/observabilidad`. Datos en KV, 7 días de historial. |
-| Security hardening | ✅ Completo (fases 1–5) | RLS 21 tablas Supabase, secretos separados, webhook firmado, PREMIUM_TOKEN eliminado |
-| Cambio de marca "Raúl Dubón" | ✅ Aplicado | Header, footer, metadata, PDF, home page, Worker CORS |
-| Sistema de suscripción por correo | ✅ Producción (sesión 9) | Double Opt-In vía Resend |
-| Centro de Categorías Dinámico | ✅ Producción (sesión 9) | Grid automático, SEO completo en `/categorias/[slug]` |
-| Donaciones PayPal | ✅ Producción (sesión 11–12) | Orders API v2, webhook con firma, notificación al admin por correo |
-| Monetización de contenido | ✅ Producción (sesión 12) | Artículos de pago, muro de pago, magic link, panel `/admin/compras` |
-| Notificación admin por donación | ✅ Producción (sesión 12) | Correo vía Resend al capturar cada pago |
+### Flujo de compra
 
-**Próximos pasos recomendados:**
-1. Agregar íconos/emojis a las categorías desde la DB (campo `icono` en tabla `Categoria`)
-2. Implementar nonces en CSP para eliminar `script-src 'unsafe-inline'`
-3. Limpiar `FormularioDonacion.tsx` (inactivo, era para Stripe)
-
-**Deuda de seguridad activa:** CSP `script-src 'unsafe-inline'` (ver auditoría sesión 8).
-
----
-
-*Última actualización: 2026-06-01 (sesión 13 — fixes PayPal locale es_MX, aviso premium admin, telemetría secrets)*
-*Commit activo en main: `74cf3c9`*
-*Rama activa: `claude/kind-ptolemy-6ewhS`*
-
----
-
-## 15. Sistema de monetización de contenido premium (sesión 12)
-
-### Flujo completo de compra
-
-1. Visitante llega a artículo premium → ve resumen público (o primeros 800 chars) + muro de pago (`MuroPago.tsx`)
-2. Ingresa email + nombre → `POST /api/comprar` crea `PedidoContenido` PENDIENTE + orden PayPal con `custom_id="contenido:<pedidoId>"`
-3. Redirige a PayPal (`approvalUrl`) → visitante paga
-4. PayPal redirige a `/comprar/exito?pedido_id=...&token=<paypalOrderId>` → captura la orden, marca COMPLETADO, setea cookie `acc_<publicacionId[:16]>`
-5. En paralelo, el webhook PayPal procesa `CHECKOUT.ORDER.APPROVED` → verifica firma → marca COMPLETADO (idempotente) → envía magic link por correo (`/leer/<tokenAcceso>`)
-6. Magic link → `setearCookieAcceso()` → redirige al artículo completo
+1. Visitante → artículo premium → ve resumen + `MuroPago.tsx` (email + nombre)
+2. `POST /api/comprar` → crea `PedidoContenido` PENDIENTE + orden PayPal con `custom_id="contenido:<pedidoId>"`
+3. PayPal aprueba → redirige a `/comprar/exito?pedido_id=...&token=<paypalOrderId>`
+4. `/comprar/exito` captura la orden → marca COMPLETADO → setea cookie `acc_<publicacionId[:16]>`
+5. Webhook PayPal (en paralelo) → verifica firma → marca COMPLETADO (idempotente) → envía magic link a correo
+6. Magic link `/leer/<tokenAcceso>` → setea cookie → redirige al artículo completo
 
 ### Verificación de acceso
-- `tieneAccesoComprado(publicacionId)` en `lib/accesoContenido.ts`
-- Lee cookie `acc_<publicacionId[:16]>` → busca `PedidoContenido` por tokenAcceso → verifica `estado=COMPLETADO` y `publicacionId` correcto
-- Cookie httpOnly, secure en producción, sameSite=lax, duración 1 año
-
-### Admin siempre accede
-- `isAdminAuthorized()` → si true, `requierePago = false` → contenido completo
-- Barra azul informativa visible para el admin en el artículo
-
-### Panel de compras
-- `/admin/compras` — lista todos los PedidoContenido con filtros por estado
-- Muestra total recaudado, compras completadas, artículo, comprador, fecha, monto
+`tieneAccesoComprado(publicacionId)` en `lib/accesoContenido.ts`:
+- Lee cookie `acc_<publicacionId[:16]>` → busca `PedidoContenido` por tokenAcceso → verifica estado=COMPLETADO
+- Cookie: httpOnly, secure en producción, sameSite=lax, maxAge 1 año
 
 ---
 
-## 16. Estado de donaciones y pagos PayPal
+## 15. PayPal — configuración actual
 
-### PayPal Orders API v2 — OPERATIVO
-- Donaciones: `/donar` → `POST /api/donaciones/checkout` → orden PayPal → `/donar/gracias`
-- Compras premium: `/api/comprar` → orden PayPal con `custom_id="contenido:<id>"` → `/comprar/exito`
-- Webhook: `POST /api/donaciones/webhook` — distingue por `custom_id` si es donación o compra de contenido
-- `locale: "es_MX"` — PayPal muestra la interfaz en español latinoamericano
-- `landing_page: "BILLING"` — muestra formulario de tarjeta directamente
-
-### Credenciales configuradas en Vercel ✅
-- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` (Live, server-side únicamente)
-- `PAYPAL_ENV=live`
-- `PAYPAL_WEBHOOK_ID` — ID del webhook en PayPal Dashboard
-
-### IMPORTANTE: credenciales Live vs Sandbox
-- Las credenciales deben ser de la pestaña **"Live"** en developer.paypal.com
-- Con credenciales Sandbox + `PAYPAL_ENV=live` → error 401
-- Para probar sin dinero real: credenciales Sandbox + `PAYPAL_ENV=sandbox`
-
-### Stripe — ELIMINADO
-Stripe no opera en El Salvador para cuentas receptoras. Todo el código de Stripe fue eliminado del repo en sesión 12. Las variables `STRIPE_*` se pueden quitar de Vercel.
+- `locale: "es_MX"` → interfaz en español latinoamericano ✅ (corregido sesión 13; `es-SV` no era soportado)
+- `landing_page: "BILLING"` → formulario de tarjeta directo
+- Donaciones y compras usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
+- Webhook discrimina por prefijo `"contenido:"` en `custom_id` → donación vs compra de artículo
 
 ---
 
-## 17. Hardening de rendimiento
+## 16. Progreso de la plataforma
 
-- Rate limit 30 req/min por IP en: `/api/publicaciones`, `/api/servicios`, `/api/dashboard`
-- Rate limit 20/hora por IP en: `/api/comprar`
-- Paginación en `/api/publicaciones`: parámetros `?limit=` (máx 100) y `?page=`
-- Worker IA: límite global 200 req/min via KV (`checkGlobalRateLimit` en `ratelimit.ts`)
-- CSP actualizado para permitir PayPal: `script-src`, `frame-src`, `connect-src`, `img-src`
-- `Permissions-Policy`: `payment` permite `https://www.paypal.com`
+| Componente | Estado |
+|---|---|
+| Publicaciones, recursos, cómics, admin | ✅ Producción |
+| Categorías dinámicas con SEO | ✅ Producción |
+| Servicios de consultoría + cotizaciones | ✅ Producción |
+| Suscripción por correo (Double Opt-In) | ✅ Producción |
+| Donaciones PayPal con webhook firmado | ✅ Producción |
+| Monetización de contenido premium | ✅ Producción |
+| Asistente IA con 3 skills académicas | ✅ Producción |
+| Telemetría IA en /admin/observabilidad | ✅ Producción |
+| Security hardening completo (fases 1–5) | ✅ Producción |
+| Retrieval semántico (Vectorize) | ❌ Pendiente |
+| Multi-worker / orquestación de agentes | 🔄 En planificación (sesión 13) |
+
+---
+
+## 17. Arquitectura multi-worker — planificación (sesión 13)
+
+### Estado actual (1 worker)
+Solo existe `workers/sociologia/`. Hace todo: RAG, skills, sync, telemetría, embeddings.
+
+### Visión: sistema de agentes multi-worker
+
+```
+Cliente (Next.js)
+       │
+       ▼
+┌─────────────────────────┐
+│  Orchestrator Worker    │  ← nuevo: enruta y agrega respuestas
+│  (workers/orquestador/) │
+└─────────────────────────┘
+       │           │           │
+       ▼           ▼           ▼
+┌──────────┐ ┌──────────┐ ┌──────────────┐
+│sociologia│ │ futuro:  │ │  futuro:     │
+│(existente│ │datos/    │ │  resumen/    │
+│)         │ │análisis  │ │  síntesis    │
+└──────────┘ └──────────┘ └──────────────┘
+```
+
+### Approach inicial recomendado
+En lugar de crear un Worker orquestador separado de inmediato, el primer paso es **exponer una API de skill externa** en el Worker actual que pueda ser llamada por otros Workers en el futuro. Ya existe `POST /skill`. Lo que falta es:
+
+1. **Autenticación worker-a-worker** — HMAC con un `INTER_WORKER_SECRET`
+2. **Schema de request/response estandarizado** para orquestación
+3. **Orchestrator Worker** (nuevo) que reciba queries complejas, las descomponga, llame a skills especializadas y agregue respuestas
+
+¿Quieres empezar con el Orchestrator Worker o primero fortalecer la API de skills del worker actual?
+
+---
+
+*Última actualización: 2026-06-01 (sesión 13 — auditoría real del código, correcciones CLAUDE.md)*
+*Commit activo en main: `62a53a4`*
+*Rama activa: `claude/kind-ptolemy-6ewhS`*
