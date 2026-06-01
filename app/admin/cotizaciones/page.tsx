@@ -4,6 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { formatFecha } from "@/lib/utils";
 
+interface Respuesta {
+  id: string;
+  asunto: string;
+  cuerpoTexto: string;
+  estadoEnvio: string;
+  errorMensaje: string | null;
+  creadoAt: string;
+}
+
 interface Solicitud {
   id: string;
   nombre: string;
@@ -14,17 +23,23 @@ interface Solicitud {
   presupuesto: string | null;
   estado: string;
   creadoAt: string;
+  respondidaAt: string | null;
   servicio: { titulo: string; categoria: string } | null;
+  respuestas?: Respuesta[];
+  _count?: { respuestas: number };
 }
 
-const ESTADOS = ["PENDIENTE", "REVISADO", "ARCHIVADO"] as const;
+const ESTADOS = ["PENDIENTE", "REVISADO", "RESPONDIDA", "ARCHIVADO"] as const;
 type Estado = (typeof ESTADOS)[number];
 
 const ESTADO_ESTILOS: Record<Estado, string> = {
   PENDIENTE: "bg-amber-50 text-amber-700",
   REVISADO: "bg-emerald-50 text-emerald-700",
+  RESPONDIDA: "bg-blue-50 text-blue-700",
   ARCHIVADO: "bg-zinc-100 text-zinc-500",
 };
+
+const MAX_RESPUESTAS = 5;
 
 export default function AdminCotizacionesPage() {
   const router = useRouter();
@@ -34,6 +49,12 @@ export default function AdminCotizacionesPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [expandida, setExpandida] = useState<string | null>(null);
   const [actualizando, setActualizando] = useState<string | null>(null);
+  const [respondiendo, setRespondiendo] = useState<string | null>(null);
+  const [asuntoResp, setAsuntoResp] = useState("");
+  const [cuerpoResp, setCuerpoResp] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [errorResp, setErrorResp] = useState("");
+  const [detalle, setDetalle] = useState<Record<string, Respuesta[]>>({});
 
   const cargar = useCallback(() => {
     setCargando(true);
@@ -73,6 +94,54 @@ export default function AdminCotizacionesPage() {
     if (!confirm(`¿Eliminar solicitud de "${nombre}"?`)) return;
     await fetch(`/api/admin/cotizaciones/${id}`, { method: "DELETE" });
     cargar();
+  }
+
+  async function cargarRespuestas(id: string) {
+    if (detalle[id]) return;
+    const r = await fetch(`/api/admin/cotizaciones/${id}`);
+    if (!r.ok) return;
+    const d = (await r.json()) as { respuestas: Respuesta[] };
+    setDetalle((prev) => ({ ...prev, [id]: d.respuestas }));
+  }
+
+  function abrirRespuesta(s: Solicitud) {
+    setRespondiendo(s.id);
+    setAsuntoResp(`Re: tu solicitud ${s.servicio?.titulo ?? "de cotización"}`);
+    setCuerpoResp("");
+    setErrorResp("");
+    cargarRespuestas(s.id);
+  }
+
+  function cerrarRespuesta() {
+    setRespondiendo(null);
+    setAsuntoResp("");
+    setCuerpoResp("");
+    setErrorResp("");
+  }
+
+  async function enviarRespuesta(id: string) {
+    setEnviando(true);
+    setErrorResp("");
+    try {
+      const r = await fetch(`/api/admin/cotizaciones/${id}/responder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asunto: asuntoResp, cuerpo: cuerpoResp }),
+      });
+      const data = (await r.json()) as { ok?: boolean; error?: string };
+      if (!r.ok) {
+        setErrorResp(data.error ?? "Error inesperado.");
+        return;
+      }
+      setDetalle((prev) => ({ ...prev, [id]: [] }));
+      cerrarRespuesta();
+      cargar();
+      await cargarRespuestas(id);
+    } catch {
+      setErrorResp("Error de red. Intenta de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   if (cargando) {
@@ -181,16 +250,119 @@ export default function AdminCotizacionesPage() {
                     <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{s.descripcion}</p>
                   )}
 
-                  <button
-                    onClick={() => setExpandida(expandida === s.id ? null : s.id)}
-                    className="text-xs text-brand-600 hover:underline mt-1"
-                  >
-                    {expandida === s.id ? "Colapsar" : "Ver descripción completa"}
-                  </button>
+                  <div className="flex items-center gap-3 mt-1">
+                    <button
+                      onClick={() => setExpandida(expandida === s.id ? null : s.id)}
+                      className="text-xs text-brand-600 hover:underline"
+                    >
+                      {expandida === s.id ? "Colapsar" : "Ver descripción completa"}
+                    </button>
+                    {(s._count?.respuestas ?? 0) > 0 && (
+                      <button
+                        onClick={() => {
+                          const yaAbierto = detalle[s.id] !== undefined;
+                          if (yaAbierto) {
+                            setDetalle((p) => {
+                              const c = { ...p };
+                              delete c[s.id];
+                              return c;
+                            });
+                          } else {
+                            cargarRespuestas(s.id);
+                          }
+                        }}
+                        className="text-xs text-zinc-500 hover:text-brand-700 hover:underline"
+                      >
+                        {detalle[s.id] !== undefined ? "Ocultar" : "Ver"} historial ({s._count?.respuestas}/{MAX_RESPUESTAS})
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Historial de respuestas */}
+                  {detalle[s.id] && detalle[s.id].length > 0 && (
+                    <div className="mt-3 border border-zinc-200 rounded-lg bg-white divide-y divide-zinc-100">
+                      {detalle[s.id].map((r) => (
+                        <div key={r.id} className="p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-xs font-medium text-zinc-700 truncate">{r.asunto}</span>
+                            <span className={`badge text-[10px] ${r.estadoEnvio === "ENVIADO" ? "bg-emerald-50 text-emerald-700" : r.estadoEnvio === "FALLIDO" ? "bg-red-50 text-red-700" : "bg-zinc-100 text-zinc-500"}`}>
+                              {r.estadoEnvio}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-400 mb-1.5">{formatFecha(r.creadoAt)}</p>
+                          <p className="text-xs text-zinc-600 whitespace-pre-wrap line-clamp-4">{r.cuerpoTexto}</p>
+                          {r.errorMensaje && (
+                            <p className="text-xs text-red-600 mt-1">Error: {r.errorMensaje}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Form de respuesta inline */}
+                  {respondiendo === s.id && (
+                    <div className="mt-4 border border-brand-200 bg-brand-50/30 rounded-lg p-4 space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-600 mb-1">Asunto</label>
+                        <input
+                          type="text"
+                          value={asuntoResp}
+                          onChange={(e) => setAsuntoResp(e.target.value)}
+                          maxLength={200}
+                          className="w-full border border-zinc-200 rounded px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-600 mb-1">
+                          Cuerpo (texto plano; los saltos de línea se preservan)
+                        </label>
+                        <textarea
+                          value={cuerpoResp}
+                          onChange={(e) => setCuerpoResp(e.target.value)}
+                          maxLength={8000}
+                          rows={8}
+                          placeholder={`Hola ${s.nombre},\n\nGracias por tu interés. …`}
+                          className="w-full border border-zinc-200 rounded px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-none bg-white font-sans"
+                        />
+                        <p className="text-[10px] text-zinc-400 mt-1">
+                          {cuerpoResp.length}/8000 caracteres
+                        </p>
+                      </div>
+                      {errorResp && (
+                        <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded px-3 py-2">
+                          {errorResp}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => enviarRespuesta(s.id)}
+                          disabled={enviando || !asuntoResp.trim() || cuerpoResp.trim().length < 10}
+                          className="btn-primary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {enviando ? "Enviando…" : "Enviar respuesta"}
+                        </button>
+                        <button
+                          onClick={cerrarRespuesta}
+                          disabled={enviando}
+                          className="btn-secondary text-xs disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Acciones */}
                 <div className="flex flex-col gap-1.5 shrink-0">
+                  {(s._count?.respuestas ?? 0) < MAX_RESPUESTAS && respondiendo !== s.id && (
+                    <button
+                      onClick={() => abrirRespuesta(s)}
+                      className="btn-primary py-1 text-xs"
+                    >
+                      Responder
+                    </button>
+                  )}
                   {ESTADOS.filter((e) => e !== s.estado).map((e) => (
                     <button
                       key={e}

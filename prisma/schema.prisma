@@ -248,12 +248,34 @@ model SolicitudCotizacion {
   tipoServicio String?
   descripcion  String
   presupuesto  String?
-  estado       String    @default("PENDIENTE") // PENDIENTE | REVISADO | ARCHIVADO
+  estado       String    @default("PENDIENTE") // PENDIENTE | REVISADO | RESPONDIDA | ARCHIVADO
   ipHash       String?
   creadoAt     DateTime  @default(now())
+  respondidaAt DateTime?
+  respuestas   RespuestaCotizacion[]
 
   @@index([servicioId])
   @@index([estado])
+  @@index([creadoAt])
+}
+
+// Historial de respuestas enviadas por el admin a una cotización (Fase 3).
+// Máximo 5 respuestas por cotización — enforce en API (sin trigger).
+model RespuestaCotizacion {
+  id              String              @id @default(cuid())
+  cotizacionId    String
+  cotizacion      SolicitudCotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  asunto          String
+  cuerpoHtml      String
+  cuerpoTexto     String
+  enviadoPor      String              // identificador del admin (mailbox o "admin")
+  resendMessageId String?
+  estadoEnvio     String              @default("PENDIENTE") // PENDIENTE | ENVIADO | FALLIDO
+  errorMensaje    String?
+  creadoAt        DateTime            @default(now())
+
+  @@index([cotizacionId])
+  @@index([estadoEnvio])
   @@index([creadoAt])
 }
 

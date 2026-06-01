@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
   const { searchParams } = req.nextUrl;
-  const estado = searchParams.get("estado"); // PENDIENTE | REVISADO | ARCHIVADO
+  const estado = searchParams.get("estado"); // PENDIENTE | REVISADO | RESPONDIDA | ARCHIVADO
   const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50") || 50);
   const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0") || 0);
 
@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
       orderBy: { creadoAt: "desc" },
       take: limit,
       skip: offset,
-      include: { servicio: { select: { titulo: true, categoria: true } } },
+      include: {
+        servicio: { select: { titulo: true, categoria: true } },
+        _count: { select: { respuestas: true } },
+      },
     }),
     prisma.solicitudCotizacion.count({ where }),
   ]);

@@ -338,6 +338,56 @@ export async function enviarEnlaceDescargaLibro(
   }
 }
 
+// ─── Respuesta a cotización (Fase 3) ─────────────────────────────────────────
+// El admin redacta cuerpo libre desde /admin/cotizaciones. Aquí solo envolvemos
+// con el baseLayout para mantener identidad visual. Devuelve messageId para
+// que el endpoint guarde la trazabilidad en RespuestaCotizacion.
+
+export function htmlRespuestaCotizacion(
+  cuerpoTexto: string,
+  nombreDestinatario?: string | null
+): string {
+  const saludo = nombreDestinatario
+    ? `Hola <strong>${escapeHtml(nombreDestinatario)}</strong>,`
+    : "Hola,";
+  // Convertimos saltos de línea simples a <br> para preservar el formato del
+  // textarea del admin sin requerir HTML.
+  const cuerpoFormateado = escapeHtml(cuerpoTexto).replace(/\n/g, "<br>");
+  return baseLayout(`
+    <p style="font-size:16px;color:#3f3f46;margin:0 0 16px;">${saludo}</p>
+    <div style="font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 24px;">
+      ${cuerpoFormateado}
+    </div>
+    <p style="font-size:13px;color:#a1a1aa;margin:24px 0 0;font-family:sans-serif;">
+      — Raúl Dubón
+    </p>
+  `);
+}
+
+export async function enviarRespuestaCotizacion(
+  email: string,
+  asunto: string,
+  cuerpoTexto: string,
+  nombreDestinatario?: string | null
+): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  if (!process.env.RESEND_API_KEY) {
+    return { ok: false, error: "RESEND_API_KEY no configurado" };
+  }
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: asunto,
+      html: htmlRespuestaCotizacion(cuerpoTexto, nombreDestinatario),
+      text: cuerpoTexto,
+    });
+    if (error) return { ok: false, error: error.message ?? String(error) };
+    return { ok: true, messageId: data?.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export async function enviarNotificacionCompraLibro(
   montoUSD: string,
   titulo: string,
