@@ -1,9 +1,11 @@
-const BASE =
-  process.env.PAYPAL_ENV === "live"
+function getBase(): string {
+  return process.env.PAYPAL_ENV === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
+}
 
 async function getToken(): Promise<string> {
+  const BASE = getBase();
   const id = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_CLIENT_SECRET;
   console.log(`[paypal] env=${process.env.PAYPAL_ENV} base=${BASE} id_set=${!!id} secret_set=${!!secret}`);
@@ -38,6 +40,7 @@ export async function crearOrdenPayPal(
   } = {}
 ): Promise<{ id: string; approvalUrl: string }> {
   const token = await getToken();
+  const BASE = getBase();
   const valor = (montoCentavos / 100).toFixed(2);
 
   const purchaseUnit: Record<string, unknown> = {
@@ -116,6 +119,7 @@ export async function verificarFirmaWebhookPayPal(
   }
 
   const token = await getToken();
+  const BASE = getBase();
 
   const res = await fetch(`${BASE}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
@@ -149,6 +153,7 @@ export async function capturarOrdenPayPal(orderId: string): Promise<{
   nombre: string;
 }> {
   const token = await getToken();
+  const BASE = getBase();
 
   const res = await fetch(`${BASE}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
