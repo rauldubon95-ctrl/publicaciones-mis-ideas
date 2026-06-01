@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
   const body = await req.json().catch(() => null);
-  const { titulo, descripcion, contenido, publicado } = (body ?? {}) as Record<string, unknown>;
+  const { titulo, descripcion, contenido, publicado, esPremium, precioCentavos, resumenPublico } =
+    (body ?? {}) as Record<string, unknown>;
 
   if (
     typeof titulo !== "string" || !titulo.trim() || titulo.length > 200 ||
@@ -25,12 +26,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Campos inválidos" }, { status: 400 });
   }
 
+  const premium = !!esPremium;
+  const precio = typeof precioCentavos === "number" && precioCentavos >= 100 ? Math.round(precioCentavos) : null;
+  if (premium && precio == null) {
+    return NextResponse.json({ error: "El precio mínimo es $1.00 USD para recursos premium." }, { status: 400 });
+  }
+  const resumen = typeof resumenPublico === "string" && resumenPublico.trim()
+    ? resumenPublico.trim().slice(0, 2000)
+    : null;
+
   const slug = toSlug(titulo);
   const existe = await prisma.recursoHtml.findUnique({ where: { slug } });
   if (existe) return NextResponse.json({ error: "Ya existe un recurso con ese título" }, { status: 409 });
 
   const recurso = await prisma.recursoHtml.create({
-    data: { titulo, slug, descripcion, contenido, publicado: !!publicado },
+    data: {
+      titulo,
+      slug,
+      descripcion,
+      contenido,
+      publicado: !!publicado,
+      esPremium: premium,
+      precioCentavos: premium ? precio : null,
+      resumenPublico: resumen,
+    },
   });
   return NextResponse.json(recurso, { status: 201 });
 }

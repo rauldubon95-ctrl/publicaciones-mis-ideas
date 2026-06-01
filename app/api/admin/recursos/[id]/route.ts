@@ -9,7 +9,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
 
   const body = await req.json().catch(() => null);
-  const { titulo, descripcion, contenido, publicado } = (body ?? {}) as Record<string, unknown>;
+  const { titulo, descripcion, contenido, publicado, esPremium, precioCentavos, resumenPublico } =
+    (body ?? {}) as Record<string, unknown>;
 
   if (
     typeof titulo !== "string" || !titulo.trim() ||
@@ -19,9 +20,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Campos inválidos" }, { status: 400 });
   }
 
+  const premium = !!esPremium;
+  const precio = typeof precioCentavos === "number" && precioCentavos >= 100 ? Math.round(precioCentavos) : null;
+  if (premium && precio == null) {
+    return NextResponse.json({ error: "El precio mínimo es $1.00 USD para recursos premium." }, { status: 400 });
+  }
+  const resumen = typeof resumenPublico === "string" && resumenPublico.trim()
+    ? resumenPublico.trim().slice(0, 2000)
+    : null;
+
   const recurso = await prisma.recursoHtml.update({
     where: { id },
-    data: { titulo, descripcion, contenido, publicado: !!publicado },
+    data: {
+      titulo,
+      descripcion,
+      contenido,
+      publicado: !!publicado,
+      esPremium: premium,
+      precioCentavos: premium ? precio : null,
+      resumenPublico: resumen,
+    },
   });
   return NextResponse.json(recurso);
 }

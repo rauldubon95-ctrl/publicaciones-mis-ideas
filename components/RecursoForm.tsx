@@ -3,7 +3,16 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface Props {
-  recurso?: { id: string; titulo: string; descripcion: string; contenido: string; publicado: boolean };
+  recurso?: {
+    id: string;
+    titulo: string;
+    descripcion: string;
+    contenido: string;
+    publicado: boolean;
+    esPremium?: boolean;
+    precioCentavos?: number | null;
+    resumenPublico?: string | null;
+  };
 }
 
 export default function RecursoForm({ recurso }: Props) {
@@ -15,6 +24,11 @@ export default function RecursoForm({ recurso }: Props) {
   const [descripcion, setDescripcion] = useState(recurso?.descripcion ?? "");
   const [contenido, setContenido] = useState(recurso?.contenido ?? "");
   const [publicado, setPublicado] = useState(recurso?.publicado ?? false);
+  const [esPremium, setEsPremium] = useState(recurso?.esPremium ?? false);
+  const [precioInput, setPrecioInput] = useState(
+    recurso?.precioCentavos != null ? (recurso.precioCentavos / 100).toFixed(2) : ""
+  );
+  const [resumenPublico, setResumenPublico] = useState(recurso?.resumenPublico ?? "");
   const [estado, setEstado] = useState<"idle" | "guardando" | "error">("idle");
   const [error, setError] = useState("");
   const [cargandoHtml, setCargandoHtml] = useState(false);
@@ -61,12 +75,32 @@ export default function RecursoForm({ recurso }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setEstado("guardando"); setError("");
+
+    const precioParsed = parseFloat(precioInput);
+    const precioCentavos = esPremium && !isNaN(precioParsed) && precioParsed >= 1
+      ? Math.round(precioParsed * 100)
+      : null;
+
+    if (esPremium && precioCentavos == null) {
+      setError("El precio mínimo es $1.00 USD cuando el recurso es premium.");
+      setEstado("error");
+      return;
+    }
+
     const url = esEdicion ? `/api/admin/recursos/${recurso.id}` : "/api/admin/recursos";
     const method = esEdicion ? "PUT" : "POST";
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, descripcion, contenido, publicado }),
+      body: JSON.stringify({
+        titulo,
+        descripcion,
+        contenido,
+        publicado,
+        esPremium,
+        precioCentavos,
+        resumenPublico: resumenPublico.trim() || null,
+      }),
     });
     if (!res.ok) { const d = await res.json(); setError(d.error ?? "Error al guardar"); setEstado("error"); return; }
     router.push("/admin/recursos"); router.refresh();
@@ -110,6 +144,54 @@ export default function RecursoForm({ recurso }: Props) {
             </div>
             <span className="text-sm text-zinc-700 font-medium">{publicado ? "Visible al público" : "Guardar como borrador"}</span>
           </label>
+        </div>
+
+        {/* Monetización */}
+        <div className="border-t border-zinc-100 pt-5 space-y-4">
+          <div className="flex items-center">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div onClick={() => setEsPremium(!esPremium)}
+                className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${esPremium ? "bg-amber-600" : "bg-zinc-300"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${esPremium ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+              <span className="text-sm text-zinc-700 font-medium">
+                {esPremium ? "Recurso de pago" : "Recurso gratuito"}
+              </span>
+            </label>
+          </div>
+
+          {esPremium && (
+            <>
+              <div>
+                <label className={labelClass}>Precio (USD) *</label>
+                <div className="relative max-w-xs">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={precioInput}
+                    onChange={(e) => setPrecioInput(e.target.value)}
+                    placeholder="5.00"
+                    className="input pl-7"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">Mínimo $1.00. El precio nunca se envía desde el cliente al cobrar — se relee de la DB.</p>
+              </div>
+              <div>
+                <label className={labelClass}>Resumen público (opcional)</label>
+                <textarea
+                  value={resumenPublico}
+                  onChange={(e) => setResumenPublico(e.target.value)}
+                  rows={4}
+                  maxLength={2000}
+                  placeholder="Texto que verán los visitantes antes del muro de pago. Si lo dejas vacío, se mostrará la descripción."
+                  className="input resize-none"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

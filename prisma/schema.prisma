@@ -160,9 +160,35 @@ model RecursoHtml {
   publicado     Boolean        @default(false)
   creadoAt      DateTime       @default(now())
   actualizadoAt DateTime       @updatedAt
-  vistas        VistaRecurso[]
+  // Recurso premium (Fase 4, sesión 17)
+  esPremium      Boolean         @default(false)
+  precioCentavos Int?            // null = sin precio; >0 = precio en USD centavos
+  resumenPublico String?         // texto visible antes del muro (fallback a descripcion)
+  vistas         VistaRecurso[]
+  pedidos        PedidoRecurso[]
 
   @@index([slug])
+}
+
+model PedidoRecurso {
+  id              String      @id @default(cuid())
+  recursoId       String
+  recurso         RecursoHtml @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+  emailComprador  String
+  nombreComprador String?
+  montoCentavos   Int
+  moneda          String      @default("USD")
+  paypalOrderId   String?     @unique
+  estado          String      @default("PENDIENTE") // PENDIENTE | COMPLETADO | CANCELADO | FALLIDO
+  tokenAcceso     String      @unique @default(cuid())
+  creadoAt        DateTime    @default(now())
+  completadoAt    DateTime?
+  ultimoAccesoAt  DateTime?
+
+  @@index([emailComprador])
+  @@index([estado])
+  @@index([recursoId, estado])
+  @@index([creadoAt])
 }
 
 model Comic {
