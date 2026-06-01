@@ -106,6 +106,19 @@ export default async function PublicacionPage({ params }: Props) {
   // Borrador: solo el admin puede verlo
   if (!publicacion.publicado && !adminOk) notFound();
 
+  const relacionados = publicacion.categoriaId
+    ? await prisma.publicacion.findMany({
+        where: {
+          publicado: true,
+          categoriaId: publicacion.categoriaId,
+          NOT: { id: publicacion.id },
+        },
+        orderBy: { publicadoAt: "desc" },
+        take: 3,
+        select: { slug: true, titulo: true, resumen: true },
+      })
+    : [];
+
   const conteos = publicacion.reacciones.reduce<Record<string, number>>((acc, r) => {
     acc[r.tipo] = (acc[r.tipo] ?? 0) + 1;
     return acc;
@@ -267,6 +280,33 @@ export default async function PublicacionPage({ params }: Props) {
 
           {/* Tarjeta del autor */}
           <TarjetaAutor />
+
+          {relacionados.length > 0 && (
+            <section className="mt-10 border-t border-zinc-100 pt-10">
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-5">
+                Artículos relacionados
+              </p>
+              <ul className="space-y-4">
+                {relacionados.map((r) => (
+                  <li key={r.slug}>
+                    <Link
+                      href={`/publicaciones/${r.slug}`}
+                      className="block group"
+                    >
+                      <h3 className="font-serif text-lg text-zinc-800 group-hover:text-brand-700 transition-colors leading-snug">
+                        {r.titulo}
+                      </h3>
+                      {r.resumen && (
+                        <p className="text-sm text-zinc-500 mt-1 line-clamp-2">
+                          {r.resumen}
+                        </p>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <hr className="border-zinc-100 my-10" />
 
