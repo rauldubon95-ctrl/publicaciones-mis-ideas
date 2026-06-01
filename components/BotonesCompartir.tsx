@@ -4,16 +4,16 @@ import { useState } from "react";
 
 interface Props {
   titulo: string;
-  slug: string;
+  path: string;
 }
 
-export default function BotonesCompartir({ titulo, slug }: Props) {
+export default function BotonesCompartir({ titulo, path }: Props) {
   const [copiado, setCopiado] = useState(false);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     (typeof window !== "undefined" ? window.location.origin : "");
-  const url = `${baseUrl}/publicaciones/${slug}`;
+  const url = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
   const urlEnc = encodeURIComponent(url);
   const tituloEnc = encodeURIComponent(titulo);

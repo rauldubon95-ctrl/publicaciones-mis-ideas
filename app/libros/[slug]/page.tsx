@@ -5,6 +5,7 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import Image from "next/image";
 import Link from "next/link";
 import MuroLibro from "@/components/MuroLibro";
+import BotonesCompartir from "@/components/BotonesCompartir";
 import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
 import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
@@ -97,6 +98,8 @@ export default async function LibroPage({ params }: Props) {
         <span>/</span>
         <span className="text-zinc-600 truncate">{libro.titulo}</span>
       </nav>
+
+      <BotonesCompartir titulo={libro.titulo} path={`/libros/${slug}`} />
 
       {esDePago && adminOk && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-3">
