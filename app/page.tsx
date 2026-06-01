@@ -4,8 +4,22 @@ import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import CentroCategoriasGrid from "@/components/CentroCategoriasGrid";
 import SubscriptionForm from "@/components/SubscriptionForm";
+import type { Metadata } from "next";
+import { canonicalWithPage } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const pagina = Math.max(1, parseInt(params.pagina ?? "1") || 1);
+  return {
+    alternates: { canonical: canonicalWithPage("/", pagina) },
+  };
+}
 
 const POR_PAGINA = 4;
 

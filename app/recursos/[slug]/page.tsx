@@ -4,6 +4,7 @@ import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
 import TrackView from "@/components/TrackView";
 import type { Metadata } from "next";
+import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,27 @@ interface Props { params: Promise<{ slug: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const r = await prisma.recursoHtml.findUnique({ where: { slug } });
-  return r ? { title: r.titulo } : {};
+  if (!r) return {};
+  const descripcion = recortarDescripcion(r.descripcion);
+  const url = canonicalUrl(`/recursos/${slug}`);
+  return {
+    title: r.titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: r.titulo,
+      description: descripcion,
+      url,
+      siteName: SITE_NAME,
+      locale: "es_ES",
+    },
+    twitter: {
+      card: "summary",
+      title: r.titulo,
+      description: descripcion,
+    },
+  };
 }
 
 export default async function RecursoPage({ params }: Props) {

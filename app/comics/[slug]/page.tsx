@@ -5,6 +5,7 @@ import Link from "next/link";
 import ComicReader from "@/components/ComicReader";
 import TrackView from "@/components/TrackView";
 import type { Metadata } from "next";
+import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,23 @@ interface Props { params: Promise<{ slug: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const c = await prisma.comic.findUnique({ where: { slug } });
-  return c ? { title: c.titulo } : {};
+  if (!c) return {};
+  const descripcion = recortarDescripcion(c.descripcion);
+  const url = canonicalUrl(`/comics/${slug}`);
+  return {
+    title: c.titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: c.titulo,
+      description: descripcion,
+      url,
+      siteName: SITE_NAME,
+      locale: "es_ES",
+    },
+    twitter: { card: "summary", title: c.titulo, description: descripcion },
+  };
 }
 
 export default async function ComicPage({ params }: Props) {

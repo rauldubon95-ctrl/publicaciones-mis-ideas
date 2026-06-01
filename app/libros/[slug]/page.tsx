@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import MuroLibro from "@/components/MuroLibro";
 import type { Metadata } from "next";
+import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const l = await prisma.libro.findUnique({ where: { slug, publicado: true } });
   if (!l) return {};
+  const descripcion = recortarDescripcion(l.descripcion);
+  const url = canonicalUrl(`/libros/${slug}`);
   return {
-    title: `${l.titulo} | Raúl Dubón`,
-    description: l.descripcion.slice(0, 160),
-    openGraph: l.imagenPortada ? { images: [l.imagenPortada] } : undefined,
+    title: l.titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "book",
+      title: l.titulo,
+      description: descripcion,
+      url,
+      siteName: SITE_NAME,
+      locale: "es_ES",
+      images: l.imagenPortada ? [l.imagenPortada] : undefined,
+    },
+    twitter: {
+      card: l.imagenPortada ? "summary_large_image" : "summary",
+      title: l.titulo,
+      description: descripcion,
+      images: l.imagenPortada ? [l.imagenPortada] : undefined,
+    },
   };
 }
 

@@ -3,18 +3,16 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
+import { BASE_URL, DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org"),
-  title: { default: "Raúl Dubón", template: "%s | Raúl Dubón" },
-  description: "Espacio de divulgación académica, proyectos e ideas de Raúl Dubón",
+  metadataBase: new URL(BASE_URL),
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: DEFAULT_DESCRIPTION,
   openGraph: {
     type: "website",
     locale: "es_ES",
-    siteName: "Raúl Dubón",
-  },
-  alternates: {
-    canonical: "/",
+    siteName: SITE_NAME,
   },
 };
 

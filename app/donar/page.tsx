@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import FormularioDonacion from "@/components/FormularioDonacion";
+import { canonicalUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Apoya este proyecto",
   description:
     "Si el contenido de este espacio te ha resultado útil, considera apoyarlo con una donación.",
+  alternates: { canonical: canonicalUrl("/donar") },
 };
 
 export default function DonarPage() {

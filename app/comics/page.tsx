@@ -2,9 +2,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import type { Metadata } from "next";
+import { canonicalUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Cómics" };
+export const metadata: Metadata = {
+  title: "Cómics",
+  description: "Tiras cómicas y narrativas gráficas de Raúl Dubón.",
+  alternates: { canonical: canonicalUrl("/comics") },
+};
 
 export default async function ComicsPage() {
   const comics = await prisma.comic.findMany({

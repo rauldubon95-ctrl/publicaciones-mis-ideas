@@ -14,6 +14,7 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
 import BotonesCompartir from "@/components/BotonesCompartir";
+import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await prisma.publicacion.findUnique({ where: { slug } });
   if (!p) return {};
-  return { title: p.titulo, description: p.resumen };
+  const descripcion = recortarDescripcion(p.resumen || p.contenido);
+  const url = canonicalUrl(`/publicaciones/${slug}`);
+  return {
+    title: p.titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: p.titulo,
+      description: descripcion,
+      url,
+      siteName: SITE_NAME,
+      locale: "es_ES",
+      publishedTime: p.publicadoAt?.toISOString(),
+      modifiedTime: p.actualizadoAt?.toISOString(),
+      authors: [SITE_NAME],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.titulo,
+      description: descripcion,
+    },
+  };
 }
 
 // Construye árbol de comentarios desde los datos planos de la DB

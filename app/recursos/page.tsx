@@ -2,9 +2,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import type { Metadata } from "next";
+import { canonicalUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Recursos" };
+export const metadata: Metadata = {
+  title: "Recursos",
+  description: "Documentos, hojas de cálculo y herramientas interactivas de Raúl Dubón.",
+  alternates: { canonical: canonicalUrl("/recursos") },
+};
 
 export default async function RecursosPage() {
   const recursos = await prisma.recursoHtml.findMany({

@@ -5,8 +5,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { setearCookieAcceso } from "@/lib/accesoContenido";
 import Link from "next/link";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Acceder al artículo",
+  robots: { index: false, follow: false },
+};
 
 interface Props {
   params: Promise<{ token: string }>;

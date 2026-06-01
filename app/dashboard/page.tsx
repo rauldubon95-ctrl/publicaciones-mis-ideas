@@ -2,8 +2,15 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { canonicalUrl } from "@/lib/seo";
+
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Tableros y visualizaciones interactivas de Raúl Dubón.",
+  alternates: { canonical: canonicalUrl("/dashboard") },
+  robots: { index: false, follow: true },
+};
 
 export default async function DashboardPage() {
   const tableros = await prisma.tablero.findMany({
