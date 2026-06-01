@@ -72,6 +72,66 @@ export async function crearOrdenPayPal(
   return { id: order.id, approvalUrl: link.href };
 }
 
+// ─── Verificación de firma de webhook PayPal ──────────────────────────────────
+// PayPal firma cada webhook con headers `paypal-transmission-*`. Llamamos a
+// /v1/notifications/verify-webhook-signature con esos headers + el body crudo
+// + el webhook ID (configurado en PayPal Dashboard) para que PayPal nos
+// confirme que la firma es válida.
+export async function verificarFirmaWebhookPayPal(
+  headers: Headers,
+  rawBody: string
+): Promise<boolean> {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) {
+    console.error("[paypal-webhook] PAYPAL_WEBHOOK_ID no configurado");
+    return false;
+  }
+
+  const transmissionId = headers.get("paypal-transmission-id");
+  const transmissionTime = headers.get("paypal-transmission-time");
+  const certUrl = headers.get("paypal-cert-url");
+  const authAlgo = headers.get("paypal-auth-algo");
+  const transmissionSig = headers.get("paypal-transmission-sig");
+
+  if (!transmissionId || !transmissionTime || !certUrl || !authAlgo || !transmissionSig) {
+    return false;
+  }
+
+  let event: unknown;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return false;
+  }
+
+  const token = await getToken();
+
+  const res = await fetch(`${BASE}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      transmission_id: transmissionId,
+      transmission_time: transmissionTime,
+      cert_url: certUrl,
+      auth_algo: authAlgo,
+      transmission_sig: transmissionSig,
+      webhook_id: webhookId,
+      webhook_event: event,
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("[paypal-webhook] verify falló:", res.status, await res.text());
+    return false;
+  }
+
+  const data = (await res.json()) as { verification_status?: string };
+  return data.verification_status === "SUCCESS";
+}
+
 export async function capturarOrdenPayPal(orderId: string): Promise<{
   completado: boolean;
   monto: string;

@@ -27,7 +27,6 @@
     "remark-gfm": "^4.0.1",
     "resend": "^6.12.4",
     "slugify": "^1.6.6",
-    "stripe": "^22.2.0",
     "turndown": "^7.2.4"
   },
   "engines": {

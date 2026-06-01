@@ -5,9 +5,14 @@
 export interface Env {
   AI: Ai;
   DB: D1Database;
-  RATE_LIMIT: KVNamespace;      // KV namespace binding real
-  ADMIN_SECRET?: string;        // Worker secret — valida token premium vía HMAC
-  VECTORIZE?: VectorizeIndex;   // Phase 3: opcional hasta que exista el index
+  RATE_LIMIT: KVNamespace;          // KV namespace binding real
+  // ── Secretos (transición desde ADMIN_SECRET único) ─────────────
+  // Si la variable específica no está configurada, el código cae a
+  // ADMIN_SECRET legacy. Permite migración gradual sin downtime.
+  ADMIN_SECRET?: string;            // legacy — fallback para todos los usos
+  SESSION_SIGNING_SECRET?: string;  // valida token premium vía HMAC (chat IA + embed)
+  D1_SYNC_SECRET?: string;          // autentica endpoints /sync y /telemetria
+  VECTORIZE?: VectorizeIndex;       // Phase 3: opcional hasta que exista el index
 }
 
 // ── Request / Response (backward-compatible con v1) ───────────

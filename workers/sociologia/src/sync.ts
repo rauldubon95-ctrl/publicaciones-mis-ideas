@@ -20,12 +20,13 @@ export async function handleSyncRequest(
   request: Request,
   env: Env
 ): Promise<Response> {
-  if (!env.ADMIN_SECRET) {
+  const secret = env.D1_SYNC_SECRET ?? env.ADMIN_SECRET;
+  if (!secret) {
     return jsonResp({ error: "No configurado" }, 500);
   }
 
   const syncToken = request.headers.get("X-Sync-Token");
-  const esperado = await computarHmac(env.ADMIN_SECRET, SYNC_MESSAGE);
+  const esperado = await computarHmac(secret, SYNC_MESSAGE);
 
   if (!syncToken || !constantTimeEqual(syncToken, esperado)) {
     return jsonResp({ error: "No autorizado" }, 401);

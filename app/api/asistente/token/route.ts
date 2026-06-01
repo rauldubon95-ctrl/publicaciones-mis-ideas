@@ -1,8 +1,9 @@
 import { createHmac } from "crypto";
 import { isAdminAuthorized } from "@/lib/adminAuth";
+import { sessionSecret } from "@/lib/secrets";
 
 export async function GET() {
-  const secret = process.env.ADMIN_SECRET;
+  const secret = sessionSecret();
   if (!secret || !(await isAdminAuthorized())) {
     return Response.json({ token: null });
   }

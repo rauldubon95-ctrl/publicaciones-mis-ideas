@@ -309,17 +309,32 @@ model EmailEnvio {
   @@index([creadoAt])
 }
 
-// ─── Donaciones — arquitectura preparada, Stripe pendiente (Fase 5) ──────────
+// ─── Donaciones — PayPal Orders API v2 (sesión 11) ────────────────────────────
 model Donacion {
   id        String   @id @default(cuid())
   monto     Int      // en centavos (ej: 500 = $5.00)
   moneda    String   @default("USD")
   nombre    String?
   correo    String?
-  stripeId  String?  @unique // checkout session ID de Stripe
+  // Order ID que devuelve PayPal al crear la orden. Campo histórico llamado
+  // stripeId por compatibilidad con código legacy; conceptualmente es el ID
+  // del proveedor de pago (hoy siempre PayPal).
+  stripeId  String?  @unique
   estado    String   @default("PENDIENTE") // PENDIENTE | COMPLETADO | FALLIDO | CANCELADO
   creadoAt  DateTime @default(now())
 
   @@index([estado])
   @@index([creadoAt])
+}
+
+// ─── Webhooks procesados — idempotencia para evitar doble-aplicar eventos ─────
+// PayPal puede reenviar el mismo evento varias veces. Antes de aplicar uno,
+// intentamos insertar su eventId aquí; si ya existe, lo ignoramos.
+model WebhookEventoProcesado {
+  eventId     String   @id
+  proveedor   String   // "paypal"
+  tipoEvento  String?  // "PAYMENT.CAPTURE.COMPLETED", etc.
+  procesadoAt DateTime @default(now())
+
+  @@index([procesadoAt])
 }

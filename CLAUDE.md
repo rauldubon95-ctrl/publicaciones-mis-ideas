@@ -64,7 +64,10 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string (pooled) de Supabase | Sí |
 | `DIRECT_URL` | PostgreSQL direct connection string de Supabase | Sí |
-| `ADMIN_SECRET` | Secreto para sesiones admin. HMAC-SHA256 de cookies, token premium y sync D1 | Sí |
+| `ADMIN_SECRET` | **LEGACY** — fallback si no están las variables separadas (`ADMIN_PASSWORD`, `SESSION_SIGNING_SECRET`, `D1_SYNC_SECRET`). Mantener hasta migrar completamente. | Legacy |
+| `ADMIN_PASSWORD` | Contraseña que el humano escribe en `/admin/login`. Puede ser corta y memorable. | Sí (post-sesión 12) |
+| `SESSION_SIGNING_SECRET` | Secreto aleatorio largo (≥32 chars) que firma cookies admin y el token premium del asistente IA. Debe coincidir con el secret del Worker. | Sí (post-sesión 12) |
+| `D1_SYNC_SECRET` | Secreto aleatorio largo (≥32 chars) que autentica los endpoints `/sync` y `/telemetria` del Worker. Debe coincidir con el secret del Worker. | Sí (post-sesión 12) |
 | `NEXT_PUBLIC_APP_URL` | URL pública del sitio (ej: `https://...vercel.app`) | Sí |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase | Sí |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key de Supabase | Sí |
@@ -76,12 +79,13 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
 | `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
 | `ADMIN_EMAIL` | Correo del admin que recibe notificación cuando llega una donación. Default: `raul.dubon95@gmail.com`. | Recomendado |
-| `STRIPE_SECRET_KEY` | **SIN USO ACTIVO** — Stripe no opera en El Salvador. Variable presente en Vercel. | No (inactivo) |
-| `STRIPE_WEBHOOK_SECRET` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
+| `STRIPE_SECRET_KEY` | **ELIMINADO** sesión 12 — código de Stripe borrado del repo. Quitar de Vercel. | No |
+| `STRIPE_WEBHOOK_SECRET` | **ELIMINADO** sesión 12 — quitar de Vercel. | No |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **ELIMINADO** sesión 12 — quitar de Vercel. | No |
 | `PAYPAL_CLIENT_ID` | Client ID de la cuenta Business de PayPal (Orders API v2). Server-side únicamente. | Sí (donaciones) |
 | `PAYPAL_CLIENT_SECRET` | Secret de la cuenta Business de PayPal. NUNCA con prefijo `NEXT_PUBLIC_`. | Sí (donaciones) |
 | `PAYPAL_ENV` | `live` para producción, `sandbox` para pruebas. Si no está definida, usa sandbox por defecto. | Sí (donaciones) |
+| `PAYPAL_WEBHOOK_ID` | Webhook ID que da PayPal Dashboard al crear el webhook. Sin esto, el webhook rechaza todos los eventos. | Sí (post-sesión 12) |
 
 ### Cloudflare Worker (`workers/sociologia/`)
 
@@ -90,7 +94,9 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `DB` | D1 binding | `llm_sociolog` — ID en `workers/sociologia/wrangler.toml` |
 | `RATE_LIMIT` | KV binding | Namespace `RATE_LIMIT` — ID en `workers/sociologia/wrangler.toml` |
 | `AI` | Workers AI binding | Modelo `@cf/meta/llama-3.1-8b-instruct` |
-| `ADMIN_SECRET` | Worker secret | Mismo valor que en Vercel — valida token premium Y autentica `/sync` |
+| `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback si no están `SESSION_SIGNING_SECRET` y `D1_SYNC_SECRET`. |
+| `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium del chat IA y del endpoint `/embed`. Mismo valor que en Vercel. |
+| `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. Mismo valor que en Vercel. |
 
 ### GitHub Secrets (Actions)
 

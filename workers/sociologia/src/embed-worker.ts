@@ -28,14 +28,15 @@ export async function handleEmbedRequest(
     );
   }
 
-  // Verificar que es admin: HMAC(ADMIN_SECRET, "premium-bypass-v1") — misma clave que el chat
+  // Verificar que es admin: HMAC(SESSION_SIGNING_SECRET, "premium-bypass-v1") — misma clave que el chat
   const adminKey = request.headers.get("X-Admin-Key");
-  if (!adminKey || !env.ADMIN_SECRET) {
+  const signingSecret = env.SESSION_SIGNING_SECRET ?? env.ADMIN_SECRET;
+  if (!adminKey || !signingSecret) {
     return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
   }
   const encoder = new TextEncoder();
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", encoder.encode(env.ADMIN_SECRET),
+    "raw", encoder.encode(signingSecret),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode("premium-bypass-v1"));

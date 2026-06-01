@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { safeCompare, createSessionToken } from "@/lib/auth";
 import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
 import { prisma } from "@/lib/prisma";
+import { adminPassword, sessionSecret } from "@/lib/secrets";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,9 +42,10 @@ export async function POST(req: NextRequest) {
       ? (body as Record<string, string>).clave
       : "";
 
-  const secret = process.env.ADMIN_SECRET;
+  const password = adminPassword();
+  const signingSecret = sessionSecret();
 
-  if (!secret || !safeCompare(clave, secret)) {
+  if (!password || !signingSecret || !safeCompare(clave, password)) {
     await registrarEvento("LOGIN_FALLIDO", ip, "/api/admin/login", {
       intento: rate.contador,
     });
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   await registrarEvento("LOGIN_EXITOSO", ip, "/api/admin/login");
 
-  const { token: sessionToken, jti } = await createSessionToken(secret);
+  const { token: sessionToken, jti } = await createSessionToken(signingSecret);
   await prisma.sesionAdmin.create({
     data: {
       jti,

@@ -49,10 +49,11 @@ export async function validarTokenPremium(
 ): Promise<boolean> {
   if (!token) return false;
 
-  // Método 1: HMAC (requiere ADMIN_SECRET como Worker secret)
-  if (env.ADMIN_SECRET) {
+  // Método 1: HMAC (requiere SESSION_SIGNING_SECRET o legacy ADMIN_SECRET)
+  const signingSecret = env.SESSION_SIGNING_SECRET ?? env.ADMIN_SECRET;
+  if (signingSecret) {
     try {
-      const esperado = await computarHmacPremium(env.ADMIN_SECRET);
+      const esperado = await computarHmacPremium(signingSecret);
       if (token.length === esperado.length) {
         let diff = 0;
         for (let i = 0; i < token.length; i++) {

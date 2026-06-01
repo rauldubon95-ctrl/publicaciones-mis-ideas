@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { parseSessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sessionSecret } from "@/lib/secrets";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 export async function POST() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_auth")?.value;
-  const secret = process.env.ADMIN_SECRET;
+  const secret = sessionSecret();
 
   if (token && secret) {
     const jti = await parseSessionToken(token, secret);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { createHmac } from "crypto";
+import { d1SyncSecret } from "@/lib/secrets";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 
@@ -10,9 +11,9 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const secret = process.env.ADMIN_SECRET;
+  const secret = d1SyncSecret();
   if (!secret) {
-    return NextResponse.json({ error: "ADMIN_SECRET no configurado" }, { status: 500 });
+    return NextResponse.json({ error: "Secreto de sync no configurado" }, { status: 500 });
   }
 
   const token = createHmac("sha256", secret).update("telemetria-v1").digest("hex");

@@ -66,10 +66,13 @@ export async function middleware(request: NextRequest) {
   }
 
   const cookie = request.cookies.get("admin_auth")?.value;
-  const secret = process.env.ADMIN_SECRET;
+  // Edge runtime no puede importar desde lib/secrets.ts si éste tuviera
+  // dependencias node:. Mantenemos la lectura inline aquí.
+  const secret =
+    process.env.SESSION_SIGNING_SECRET ?? process.env.ADMIN_SECRET;
 
   if (!secret) {
-    return new NextResponse("ADMIN_SECRET no configurado", { status: 500 });
+    return new NextResponse("Secreto de sesión no configurado", { status: 500 });
   }
 
   if (cookie && (await verifySessionToken(cookie, secret))) {

@@ -183,7 +183,7 @@ export default function AdminDonacionesPage() {
                     Estado
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden sm:table-cell">
-                    Stripe ID
+                    PayPal Order ID
                   </th>
                 </tr>
               </thead>

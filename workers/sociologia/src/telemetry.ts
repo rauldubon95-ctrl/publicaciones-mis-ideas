@@ -30,10 +30,11 @@ export async function handleTelemetriaRequest(
   env: Env,
   CORS: Record<string, string>
 ): Promise<Response> {
-  if (!env.ADMIN_SECRET) return json({ error: "No configurado" }, 500, CORS);
+  const secret = env.D1_SYNC_SECRET ?? env.ADMIN_SECRET;
+  if (!secret) return json({ error: "No configurado" }, 500, CORS);
 
   const token = request.headers.get("X-Sync-Token");
-  const esperado = await hmacHex(env.ADMIN_SECRET, "telemetria-v1");
+  const esperado = await hmacHex(secret, "telemetria-v1");
   if (!token || !constantTimeEqual(token, esperado)) {
     return json({ error: "No autorizado" }, 401, CORS);
   }

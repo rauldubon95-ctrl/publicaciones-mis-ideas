@@ -1,6 +1,7 @@
 // Cliente server-side para sincronizar artículos publicados hacia D1 del Worker.
 // Se llama tras PUT en admin/publicaciones/[id] — fallo no bloquea la respuesta.
 import { createHmac } from "crypto";
+import { d1SyncSecret } from "@/lib/secrets";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 const SYNC_MESSAGE = "d1-sync-v1";
@@ -18,7 +19,7 @@ export async function syncPublicacionToD1(
   payload: SyncPayload,
   action: "upsert" | "delete"
 ): Promise<void> {
-  const secret = process.env.ADMIN_SECRET;
+  const secret = d1SyncSecret();
   if (!secret) return;
 
   const syncToken = createHmac("sha256", secret).update(SYNC_MESSAGE).digest("hex");
