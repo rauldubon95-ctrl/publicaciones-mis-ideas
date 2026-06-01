@@ -115,6 +115,19 @@ export default async function PublicacionPage({ params }: Props) {
           </Link>
         </div>
       )}
+      {publicacion.esPremium && adminOk && (
+        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-3">
+          <p className="text-sm text-blue-800 font-medium">
+            Artículo premium — estás viendo el contenido completo porque eres admin. Los visitantes ven solo el resumen y el muro de pago.
+          </p>
+          <Link
+            href={`/admin/editar/${publicacion.id}`}
+            className="shrink-0 text-xs font-medium text-blue-900 underline underline-offset-2 hover:text-blue-700"
+          >
+            Editar precio
+          </Link>
+        </div>
+      )}
       <TrackView publicacionId={publicacion.id} />
 
       {/* Breadcrumb */}

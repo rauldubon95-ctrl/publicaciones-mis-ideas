@@ -75,9 +75,10 @@ export default function ObservabilidadPage() {
         <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 text-red-700">
           <p className="font-medium">No se pudo cargar la telemetría</p>
           <p className="text-sm mt-1">{error ?? "Sin datos disponibles"}</p>
-          <p className="text-xs mt-3 text-red-500">
-            Verifica que el Worker esté desplegado y que ADMIN_SECRET esté configurado.
-          </p>
+          <div className="text-xs mt-3 text-red-500 space-y-1">
+            <p>Si el error dice "401": el secreto <code className="bg-red-100 px-1 rounded">D1_SYNC_SECRET</code> en Vercel no coincide con el del Worker.</p>
+            <p>Solución: en Cloudflare → Workers → <em>sociologia</em> → Settings → Variables → agrega <code className="bg-red-100 px-1 rounded">D1_SYNC_SECRET</code> como secret con el mismo valor que tienes en Vercel.</p>
+          </div>
         </div>
       </div>
     );
