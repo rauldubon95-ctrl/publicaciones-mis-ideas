@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { tieneAccesoLibro } from "@/lib/accesoLibro";
+import { isAdminAuthorized } from "@/lib/adminAuth";
 import Image from "next/image";
 import Link from "next/link";
+import MuroLibro from "@/components/MuroLibro";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +30,15 @@ export default async function LibroPage({ params }: Props) {
   });
   if (!libro) notFound();
 
+  const esDePago = libro.precioCentavos != null && libro.precioCentavos > 0;
+
+  const [adminOk, tieneAcceso] = await Promise.all([
+    isAdminAuthorized(),
+    esDePago ? tieneAccesoLibro(libro.id) : Promise.resolve(true),
+  ]);
+
+  const puedeDescargar = !esDePago || adminOk || tieneAcceso;
+
   const precio =
     libro.precioCentavos != null && libro.precioCentavos > 0
       ? `$${(libro.precioCentavos / 100).toFixed(2)} USD`
@@ -43,6 +55,17 @@ export default async function LibroPage({ params }: Props) {
         <span>/</span>
         <span className="text-zinc-600 truncate">{libro.titulo}</span>
       </nav>
+
+      {esDePago && adminOk && (
+        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-3">
+          <p className="text-sm text-blue-800 font-medium">
+            Libro de pago — estás viendo el contenido completo porque eres admin. Los visitantes deben comprarlo para descargar.
+          </p>
+          <Link href={`/admin/libros/editar/${libro.id}`} className="shrink-0 text-xs font-medium text-blue-900 underline underline-offset-2 hover:text-blue-700">
+            Editar precio
+          </Link>
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-[auto_1fr] gap-10 items-start">
         {/* Portada */}
@@ -106,20 +129,29 @@ export default async function LibroPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Botón de descarga */}
-          <a
-            href={`/api/libros/${libro.slug}/descargar`}
-            className="inline-flex items-center justify-center gap-2.5 bg-brand-700 hover:bg-brand-800 text-white font-semibold px-8 py-4 rounded-xl transition-colors text-base shadow-sm w-full sm:w-auto"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Descargar PDF
-          </a>
-
-          <p className="text-xs text-zinc-400">
-            Al descargar aceptas el uso personal del documento.
-          </p>
+          {/* Botón o muro de pago */}
+          {puedeDescargar ? (
+            <>
+              <a
+                href={`/api/libros/${libro.slug}/descargar`}
+                className="inline-flex items-center justify-center gap-2.5 bg-brand-700 hover:bg-brand-800 text-white font-semibold px-8 py-4 rounded-xl transition-colors text-base shadow-sm w-full sm:w-auto"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Descargar PDF
+              </a>
+              <p className="text-xs text-zinc-400">
+                Al descargar aceptas el uso personal del documento.
+              </p>
+            </>
+          ) : (
+            <MuroLibro
+              libroId={libro.id}
+              titulo={libro.titulo}
+              precioCentavos={libro.precioCentavos!}
+            />
+          )}
         </div>
       </div>
     </main>

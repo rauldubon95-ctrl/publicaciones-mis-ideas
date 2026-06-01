@@ -385,6 +385,7 @@ model Libro {
   creadoAt       DateTime        @default(now())
   actualizadoAt  DateTime        @updatedAt
   descargas      DescargaLibro[]
+  pedidos        PedidoLibro[]
 
   @@index([publicado])
   @@index([creadoAt])
@@ -399,5 +400,26 @@ model DescargaLibro {
   dispositivo String?
 
   @@index([libroId])
+  @@index([creadoAt])
+}
+
+model PedidoLibro {
+  id              String    @id @default(cuid())
+  libroId         String
+  libro           Libro     @relation(fields: [libroId], references: [id], onDelete: Cascade)
+  emailComprador  String
+  nombreComprador String?
+  montoCentavos   Int
+  moneda          String    @default("USD")
+  paypalOrderId   String?   @unique
+  estado          String    @default("PENDIENTE") // PENDIENTE | COMPLETADO | CANCELADO | FALLIDO
+  tokenAcceso     String    @unique @default(cuid())
+  creadoAt        DateTime  @default(now())
+  completadoAt    DateTime?
+  ultimoAccesoAt  DateTime?
+
+  @@index([emailComprador])
+  @@index([estado])
+  @@index([libroId, estado])
   @@index([creadoAt])
 }
