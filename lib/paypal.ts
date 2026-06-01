@@ -6,6 +6,7 @@ const BASE =
 async function getToken(): Promise<string> {
   const id = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_CLIENT_SECRET;
+  console.log(`[paypal] env=${process.env.PAYPAL_ENV} base=${BASE} id_set=${!!id} secret_set=${!!secret}`);
   if (!id || !secret) throw new Error("Credenciales PayPal no configuradas");
 
   const creds = btoa(`${id}:${secret}`);

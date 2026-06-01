@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { crearOrdenPayPal } from "@/lib/paypal";
 import { checkRateLimitDb, registrarEvento, getIp } from "@/lib/security";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 
 export async function POST(req: NextRequest) {
