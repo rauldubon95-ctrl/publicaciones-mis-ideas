@@ -14,7 +14,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_ES",
     siteName: SITE_NAME,
-    images: ["/og-image-rauldubon.png"],
+    images: [
+      {
+        url: "/og-image-rauldubon.png",
+        width: 1200,
+        height: 630,
+        alt: "Raúl Dubón — Divulgación académica",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
