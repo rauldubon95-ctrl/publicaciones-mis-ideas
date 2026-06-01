@@ -13,6 +13,7 @@ function escapeHtml(text: string): string {
 
 const FROM = process.env.FROM_EMAIL ?? "Raúl Dubón <noreply@rauldubon.org>";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "raul.dubon95@gmail.com";
 
 // ─── Plantillas HTML ──────────────────────────────────────────────────────────
 
@@ -123,6 +124,57 @@ export function htmlNuevaPublicacion(
   `);
 }
 
+export function htmlNotificacionDonacion(
+  montoUSD: string,
+  nombreDonante: string,
+  correoDonante: string | null,
+  donacionId: string
+): string {
+  const adminUrl = `${BASE_URL}/admin/donaciones`;
+  return baseLayout(`
+    <p style="font-size:16px;color:#3f3f46;margin:0 0 8px;">
+      <strong>Nueva donación recibida</strong> 🎉
+    </p>
+    <p style="font-size:14px;color:#71717a;margin:0 0 24px;font-family:sans-serif;">
+      Esta es una notificación automática para el administrador.
+    </p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="background:#fafafa;border:1px solid #e4e4e7;border-radius:6px;margin:0 0 24px;">
+      <tr>
+        <td style="padding:20px 24px;">
+          <p style="margin:0 0 12px;font-size:14px;color:#71717a;font-family:sans-serif;">Monto</p>
+          <p style="margin:0 0 20px;font-size:28px;font-weight:600;color:#059669;font-family:Georgia,serif;">
+            $${escapeHtml(montoUSD)} USD
+          </p>
+          <p style="margin:0 0 6px;font-size:13px;color:#71717a;font-family:sans-serif;">Donante</p>
+          <p style="margin:0 0 16px;font-size:15px;color:#18181b;">
+            ${escapeHtml(nombreDonante || "Anónimo")}
+          </p>
+          ${
+            correoDonante
+              ? `<p style="margin:0 0 6px;font-size:13px;color:#71717a;font-family:sans-serif;">Correo de contacto</p>
+                 <p style="margin:0 0 16px;font-size:14px;color:#18181b;font-family:monospace;">${escapeHtml(correoDonante)}</p>`
+              : ""
+          }
+          <p style="margin:0 0 6px;font-size:13px;color:#71717a;font-family:sans-serif;">ID de donación</p>
+          <p style="margin:0;font-size:12px;color:#52525b;font-family:monospace;">${escapeHtml(donacionId)}</p>
+        </td>
+      </tr>
+    </table>
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+      <tr>
+        <td style="background:#1d4ed8;border-radius:6px;">
+          <a href="${adminUrl}" style="display:inline-block;padding:12px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;font-family:sans-serif;">
+            Ver en el panel de admin
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:12px;color:#a1a1aa;margin:24px 0 0;font-family:sans-serif;">
+      El pago ya fue procesado y capturado por PayPal. El monto aparecerá en tu cuenta Business según los tiempos habituales de PayPal.
+    </p>
+  `);
+}
+
 // ─── Funciones de envío ───────────────────────────────────────────────────────
 
 export async function enviarConfirmacion(
@@ -137,6 +189,26 @@ export async function enviarConfirmacion(
       to: email,
       subject: "Confirma tu suscripción — Raúl Dubón",
       html: htmlConfirmacion(token, nombre),
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function enviarNotificacionDonacion(
+  montoUSD: string,
+  nombreDonante: string,
+  correoDonante: string | null,
+  donacionId: string
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `💰 Nueva donación de $${montoUSD} — ${nombreDonante || "Anónimo"}`,
+      html: htmlNotificacionDonacion(montoUSD, nombreDonante, correoDonante, donacionId),
     });
     return !error;
   } catch {

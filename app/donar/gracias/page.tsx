@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
+import { enviarNotificacionDonacion } from "@/lib/resend";
 
 export const metadata: Metadata = {
   title: "Gracias por tu apoyo",
@@ -25,13 +26,30 @@ export default async function GraciasPage({ searchParams }: Props) {
       const captura = await capturarOrdenPayPal(paypalOrderId);
       if (captura.completado) {
         const montoCentavos = Math.round(parseFloat(captura.monto) * 100);
-        await prisma.donacion.update({
+        const actualizada = await prisma.donacion.updateMany({
           where: { id: donacion_id, estado: "PENDIENTE" },
           data: { estado: "COMPLETADO" },
         });
         pagado = true;
         monto = montoCentavos;
         nombre = captura.nombre;
+
+        // Notificar al admin solo si esta solicitud fue la que cerró la donación
+        // (evita doble correo si el usuario refresca la página de gracias)
+        if (actualizada.count > 0) {
+          const datos = await prisma.donacion.findUnique({
+            where: { id: donacion_id },
+            select: { correo: true, nombre: true },
+          });
+          const nombreDonante = captura.nombre || datos?.nombre || "Anónimo";
+          // Fire-and-forget — no bloquear la respuesta al donante si el correo falla
+          enviarNotificacionDonacion(
+            captura.monto,
+            nombreDonante,
+            datos?.correo ?? null,
+            donacion_id
+          ).catch(() => {});
+        }
       }
     } catch {
       // Error de captura — mostrar pantalla de error

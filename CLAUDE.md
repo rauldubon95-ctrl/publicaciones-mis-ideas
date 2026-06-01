@@ -75,6 +75,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 | `RESEND_API_KEY` | API Key de Resend para envío de correos (suscripciones y notificaciones) | Sí (sistema email) |
 | `FROM_EMAIL` | Remitente de correos, ej: `Raúl Dubón <noreply@rauldubon.org>` | Sí (sistema email) |
+| `ADMIN_EMAIL` | Correo del admin que recibe notificación cuando llega una donación. Default: `raul.dubon95@gmail.com`. | Recomendado |
 | `STRIPE_SECRET_KEY` | **SIN USO ACTIVO** — Stripe no opera en El Salvador. Variable presente en Vercel. | No (inactivo) |
 | `STRIPE_WEBHOOK_SECRET` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | **SIN USO ACTIVO** — mismo motivo. | No (inactivo) |
