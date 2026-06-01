@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  // Acepta sesión admin O el HEALTH_TOKEN como query param ?token=...
   const healthToken = process.env.HEALTH_TOKEN;
   const qToken = req.nextUrl.searchParams.get("token");
   const tokenOk = healthToken && qToken === healthToken;
@@ -17,36 +16,30 @@ export async function GET(req: NextRequest) {
   const env = process.env.PAYPAL_ENV;
   const id = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_CLIENT_SECRET;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-  const diagnostico = {
+  const base =
+    env === "live"
+      ? "https://api-m.paypal.com"
+      : "https://api-m.sandbox.paypal.com";
+
+  const result: Record<string, unknown> = {
     PAYPAL_ENV: env ?? "(no configurado)",
+    base_url: base,
+    NEXT_PUBLIC_APP_URL: appUrl || "(vacío)",
     PAYPAL_CLIENT_ID_set: !!id,
-    PAYPAL_CLIENT_ID_preview: id ? `${id.slice(0, 8)}...` : null,
     PAYPAL_CLIENT_SECRET_set: !!secret,
-    base_url:
-      env === "live"
-        ? "https://api-m.paypal.com"
-        : "https://api-m.sandbox.paypal.com",
-    auth_resultado: null as string | null,
-    auth_status: null as number | null,
-    auth_body: null as string | null,
   };
 
   if (!id || !secret) {
-    return NextResponse.json({
-      ...diagnostico,
-      error: "Credenciales no configuradas",
-    });
+    return NextResponse.json({ ...result, error: "Credenciales no configuradas" });
   }
 
+  // Paso 1: obtener token
+  let token = "";
   try {
-    const base =
-      env === "live"
-        ? "https://api-m.paypal.com"
-        : "https://api-m.sandbox.paypal.com";
-
     const creds = btoa(`${id}:${secret}`);
-    const res = await fetch(`${base}/v1/oauth2/token`, {
+    const authRes = await fetch(`${base}/v1/oauth2/token`, {
       method: "POST",
       headers: {
         Authorization: `Basic ${creds}`,
@@ -55,16 +48,53 @@ export async function GET(req: NextRequest) {
       body: "grant_type=client_credentials",
       cache: "no-store",
     });
-
-    const body = await res.text();
-    diagnostico.auth_status = res.status;
-    diagnostico.auth_body = body.slice(0, 300);
-    diagnostico.auth_resultado = res.ok ? "OK" : "FALLO";
+    const authBody = await authRes.text();
+    result.auth_status = authRes.status;
+    result.auth_ok = authRes.ok;
+    if (!authRes.ok) {
+      result.auth_error = authBody.slice(0, 400);
+      return NextResponse.json(result);
+    }
+    token = (JSON.parse(authBody) as { access_token: string }).access_token;
+    result.auth_ok = true;
   } catch (err) {
-    diagnostico.auth_resultado = "ERROR_RED";
-    diagnostico.auth_body =
-      err instanceof Error ? err.message : String(err);
+    result.auth_error = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(result);
   }
 
-  return NextResponse.json(diagnostico);
+  // Paso 2: crear orden de prueba ($1)
+  const returnUrl = `${appUrl}/donar/gracias?donacion_id=TEST`;
+  const cancelUrl = `${appUrl}/donar`;
+  result.return_url_usado = returnUrl;
+  result.cancel_url_usado = cancelUrl;
+
+  try {
+    const orderRes = await fetch(`${base}/v2/checkout/orders`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        intent: "CAPTURE",
+        purchase_units: [{ amount: { currency_code: "USD", value: "1.00" }, description: "Test" }],
+        application_context: {
+          return_url: returnUrl,
+          cancel_url: cancelUrl,
+          brand_name: "Raúl Dubón",
+          user_action: "PAY_NOW",
+          landing_page: "BILLING",
+          locale: "es_MX",
+        },
+      }),
+    });
+    const orderBody = await orderRes.text();
+    result.orden_status = orderRes.status;
+    result.orden_ok = orderRes.ok;
+    result.orden_body = orderBody.slice(0, 600);
+  } catch (err) {
+    result.orden_error = err instanceof Error ? err.message : String(err);
+  }
+
+  return NextResponse.json(result);
 }
