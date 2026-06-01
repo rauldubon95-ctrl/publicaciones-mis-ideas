@@ -360,7 +360,7 @@ Automático al publicar/despublicar. Para sincronizar todos:
 
 ## 15. PayPal — configuración actual
 
-- `locale: "es_MX"` → interfaz en español latinoamericano ✅ (corregido sesión 13; `es-SV` no era soportado)
+- `locale: "es-MX"` → interfaz en español latinoamericano ✅ (formato BCP-47 con guión; `es_MX` con guión bajo es rechazado por PayPal Orders v2)
 - `landing_page: "BILLING"` → formulario de tarjeta directo
 - Donaciones, artículos y libros usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
 - Webhook discrimina por prefijo en `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, sin prefijo = donación
@@ -417,5 +417,5 @@ Cliente (Next.js)
 
 ---
 
-*Última actualización: 2026-06-01 (sesión 13 — libros con pago PayPal completo)*
-*Commit activo en main: `8d75b88`*
+*Última actualización: 2026-06-01 (sesión 14 — fix locale PayPal es_MX→es-MX)*
+*Commit activo en main: `489c6a3`*
