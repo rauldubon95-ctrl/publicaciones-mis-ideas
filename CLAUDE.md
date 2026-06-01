@@ -383,6 +383,7 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Security hardening completo (fases 1–5) | ✅ Producción |
 | Retrieval semántico (Vectorize) | ❌ Pendiente |
 | Multi-worker / orquestación de agentes | ❌ Pendiente |
+| Botones compartir en redes sociales | ❌ Pendiente sesión 15 |
 
 ---
 
@@ -417,5 +418,5 @@ Cliente (Next.js)
 
 ---
 
-*Última actualización: 2026-06-01 (sesión 14 — fix locale PayPal es_MX→es-MX)*
-*Commit activo en main: `489c6a3`*
+*Última actualización: 2026-06-01 (sesión 14 — fix locale PayPal es_MX→es-MX; prompts sesión 15 preparados)*
+*Commit activo en main: `ec21524`*
