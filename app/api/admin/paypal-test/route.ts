@@ -4,9 +4,13 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest) {
-  const ok = await isAdminAuthorized();
-  if (!ok) {
+export async function GET(req: NextRequest) {
+  // Acepta sesión admin O el HEALTH_TOKEN como query param ?token=...
+  const healthToken = process.env.HEALTH_TOKEN;
+  const qToken = req.nextUrl.searchParams.get("token");
+  const tokenOk = healthToken && qToken === healthToken;
+  const sessionOk = tokenOk ? false : await isAdminAuthorized();
+  if (!tokenOk && !sessionOk) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
