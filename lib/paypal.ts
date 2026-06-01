@@ -8,8 +8,7 @@ async function getToken(): Promise<string> {
   const BASE = getBase();
   const id = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_CLIENT_SECRET;
-  console.log(`[paypal] env=${process.env.PAYPAL_ENV} base=${BASE} id_set=${!!id} secret_set=${!!secret}`);
-  if (!id || !secret) throw new Error("Credenciales PayPal no configuradas");
+if (!id || !secret) throw new Error("Credenciales PayPal no configuradas");
 
   const creds = btoa(`${id}:${secret}`);
   const res = await fetch(`${BASE}/v1/oauth2/token`, {
@@ -64,7 +63,7 @@ export async function crearOrdenPayPal(
         brand_name: "Raúl Dubón",
         user_action: "PAY_NOW",
         landing_page: "BILLING",
-        locale: "es_MX",
+        locale: "es-MX",
       },
     }),
   });

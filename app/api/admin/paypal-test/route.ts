@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
           brand_name: "Raúl Dubón",
           user_action: "PAY_NOW",
           landing_page: "BILLING",
-          locale: "es_MX",
+          locale: "es-MX",
         },
       }),
     });
