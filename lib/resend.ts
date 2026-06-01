@@ -338,6 +338,74 @@ export async function enviarEnlaceDescargaLibro(
   }
 }
 
+// ─── Enlace de acceso a recurso premium (Fase 4) ─────────────────────────────
+
+export async function enviarEnlaceAccesoRecurso(
+  email: string,
+  titulo: string,
+  token: string,
+  nombre?: string
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  const enlace = `${BASE_URL}/leer/recurso/${token}`;
+  const saludo = nombre ? `Hola ${escapeHtml(nombre)},` : "Hola,";
+  const html = baseLayout(`
+    <h1 style="font-size:22px;margin:0 0 12px;color:#18181b;">Tu acceso está listo</h1>
+    <p style="margin:0 0 8px;color:#52525b;font-size:16px;">${saludo}</p>
+    <p style="margin:0 0 24px;color:#52525b;font-size:16px;">
+      Gracias por adquirir el recurso <strong>${escapeHtml(titulo)}</strong>.
+      Usa el botón de abajo para abrirlo. El enlace es permanente — puedes volver a usarlo cuando quieras.
+    </p>
+    <a href="${enlace}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
+      Abrir recurso
+    </a>
+    <p style="margin:24px 0 0;color:#a1a1aa;font-size:13px;">
+      Si el botón no funciona, copia este enlace en tu navegador:<br>
+      <a href="${enlace}" style="color:#1d4ed8;word-break:break-all;">${enlace}</a>
+    </p>
+  `);
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: `Tu recurso "${titulo}" — acceso disponible`,
+      html,
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function enviarNotificacionCompraRecurso(
+  montoUSD: string,
+  titulo: string,
+  emailComprador: string,
+  nombreComprador: string | null
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  const html = baseLayout(`
+    <h1 style="font-size:22px;margin:0 0 16px;color:#18181b;">🧩 Nueva venta de recurso</h1>
+    <table style="width:100%;border-collapse:collapse;font-size:15px;">
+      <tr><td style="padding:8px 0;color:#71717a;">Recurso</td><td style="padding:8px 0;color:#18181b;font-weight:600;">${escapeHtml(titulo)}</td></tr>
+      <tr><td style="padding:8px 0;color:#71717a;">Monto</td><td style="padding:8px 0;color:#16a34a;font-weight:700;font-size:18px;">$${escapeHtml(montoUSD)} USD</td></tr>
+      <tr><td style="padding:8px 0;color:#71717a;">Comprador</td><td style="padding:8px 0;color:#18181b;">${escapeHtml(nombreComprador || "—")}</td></tr>
+      <tr><td style="padding:8px 0;color:#71717a;">Correo</td><td style="padding:8px 0;color:#18181b;">${escapeHtml(emailComprador)}</td></tr>
+    </table>
+  `);
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `🧩 Venta de recurso: ${titulo} — $${montoUSD}`,
+      html,
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Respuesta a cotización (Fase 3) ─────────────────────────────────────────
 // El admin redacta cuerpo libre desde /admin/cotizaciones. Aquí solo envolvemos
 // con el baseLayout para mantener identidad visual. Devuelve messageId para
