@@ -5,8 +5,9 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import Image from "next/image";
 import Link from "next/link";
 import MuroLibro from "@/components/MuroLibro";
+import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
-import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +65,31 @@ export default async function LibroPage({ params }: Props) {
       ? "Gratis"
       : null;
 
+  const bookJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Book",
+    name: libro.titulo,
+    description: recortarDescripcion(libro.descripcion),
+    url: canonicalUrl(`/libros/${slug}`),
+    inLanguage: "es",
+    author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    ...(libro.paginas && { numberOfPages: libro.paginas }),
+    ...(libro.imagenPortada && { image: libro.imagenPortada }),
+    ...(esDePago &&
+      libro.precioCentavos != null && {
+        offers: {
+          "@type": "Offer",
+          price: (libro.precioCentavos / 100).toFixed(2),
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock",
+          url: canonicalUrl(`/libros/${slug}`),
+        },
+      }),
+  };
+
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
+      <JsonLd data={bookJsonLd} />
       <nav className="text-xs text-zinc-400 mb-10 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>

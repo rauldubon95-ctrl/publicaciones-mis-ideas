@@ -14,7 +14,8 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
 import BotonesCompartir from "@/components/BotonesCompartir";
-import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import JsonLd from "@/components/JsonLd";
+import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -124,8 +125,27 @@ export default async function PublicacionPage({ params }: Props) {
       publicacion.contenido.slice(0, 800) + "…"
     : publicacion.contenido;
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: publicacion.titulo,
+    description: recortarDescripcion(publicacion.resumen || publicacion.contenido),
+    url: canonicalUrl(`/publicaciones/${slug}`),
+    datePublished: publicacion.publicadoAt?.toISOString(),
+    dateModified: publicacion.actualizadoAt?.toISOString(),
+    inLanguage: "es",
+    author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    publisher: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonicalUrl(`/publicaciones/${slug}`),
+    },
+    ...(publicacion.categoria && { articleSection: publicacion.categoria.nombre }),
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <JsonLd data={articleJsonLd} />
       {!publicacion.publicado && adminOk && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded px-4 py-3">
           <p className="text-sm text-amber-800 font-medium">

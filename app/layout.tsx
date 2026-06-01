@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
+import JsonLd from "@/components/JsonLd";
 import { BASE_URL, DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -16,10 +17,37 @@ export const metadata: Metadata = {
   },
 };
 
+const personaJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: SITE_NAME,
+  url: BASE_URL,
+  description: DEFAULT_DESCRIPTION,
+  jobTitle: "Investigador en ciencias sociales",
+  knowsAbout: [
+    "Sociología",
+    "Ciencias sociales",
+    "América Latina",
+    "Historia",
+    "Análisis político",
+  ],
+};
+
+const sitioJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: BASE_URL,
+  description: DEFAULT_DESCRIPTION,
+  inLanguage: "es",
+  author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body className="min-h-screen flex flex-col">
+        <JsonLd data={[personaJsonLd, sitioJsonLd]} />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
