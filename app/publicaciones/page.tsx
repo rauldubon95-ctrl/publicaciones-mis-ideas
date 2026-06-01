@@ -2,9 +2,24 @@ import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import type { Metadata } from "next";
+import { canonicalWithPage } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Publicaciones" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const pagina = Math.max(1, parseInt(params.pagina ?? "1") || 1);
+  return {
+    title: pagina > 1 ? `Publicaciones — página ${pagina}` : "Publicaciones",
+    description:
+      "Todas las publicaciones académicas y de divulgación de Raúl Dubón.",
+    alternates: { canonical: canonicalWithPage("/publicaciones", pagina) },
+  };
+}
 
 const POR_PAGINA = 8;
 

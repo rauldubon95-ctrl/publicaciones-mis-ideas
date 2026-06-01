@@ -14,24 +14,28 @@ interface Props {
   searchParams: Promise<{ pagina?: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const sp = await searchParams;
+  const pagina = Math.max(1, parseInt(sp.pagina ?? "1") || 1);
   const cat = await prisma.categoria.findUnique({ where: { slug } });
   if (!cat) return {};
 
-  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org";
+  const { canonicalWithPage, SITE_NAME } = await import("@/lib/seo");
+  const url = canonicalWithPage(`/categorias/${slug}`, pagina);
+  const descripcion = cat.descripcion ?? `Publicaciones sobre ${cat.nombre} en ${SITE_NAME}`;
 
   return {
-    title: cat.nombre,
-    description: cat.descripcion ?? `Publicaciones sobre ${cat.nombre} en Raúl Dubón`,
-    alternates: {
-      canonical: `/categorias/${slug}`,
-    },
+    title: pagina > 1 ? `${cat.nombre} — página ${pagina}` : cat.nombre,
+    description: descripcion,
+    alternates: { canonical: url },
     openGraph: {
-      title: `${cat.nombre} | Raúl Dubón`,
-      description: cat.descripcion ?? `Publicaciones sobre ${cat.nombre}`,
-      url: `${BASE_URL}/categorias/${slug}`,
+      title: cat.nombre,
+      description: descripcion,
+      url,
       type: "website",
+      siteName: SITE_NAME,
+      locale: "es_ES",
     },
   };
 }

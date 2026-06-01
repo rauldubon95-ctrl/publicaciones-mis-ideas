@@ -3,25 +3,58 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
+import JsonLd from "@/components/JsonLd";
+import { BASE_URL, DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org"),
-  title: { default: "Raúl Dubón", template: "%s | Raúl Dubón" },
-  description: "Espacio de divulgación académica, proyectos e ideas de Raúl Dubón",
+  metadataBase: new URL(BASE_URL),
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: DEFAULT_DESCRIPTION,
   openGraph: {
     type: "website",
     locale: "es_ES",
-    siteName: "Raúl Dubón",
+    siteName: SITE_NAME,
+    images: ["/og-default.png"],
   },
-  alternates: {
-    canonical: "/",
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION,
+    images: ["/og-default.png"],
   },
+};
+
+const personaJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: SITE_NAME,
+  url: BASE_URL,
+  description: DEFAULT_DESCRIPTION,
+  jobTitle: "Investigador en ciencias sociales",
+  knowsAbout: [
+    "Sociología",
+    "Ciencias sociales",
+    "América Latina",
+    "Historia",
+    "Análisis político",
+  ],
+};
+
+const sitioJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: BASE_URL,
+  description: DEFAULT_DESCRIPTION,
+  inLanguage: "es",
+  author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body className="min-h-screen flex flex-col">
+        <JsonLd data={[personaJsonLd, sitioJsonLd]} />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

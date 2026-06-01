@@ -14,6 +14,8 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
 import BotonesCompartir from "@/components/BotonesCompartir";
+import JsonLd from "@/components/JsonLd";
+import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await prisma.publicacion.findUnique({ where: { slug } });
   if (!p) return {};
-  return { title: p.titulo, description: p.resumen };
+  const descripcion = recortarDescripcion(p.resumen || p.contenido);
+  const url = canonicalUrl(`/publicaciones/${slug}`);
+  return {
+    title: p.titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: p.titulo,
+      description: descripcion,
+      url,
+      siteName: SITE_NAME,
+      locale: "es_ES",
+      publishedTime: p.publicadoAt?.toISOString(),
+      modifiedTime: p.actualizadoAt?.toISOString(),
+      authors: [SITE_NAME],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.titulo,
+      description: descripcion,
+    },
+  };
 }
 
 // Construye árbol de comentarios desde los datos planos de la DB
@@ -82,6 +106,19 @@ export default async function PublicacionPage({ params }: Props) {
   // Borrador: solo el admin puede verlo
   if (!publicacion.publicado && !adminOk) notFound();
 
+  const relacionados = publicacion.categoriaId
+    ? await prisma.publicacion.findMany({
+        where: {
+          publicado: true,
+          categoriaId: publicacion.categoriaId,
+          NOT: { id: publicacion.id },
+        },
+        orderBy: { publicadoAt: "desc" },
+        take: 3,
+        select: { slug: true, titulo: true, resumen: true },
+      })
+    : [];
+
   const conteos = publicacion.reacciones.reduce<Record<string, number>>((acc, r) => {
     acc[r.tipo] = (acc[r.tipo] ?? 0) + 1;
     return acc;
@@ -101,8 +138,27 @@ export default async function PublicacionPage({ params }: Props) {
       publicacion.contenido.slice(0, 800) + "…"
     : publicacion.contenido;
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: publicacion.titulo,
+    description: recortarDescripcion(publicacion.resumen || publicacion.contenido),
+    url: canonicalUrl(`/publicaciones/${slug}`),
+    datePublished: publicacion.publicadoAt?.toISOString(),
+    dateModified: publicacion.actualizadoAt?.toISOString(),
+    inLanguage: "es",
+    author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    publisher: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonicalUrl(`/publicaciones/${slug}`),
+    },
+    ...(publicacion.categoria && { articleSection: publicacion.categoria.nombre }),
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <JsonLd data={articleJsonLd} />
       {!publicacion.publicado && adminOk && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded px-4 py-3">
           <p className="text-sm text-amber-800 font-medium">
@@ -224,6 +280,33 @@ export default async function PublicacionPage({ params }: Props) {
 
           {/* Tarjeta del autor */}
           <TarjetaAutor />
+
+          {relacionados.length > 0 && (
+            <section className="mt-10 border-t border-zinc-100 pt-10">
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-5">
+                Artículos relacionados
+              </p>
+              <ul className="space-y-4">
+                {relacionados.map((r) => (
+                  <li key={r.slug}>
+                    <Link
+                      href={`/publicaciones/${r.slug}`}
+                      className="block group"
+                    >
+                      <h3 className="font-serif text-lg text-zinc-800 group-hover:text-brand-700 transition-colors leading-snug">
+                        {r.titulo}
+                      </h3>
+                      {r.resumen && (
+                        <p className="text-sm text-zinc-500 mt-1 line-clamp-2">
+                          {r.resumen}
+                        </p>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <hr className="border-zinc-100 my-10" />
 

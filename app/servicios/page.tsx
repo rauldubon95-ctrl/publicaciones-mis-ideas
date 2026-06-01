@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import ServiciosConFormulario from "@/components/ServiciosConFormulario";
 import type { Metadata } from "next";
+import { canonicalUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Servicios de Consultoría",
   description:
     "Servicios profesionales de consultoría en evaluación, investigación social, análisis de datos y apoyo metodológico para proyectos académicos e institucionales.",
+  alternates: { canonical: canonicalUrl("/servicios") },
 };
 
 export const dynamic = "force-dynamic";
