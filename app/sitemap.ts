@@ -1,16 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import type { MetadataRoute } from "next";
+import { BASE_URL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://rauldubon.org";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [publicaciones, comics, recursos, categorias] = await Promise.all([
+  const [publicaciones, libros, comics, recursos, categorias] = await Promise.all([
     prisma.publicacion.findMany({
       where: { publicado: true },
       select: { slug: true, actualizadoAt: true },
       orderBy: { publicadoAt: "desc" },
+    }),
+    prisma.libro.findMany({
+      where: { publicado: true },
+      select: { slug: true, actualizadoAt: true },
     }),
     prisma.comic.findMany({
       where: { publicado: true },
@@ -27,7 +30,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   ]);
 
-  // Solo indexar categorías que tienen al menos una publicación
   const categoriasConContenido = categorias.filter(
     (c) => c._count.publicaciones > 0
   );
@@ -35,10 +37,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const paginasEstaticas: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
     { url: `${BASE_URL}/publicaciones`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${BASE_URL}/libros`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/recursos`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE_URL}/comics`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE_URL}/servicios`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/dashboard`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
     { url: `${BASE_URL}/donar`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   ];
 
@@ -47,6 +49,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: p.actualizadoAt ?? new Date(),
     changeFrequency: "monthly",
     priority: 0.8,
+  }));
+
+  const paginasLibros: MetadataRoute.Sitemap = libros.map((l) => ({
+    url: `${BASE_URL}/libros/${l.slug}`,
+    lastModified: l.actualizadoAt ?? new Date(),
+    changeFrequency: "monthly",
+    priority: 0.7,
   }));
 
   const paginasComics: MetadataRoute.Sitemap = comics.map((c) => ({
@@ -74,6 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...paginasEstaticas,
     ...paginasPublicaciones,
+    ...paginasLibros,
     ...paginasComics,
     ...paginasRecursos,
     ...paginasCategorias,
