@@ -48,6 +48,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Categorías dinámicas | Producción | Grid automático, `icono`+`imagen`, SEO en `/categorias/[slug]` |
 | ✅ Security hardening fases 1–5 | Producción | RLS 21 tablas Supabase, IPs hasheadas, secretos separados, middleware, scan paths |
 | ✅ Agentes IA GitHub Actions | Producción | `code-review.yml` + `prioritize.yml` — GitHub Models (gratis) |
+| ✅ Botones compartir redes sociales | Producción sesión 15 | `BotonesCompartir.tsx` en `/publicaciones/[slug]`. WhatsApp, Facebook, X, LinkedIn, copiar enlace. Share intents nativos, sin API keys. |
 | ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
 | ❌ Multi-worker / orquestación | Pendiente | Ver §17. Solo existe 1 worker hoy. |
 | ❌ Vectorize (retrieval semántico) | Pendiente | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create`. |
@@ -383,7 +384,7 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Security hardening completo (fases 1–5) | ✅ Producción |
 | Retrieval semántico (Vectorize) | ❌ Pendiente |
 | Multi-worker / orquestación de agentes | ❌ Pendiente |
-| Botones compartir en redes sociales | ❌ Pendiente sesión 15 |
+| Botones compartir en redes sociales | ✅ Producción sesión 15 |
 
 ---
 
@@ -418,5 +419,5 @@ Cliente (Next.js)
 
 ---
 
-*Última actualización: 2026-06-01 (sesión 14 — fix locale PayPal es_MX→es-MX; prompts sesión 15 preparados)*
-*Commit activo en main: `ec21524`*
+*Última actualización: 2026-06-01 (sesión 15 — botones compartir en artículos)*
+*Commit activo en main: `a093315`*
