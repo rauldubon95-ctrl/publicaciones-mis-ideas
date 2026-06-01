@@ -13,6 +13,7 @@ import type { ComentarioArbol } from "@/app/api/comentarios/route";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
+import BotonesCompartir from "@/components/BotonesCompartir";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,8 @@ export default async function PublicacionPage({ params }: Props) {
           </Link>
         </div>
       </header>
+
+      <BotonesCompartir titulo={publicacion.titulo} slug={slug} />
 
       {/* Contenido */}
       <div className="prose prose-zinc prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700 max-w-none mb-12">
