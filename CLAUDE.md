@@ -15,11 +15,11 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 **Stack:**
 - Frontend: Next.js 15.5.18 + React 19.1.0 (App Router) desplegado en Vercel
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma
-- Storage de imágenes: Supabase Storage (bucket `comics`)
+- Storage: Supabase Storage — bucket `comics` (imágenes cómics) + bucket `libros` (PDFs y portadas)
 - IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
-**Rama de desarrollo activa:** `claude/kind-ptolemy-6ewhS` (sesión 13)
+**Rama de desarrollo activa:** ver `git branch --show-current` al inicio de cada sesión
 
 ---
 
@@ -27,18 +27,21 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 
 | Componente | Estado | Notas |
 |---|---|---|
-| ✅ Next.js app | Producción | Vercel, `main`, commit `62a53a4`. Next.js 15.5.18 + React 19.1.0 |
+| ✅ Next.js app | Producción | Vercel, `main`, commit `8d75b88`. Next.js 15.5.18 + React 19.1.0 |
 | ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. |
 | ✅ Skills: sociológica, histórica, política | Producción | `sociological-analysis`, `historical-analysis`, `political-analysis` en SkillRegistry |
 | ✅ Sync Supabase → D1 | Producción | Automático al publicar/despublicar + botón sync masivo en admin |
 | ✅ Token premium (admin sin límite IA) | Producción | HMAC(SESSION_SIGNING_SECRET \|\| ADMIN_SECRET, "premium-bypass-v1") |
 | ✅ Secretos separados | Producción sesión 12 | `ADMIN_PASSWORD` + `SESSION_SIGNING_SECRET` + `D1_SYNC_SECRET`. `lib/secrets.ts` con fallback a `ADMIN_SECRET`. |
 | ✅ Telemetría IA | Producción | KV, 7 días historial. Panel `/admin/observabilidad`. Requiere `D1_SYNC_SECRET` igual en Vercel y Worker. |
-| ✅ Monetización de contenido premium | Producción sesión 12 | Artículos de pago, muro de pago, compra PayPal, magic link correo, cookie acceso 1 año |
+| ✅ Monetización artículos premium | Producción sesión 12 | `MuroPago.tsx`, PayPal, magic link correo, cookie `acc_<id[:16]>` 1 año |
+| ✅ Libros en venta | Producción sesión 13 | `MuroLibro.tsx`, PayPal, magic link `/leer/libro/[token]`, cookie `lib_<id[:16]>` 1 año |
 | ✅ PayPal Orders API v2 — Donaciones | Producción | `FormularioDonacion.tsx`: montos $3/$5/$10/$25 + personalizado. Webhook firmado. |
-| ✅ PayPal Orders API v2 — Compras premium | Producción sesión 12 | `MuroPago.tsx`: pago por artículo individual. `custom_id="contenido:<pedidoId>"` en webhook. |
-| ✅ Notificación admin por donación/compra | Producción sesión 12 | Resend envía correo a `ADMIN_EMAIL` al capturar cada pago. |
+| ✅ PayPal Orders API v2 — Artículos | Producción sesión 12 | `custom_id="contenido:<pedidoId>"` en webhook. |
+| ✅ PayPal Orders API v2 — Libros | Producción sesión 13 | `custom_id="libro:<pedidoId>"` en webhook. |
+| ✅ Notificación admin por donación/compra | Producción | Resend envía correo a `ADMIN_EMAIL` al capturar cada pago. |
 | ✅ Webhook PayPal con firma criptográfica | Producción sesión 12 | `verificarFirmaWebhookPayPal()`. Idempotencia via `WebhookEventoProcesado`. |
+| ✅ Sección Libros | Producción sesión 13 | Grid público, página individual, CRUD admin, upload PDF+portada a Supabase Storage |
 | ✅ Paginación | Producción | `Paginacion.tsx`: home (4/pág) + `/publicaciones` (8/pág) |
 | ✅ Servicios de Consultoría | Producción | `/servicios` + modal cotización + CRUD admin |
 | ✅ Suscripción por correo | Producción | Double Opt-In, Resend, panel `/admin/suscriptores` |
@@ -46,7 +49,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Security hardening fases 1–5 | Producción | RLS 21 tablas Supabase, IPs hasheadas, secretos separados, middleware, scan paths |
 | ✅ Agentes IA GitHub Actions | Producción | `code-review.yml` + `prioritize.yml` — GitHub Models (gratis) |
 | ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
-| ❌ Multi-worker / orquestación | **En planificación sesión 13** | Ver §17. Solo existe 1 worker hoy. |
+| ❌ Multi-worker / orquestación | Pendiente | Ver §17. Solo existe 1 worker hoy. |
 | ❌ Vectorize (retrieval semántico) | Pendiente | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create`. |
 
 ---
@@ -88,8 +91,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `RATE_LIMIT` | KV binding | Rate limiting + telemetría |
 | `AI` | Workers AI binding | `@cf/meta/llama-3.1-8b-instruct` |
 | `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback |
-| `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium. **Mismo valor que Vercel.** ✅ Configurado sesión 13 |
-| `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que Vercel.** ✅ Configurado sesión 13 |
+| `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium. **Mismo valor que Vercel.** ✅ |
+| `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que Vercel.** ✅ |
 
 ---
 
@@ -137,7 +140,51 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content=
 
 ---
 
-## 7. Rutas críticas
+## 7. Libros: gratis y de pago (sesión 13)
+
+**Gratis** (`precioCentavos = 0` o `null`): botón "Descargar PDF" visible para todos.
+
+**De pago** (`precioCentavos > 0`): Al visitar `/libros/[slug]`:
+- **Admin:** ve botón de descarga + barra azul informativa
+- **Visitante sin pago:** ve descripción + `MuroLibro.tsx` (email + nombre → PayPal)
+- **Visitante con pago:** ve botón de descarga (cookie `lib_<libroId[:16]>` o magic link `/leer/libro/<token>`)
+
+### Flujo de compra de libro
+1. `MuroLibro.tsx` → `POST /api/libros/comprar` → crea `PedidoLibro` PENDIENTE + orden PayPal `custom_id="libro:<pedidoId>"`
+2. PayPal aprueba → redirige a `/libros/comprar/exito?pedido_id=...&token=<paypalOrderId>`
+3. `/libros/comprar/exito` captura orden → marca COMPLETADO → setea cookie `lib_<libroId[:16]>`
+4. Webhook PayPal (en paralelo) → detecta prefijo `"libro:"` → marca COMPLETADO (idempotente) → envía magic link correo + notificación admin
+5. Magic link `/leer/libro/<tokenAcceso>` → setea cookie → redirige al libro
+
+### Tabla PedidoLibro — SQL para Supabase (ejecutar si no existe)
+```sql
+CREATE TABLE "PedidoLibro" (
+  "id" TEXT NOT NULL DEFAULT gen_random_uuid()::TEXT,
+  "libroId" TEXT NOT NULL,
+  "emailComprador" TEXT NOT NULL,
+  "nombreComprador" TEXT,
+  "montoCentavos" INTEGER NOT NULL,
+  "moneda" TEXT NOT NULL DEFAULT 'USD',
+  "paypalOrderId" TEXT UNIQUE,
+  "estado" TEXT NOT NULL DEFAULT 'PENDIENTE',
+  "tokenAcceso" TEXT NOT NULL UNIQUE DEFAULT gen_random_uuid()::TEXT,
+  "creadoAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "completadoAt" TIMESTAMP(3),
+  "ultimoAccesoAt" TIMESTAMP(3),
+  CONSTRAINT "PedidoLibro_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "PedidoLibro_libroId_fkey" FOREIGN KEY ("libroId") REFERENCES "Libro"("id") ON DELETE CASCADE
+);
+CREATE INDEX "PedidoLibro_emailComprador_idx" ON "PedidoLibro"("emailComprador");
+CREATE INDEX "PedidoLibro_estado_idx" ON "PedidoLibro"("estado");
+CREATE INDEX "PedidoLibro_libroId_estado_idx" ON "PedidoLibro"("libroId", "estado");
+CREATE INDEX "PedidoLibro_creadoAt_idx" ON "PedidoLibro"("creadoAt");
+ALTER TABLE "PedidoLibro" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK (true);
+```
+
+---
+
+## 8. Rutas críticas
 
 ### Next.js — Páginas públicas
 
@@ -149,10 +196,14 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content=
 | `/categorias/[slug]` | Categoría con artículos |
 | `/recursos` | Recursos descargables |
 | `/comics` | Tiras cómicas |
+| `/libros` | Grid de libros publicados |
+| `/libros/[slug]` | Página individual de libro (descarga o muro de pago) |
+| `/libros/comprar/exito` | Retorno de PayPal tras compra de libro |
 | `/donar` | Donaciones vía PayPal (`FormularioDonacion.tsx`) |
 | `/servicios` | Servicios de consultoría |
-| `/comprar/exito` | Retorno de PayPal tras compra premium |
-| `/leer/[token]` | Magic link: valida token → cookie → redirige al artículo |
+| `/comprar/exito` | Retorno de PayPal tras compra de artículo premium |
+| `/leer/[token]` | Magic link artículo: valida token → cookie → redirige |
+| `/leer/libro/[token]` | Magic link libro: valida token → cookie → redirige |
 | `/suscribir/*` | Formulario y confirmaciones de suscripción |
 
 ### Next.js — Admin (todas requieren cookie `admin_auth`)
@@ -164,10 +215,12 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content=
 | `/admin/editar/[id]` | Editar publicación (incl. configuración premium) |
 | `/admin/comics` + `/nueva` + `/editar/[id]` | CRUD de cómics |
 | `/admin/recursos` + `/nueva` + `/editar/[id]` | CRUD de recursos |
+| `/admin/libros` + `/nueva` + `/editar/[id]` | CRUD de libros (PDF + portada) |
 | `/admin/servicios` | CRUD de servicios de consultoría |
 | `/admin/cotizaciones` | Solicitudes de clientes |
 | `/admin/donaciones` | Historial de donaciones PayPal |
-| `/admin/compras` | Historial de compras de contenido premium |
+| `/admin/compras` | Historial de compras de artículos premium |
+| `/admin/ventas-libros` | Historial de ventas de libros |
 | `/admin/suscriptores` | Lista de correo + analítica |
 | `/admin/metricas` | Dashboard de vistas, descargas, reacciones |
 | `/admin/tableros` | Subir y publicar plantillas Excel |
@@ -178,10 +231,16 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content=
 
 | Ruta | Propósito |
 |---|---|
-| `app/api/comprar/route.ts` | POST: inicia compra premium → PedidoContenido + orden PayPal |
-| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina donación vs compra por `custom_id`. Idempotente. |
+| `app/api/comprar/route.ts` | POST: inicia compra artículo premium → PedidoContenido + orden PayPal |
+| `app/api/libros/comprar/route.ts` | POST: inicia compra libro → PedidoLibro + orden PayPal |
+| `app/api/libros/[slug]/descargar/route.ts` | GET: descarga PDF (verifica pago si libro es de pago) |
+| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina `contenido:`, `libro:`, donación. Idempotente. |
 | `app/api/donaciones/checkout/route.ts` | POST: crea orden PayPal para donación |
 | `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido + total recaudado |
+| `app/api/admin/ventas-libros/route.ts` | GET admin: lista PedidoLibro + total recaudado |
+| `app/api/admin/libros/route.ts` | GET + POST admin: listar y crear libros |
+| `app/api/admin/libros/[id]/route.ts` | PUT + DELETE admin: editar y eliminar libro |
+| `app/api/admin/libros/upload/route.ts` | POST admin: subir PDF o portada a Supabase Storage bucket `libros` |
 | `app/api/admin/telemetria/route.ts` | GET admin: proxy autenticado → Worker `/telemetria` |
 | `app/api/admin/sync-d1-all/route.ts` | POST: sincroniza todos los artículos publicados a D1 |
 | `app/api/track/route.ts` | POST: registra vista de artículo |
@@ -199,7 +258,7 @@ CREATE VIRTUAL TABLE documentos_fts USING fts5(titulo, texto, palabras, content=
 
 ---
 
-## 8. Prisma schema — modelos activos
+## 9. Prisma schema — modelos activos
 
 ```
 Publicacion     → campos premium: esPremium Boolean, precioCentavos Int?, resumenPublico String?
@@ -208,6 +267,13 @@ Categoria       → campos: icono String?, imagen String?
 Etiqueta        → PublicacionEtiqueta → Publicacion
 Comic           → VistaComic
 Recurso         → VistaRecurso
+Libro           → titulo, slug (unique), descripcion, paginas?, precioCentavos?, urlPdf, imagenPortada?,
+                  publicado, creadoAt, actualizadoAt
+                  relaciones: DescargaLibro[], PedidoLibro[]
+DescargaLibro   → libroId, creadoAt, pais?, dispositivo?
+PedidoLibro     → libroId, emailComprador, nombreComprador?, montoCentavos, moneda, paypalOrderId? (unique),
+                  estado (PENDIENTE/COMPLETADO/FALLIDO/CANCELADO), tokenAcceso (unique cuid),
+                  creadoAt, completadoAt?, ultimoAccesoAt?
 RateLimitDb     → rate limiting persistente
 EventoSeguridad → log de seguridad
 SesionAdmin     → jti, revocadaAt, expiraAt (revocación de sesiones)
@@ -216,8 +282,7 @@ Subscription    → email, nombre, status, token, confirmedAt, unsubscribedAt
 EmailEnvio      → asunto, publicacionId, totalEnviados, totalAbiertos
 Donacion        → stripeId (campo legacy — guarda paypalOrderId), estado, monto, moneda
 PedidoContenido → publicacionId, emailComprador, montoCentavos, paypalOrderId (unique),
-                  estado (PENDIENTE/COMPLETADO/FALLIDO/CANCELADO), tokenAcceso (unique cuid),
-                  creadoAt, completadoAt, ultimoAccesoAt
+                  estado, tokenAcceso (unique cuid), creadoAt, completadoAt, ultimoAccesoAt
 WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia de webhooks
 ```
 
@@ -225,7 +290,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 ---
 
-## 9. Workflows GitHub Actions
+## 10. Workflows GitHub Actions
 
 | Workflow | Trigger | Propósito |
 |---|---|---|
@@ -235,7 +300,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 ---
 
-## 10. Deuda técnica conocida
+## 11. Deuda técnica conocida
 
 | Item | Detalle | Prioridad |
 |---|---|---|
@@ -247,28 +312,29 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | Campo `stripeId` en Donacion | Nombre legacy: hoy guarda paypalOrderId. Renombrar requiere migración Supabase + Prisma. | Baja |
 | CF_API_TOKEN con restricción IP | GitHub Actions no puede deployar Worker. Cloudflare Git integration lo cubre por ahora. | Baja |
 | `config/prompts/v1.1.txt` desconectado | Worker usa SYSTEM_PROMPT en `prompts.ts`, no este archivo. | Baja |
-| Multi-worker / orquestación | Ver §17 — en planificación | Futura |
+| Multi-worker / orquestación | Ver §17 — pendiente | Futura |
 
 ---
 
-## 11. Reglas para sesiones IA futuras
+## 12. Reglas para sesiones IA futuras
 
 1. **Worker `sociologia` está en producción** — Auto-deploy al pushear a `main` tocando `workers/sociologia/**`.
 2. **Tabla D1 real: `documentos`** — `tipo='articulo'` = corpus, `tipo='publicacion'` = artículos del sitio.
 3. **No pushear a `main` sin confirmar con el usuario** — Vercel Y Cloudflare auto-despliegan.
 4. **Actualizar este archivo** en cada sesión.
 5. **Verificar rama activa** al inicio: `git branch --show-current`.
-6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker. Si solo se actualiza en uno, la telemetría y el token premium fallan.
-7. **El admin siempre ve el contenido completo de artículos premium** (diseño intencional). Barra azul informativa lo indica. Para probar el muro de pago, usar ventana de incógnito.
-8. **El precio de artículos premium siempre viene del servidor** — nunca del cliente. `/api/comprar` lo lee de la DB.
-9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Siempre verificar firma antes de procesar.
-10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados. Toda función que los use debe ser `async`.
+6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker.
+7. **El admin siempre ve el contenido completo** de artículos premium Y libros de pago (diseño intencional). Barra azul lo indica. Para probar el muro, usar ventana de incógnito.
+8. **El precio siempre viene del servidor** — nunca del cliente. `/api/comprar` y `/api/libros/comprar` lo leen de la DB.
+9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Discrimina por prefijo `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, sin prefijo = donación.
+10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados.
 11. **`FormularioDonacion.tsx` es el componente activo de donaciones** — no `BotonesPayPal`. Montos $3/$5/$10/$25 + personalizado.
 12. **3 skills activas en el Worker**: `sociological-analysis`, `historical-analysis`, `political-analysis`.
+13. **La tabla `PedidoLibro` debe existir en Supabase** — ver SQL en §7. Si falla con "tabla no encontrada", es que no se ha ejecutado aún.
 
 ---
 
-## 12. Comandos útiles
+## 13. Comandos útiles
 
 ```bash
 git log --oneline -10 && git status
@@ -285,28 +351,10 @@ cd workers/sociologia && npx wrangler tail
 
 ---
 
-## 13. Sync de artículos a D1
+## 14. Sync de artículos a D1
 
 Automático al publicar/despublicar. Para sincronizar todos:
 1. `/admin` → "Sincronizar artículos" → `POST /api/admin/sync-d1-all`
-
----
-
-## 14. Sistema de monetización de contenido (sesión 12)
-
-### Flujo de compra
-
-1. Visitante → artículo premium → ve resumen + `MuroPago.tsx` (email + nombre)
-2. `POST /api/comprar` → crea `PedidoContenido` PENDIENTE + orden PayPal con `custom_id="contenido:<pedidoId>"`
-3. PayPal aprueba → redirige a `/comprar/exito?pedido_id=...&token=<paypalOrderId>`
-4. `/comprar/exito` captura la orden → marca COMPLETADO → setea cookie `acc_<publicacionId[:16]>`
-5. Webhook PayPal (en paralelo) → verifica firma → marca COMPLETADO (idempotente) → envía magic link a correo
-6. Magic link `/leer/<tokenAcceso>` → setea cookie → redirige al artículo completo
-
-### Verificación de acceso
-`tieneAccesoComprado(publicacionId)` en `lib/accesoContenido.ts`:
-- Lee cookie `acc_<publicacionId[:16]>` → busca `PedidoContenido` por tokenAcceso → verifica estado=COMPLETADO
-- Cookie: httpOnly, secure en producción, sameSite=lax, maxAge 1 año
 
 ---
 
@@ -314,8 +362,8 @@ Automático al publicar/despublicar. Para sincronizar todos:
 
 - `locale: "es_MX"` → interfaz en español latinoamericano ✅ (corregido sesión 13; `es-SV` no era soportado)
 - `landing_page: "BILLING"` → formulario de tarjeta directo
-- Donaciones y compras usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
-- Webhook discrimina por prefijo `"contenido:"` en `custom_id` → donación vs compra de artículo
+- Donaciones, artículos y libros usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
+- Webhook discrimina por prefijo en `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, sin prefijo = donación
 
 ---
 
@@ -328,16 +376,17 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Servicios de consultoría + cotizaciones | ✅ Producción |
 | Suscripción por correo (Double Opt-In) | ✅ Producción |
 | Donaciones PayPal con webhook firmado | ✅ Producción |
-| Monetización de contenido premium | ✅ Producción |
+| Artículos premium con muro de pago PayPal | ✅ Producción |
+| Libros en PDF con muro de pago PayPal | ✅ Producción sesión 13 |
 | Asistente IA con 3 skills académicas | ✅ Producción |
 | Telemetría IA en /admin/observabilidad | ✅ Producción |
 | Security hardening completo (fases 1–5) | ✅ Producción |
 | Retrieval semántico (Vectorize) | ❌ Pendiente |
-| Multi-worker / orquestación de agentes | 🔄 En planificación (sesión 13) |
+| Multi-worker / orquestación de agentes | ❌ Pendiente |
 
 ---
 
-## 17. Arquitectura multi-worker — planificación (sesión 13)
+## 17. Arquitectura multi-worker — planificación
 
 ### Estado actual (1 worker)
 Solo existe `workers/sociologia/`. Hace todo: RAG, skills, sync, telemetría, embeddings.
@@ -361,17 +410,12 @@ Cliente (Next.js)
 └──────────┘ └──────────┘ └──────────────┘
 ```
 
-### Approach inicial recomendado
-En lugar de crear un Worker orquestador separado de inmediato, el primer paso es **exponer una API de skill externa** en el Worker actual que pueda ser llamada por otros Workers en el futuro. Ya existe `POST /skill`. Lo que falta es:
-
+### Lo que falta para empezar
 1. **Autenticación worker-a-worker** — HMAC con un `INTER_WORKER_SECRET`
 2. **Schema de request/response estandarizado** para orquestación
-3. **Orchestrator Worker** (nuevo) que reciba queries complejas, las descomponga, llame a skills especializadas y agregue respuestas
-
-¿Quieres empezar con el Orchestrator Worker o primero fortalecer la API de skills del worker actual?
+3. **Orchestrator Worker** (nuevo `workers/orquestador/`) que reciba queries complejas, las descomponga, llame a skills y agregue respuestas
 
 ---
 
-*Última actualización: 2026-06-01 (sesión 13 — auditoría real del código, correcciones CLAUDE.md)*
-*Commit activo en main: `62a53a4`*
-*Rama activa: `claude/kind-ptolemy-6ewhS`*
+*Última actualización: 2026-06-01 (sesión 13 — libros con pago PayPal completo)*
+*Commit activo en main: `8d75b88`*
