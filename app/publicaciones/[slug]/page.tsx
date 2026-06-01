@@ -238,7 +238,7 @@ export default async function PublicacionPage({ params }: Props) {
         </div>
       </header>
 
-      <BotonesCompartir titulo={publicacion.titulo} slug={slug} />
+      <BotonesCompartir titulo={publicacion.titulo} path={`/publicaciones/${slug}`} />
 
       {/* Contenido */}
       <div className="prose prose-zinc prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700 max-w-none mb-12">

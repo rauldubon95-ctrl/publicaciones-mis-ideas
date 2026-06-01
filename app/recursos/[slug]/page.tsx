@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
 import TrackView from "@/components/TrackView";
+import BotonesCompartir from "@/components/BotonesCompartir";
+import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
-import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: "es_ES",
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: r.titulo,
       description: descripcion,
     },
@@ -44,8 +46,21 @@ export default async function RecursoPage({ params }: Props) {
 
   if (!recurso) notFound();
 
+  const recursoJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: recurso.titulo,
+    description: recortarDescripcion(recurso.descripcion),
+    url: canonicalUrl(`/recursos/${slug}`),
+    inLanguage: "es",
+    author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    datePublished: recurso.creadoAt.toISOString(),
+    dateModified: recurso.actualizadoAt.toISOString(),
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      <JsonLd data={recursoJsonLd} />
       <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
       <nav className="text-xs text-zinc-400 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
@@ -75,8 +90,10 @@ export default async function RecursoPage({ params }: Props) {
         </a>
       </header>
 
+      <BotonesCompartir titulo={recurso.titulo} path={`/recursos/${slug}`} />
+
       {/* Visor HTML — ocupa casi todo el viewport */}
-      <div className="border border-zinc-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 8rem)" }}>
+      <div className="border border-zinc-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 12rem)" }}>
         <iframe
           src={`/api/recursos/${slug}/html`}
           sandbox="allow-same-origin allow-scripts allow-forms"
