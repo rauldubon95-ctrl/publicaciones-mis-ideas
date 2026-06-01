@@ -20,6 +20,7 @@ async function getToken(): Promise<string> {
   });
   if (!res.ok) {
     const body = await res.text();
+    console.error(`[paypal] auth fallida status=${res.status} body=${body}`);
     throw new Error(`PayPal auth fallida (${res.status}): ${body}`);
   }
   const data = (await res.json()) as { access_token: string };
@@ -64,7 +65,11 @@ export async function crearOrdenPayPal(
     }),
   });
 
-  if (!res.ok) throw new Error(`PayPal orden error: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[paypal] orden fallida status=${res.status} body=${body}`);
+    throw new Error(`PayPal orden error: ${body}`);
+  }
 
   const order = (await res.json()) as {
     id: string;

@@ -86,7 +86,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: approvalUrl });
   } catch (err) {
-    console.error("PayPal checkout error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("PayPal checkout error:", msg);
     await prisma.donacion.update({
       where: { id: donacion.id },
       data: { estado: "CANCELADO" },
