@@ -20,6 +20,11 @@ model Publicacion {
   actualizadoAt DateTime  @updatedAt
   publicadoAt   DateTime?
 
+  // Contenido premium (sesión 12)
+  esPremium       Boolean @default(false)
+  precioCentavos  Int?    // null si no es premium
+  resumenPublico  String? // texto visible antes del muro de pago
+
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
@@ -29,6 +34,7 @@ model Publicacion {
   vistas        VistaPublicacion[]
   descargas     DescargaPdf[]
   enviosEmail   EmailEnvio[]
+  pedidos       PedidoContenido[]
 }
 
 model Categoria {
@@ -324,6 +330,32 @@ model Donacion {
   creadoAt  DateTime @default(now())
 
   @@index([estado])
+  @@index([creadoAt])
+}
+
+// ─── Pedidos de contenido premium ─────────────────────────────────────────────
+// Cuando alguien compra acceso a un artículo premium, se crea un PedidoContenido.
+// Al completar el pago vía webhook PayPal, su tokenAcceso se vuelve válido para
+// abrir el artículo desde un enlace mágico enviado por correo.
+model PedidoContenido {
+  id              String   @id @default(cuid())
+  publicacionId   String
+  publicacion     Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  emailComprador  String
+  nombreComprador String?
+  montoCentavos   Int
+  moneda          String   @default("USD")
+  paypalOrderId   String?  @unique
+  estado          String   @default("PENDIENTE") // PENDIENTE | COMPLETADO | CANCELADO | FALLIDO
+  tokenAcceso     String   @unique @default(cuid())
+  ipHash          String?
+  creadoAt        DateTime @default(now())
+  completadoAt    DateTime?
+  ultimoAccesoAt  DateTime?
+
+  @@index([emailComprador])
+  @@index([estado])
+  @@index([publicacionId, estado])
   @@index([creadoAt])
 }
 

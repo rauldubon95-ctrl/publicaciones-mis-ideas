@@ -29,10 +29,20 @@ async function getToken(): Promise<string> {
 export async function crearOrdenPayPal(
   montoCentavos: number,
   returnUrl: string,
-  cancelUrl: string
+  cancelUrl: string,
+  opciones: {
+    descripcion?: string;
+    customId?: string; // se usa para distinguir donaciones de compras en el webhook
+  } = {}
 ): Promise<{ id: string; approvalUrl: string }> {
   const token = await getToken();
   const valor = (montoCentavos / 100).toFixed(2);
+
+  const purchaseUnit: Record<string, unknown> = {
+    amount: { currency_code: "USD", value: valor },
+    description: opciones.descripcion ?? "Donación — Raúl Dubón",
+  };
+  if (opciones.customId) purchaseUnit.custom_id = opciones.customId;
 
   const res = await fetch(`${BASE}/v2/checkout/orders`, {
     method: "POST",
@@ -42,12 +52,7 @@ export async function crearOrdenPayPal(
     },
     body: JSON.stringify({
       intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: { currency_code: "USD", value: valor },
-          description: "Donación — Raúl Dubón",
-        },
-      ],
+      purchase_units: [purchaseUnit],
       application_context: {
         return_url: returnUrl,
         cancel_url: cancelUrl,

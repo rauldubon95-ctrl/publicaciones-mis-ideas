@@ -13,7 +13,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarFirmaWebhookPayPal } from "@/lib/paypal";
-import { enviarNotificacionDonacion } from "@/lib/resend";
+import {
+  enviarNotificacionDonacion,
+  enviarEnlaceAccesoContenido,
+} from "@/lib/resend";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +27,8 @@ interface PayPalWebhookEvent {
   resource?: {
     id?: string;
     amount?: { value?: string; currency_code?: string };
+    // custom_id puede estar a nivel de captura O dentro de purchase_units;
+    // cuando va a nivel de orden suele aparecer aquí.
     custom_id?: string;
     supplementary_data?: {
       related_ids?: { order_id?: string };
@@ -31,6 +36,8 @@ interface PayPalWebhookEvent {
     payer?: { name?: { given_name?: string; surname?: string } };
   };
 }
+
+const PREFIJO_CONTENIDO = "contenido:";
 
 export async function POST(req: NextRequest) {
   // Necesitamos el body crudo (texto exacto) para que PayPal pueda verificar la firma.
@@ -68,18 +75,32 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const customId = event.resource?.custom_id ?? "";
+    const esCompraContenido = customId.startsWith(PREFIJO_CONTENIDO);
+
     switch (event.event_type) {
       case "PAYMENT.CAPTURE.COMPLETED":
-        await procesarCaptureCompleted(event);
+        if (esCompraContenido) {
+          await procesarCompraContenidoCompletada(event, customId);
+        } else {
+          await procesarDonacionCompletada(event);
+        }
         break;
       case "PAYMENT.CAPTURE.DENIED":
       case "PAYMENT.CAPTURE.DECLINED":
-        await marcarPorOrderId(event, "FALLIDO");
+        if (esCompraContenido) {
+          await marcarPedidoPorCustomId(customId, "FALLIDO");
+        } else {
+          await marcarDonacionPorOrderId(event, "FALLIDO");
+        }
         break;
       case "PAYMENT.CAPTURE.REFUNDED":
-        await marcarPorOrderId(event, "CANCELADO");
+        if (esCompraContenido) {
+          await marcarPedidoPorCustomId(customId, "CANCELADO");
+        } else {
+          await marcarDonacionPorOrderId(event, "CANCELADO");
+        }
         break;
-      // Otros eventos (CHECKOUT.ORDER.APPROVED, etc.) — registrados pero no actúan.
     }
   } catch (err) {
     console.error("[paypal-webhook] error procesando", event.event_type, err);
@@ -90,7 +111,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-async function procesarCaptureCompleted(event: PayPalWebhookEvent) {
+async function procesarDonacionCompletada(event: PayPalWebhookEvent) {
   const orderId = event.resource?.supplementary_data?.related_ids?.order_id;
   const montoStr = event.resource?.amount?.value;
   if (!orderId || !montoStr) return;
@@ -126,11 +147,57 @@ async function procesarCaptureCompleted(event: PayPalWebhookEvent) {
   }
 }
 
-async function marcarPorOrderId(event: PayPalWebhookEvent, estado: string) {
+async function marcarDonacionPorOrderId(
+  event: PayPalWebhookEvent,
+  estado: string
+) {
   const orderId = event.resource?.supplementary_data?.related_ids?.order_id;
   if (!orderId) return;
   await prisma.donacion.updateMany({
     where: { stripeId: orderId },
+    data: { estado },
+  });
+}
+
+async function procesarCompraContenidoCompletada(
+  event: PayPalWebhookEvent,
+  customId: string
+) {
+  const pedidoId = customId.slice(PREFIJO_CONTENIDO.length);
+  if (!pedidoId) return;
+
+  const r = await prisma.pedidoContenido.updateMany({
+    where: { id: pedidoId, estado: "PENDIENTE" },
+    data: { estado: "COMPLETADO", completadoAt: new Date() },
+  });
+
+  if (r.count === 0) return; // ya estaba procesado
+
+  const pedido = await prisma.pedidoContenido.findUnique({
+    where: { id: pedidoId },
+    select: {
+      tokenAcceso: true,
+      emailComprador: true,
+      nombreComprador: true,
+      publicacion: { select: { titulo: true, slug: true } },
+    },
+  });
+  if (!pedido) return;
+
+  await enviarEnlaceAccesoContenido(
+    pedido.emailComprador,
+    pedido.publicacion.titulo,
+    pedido.publicacion.slug,
+    pedido.tokenAcceso,
+    pedido.nombreComprador
+  ).catch(() => {});
+}
+
+async function marcarPedidoPorCustomId(customId: string, estado: string) {
+  const pedidoId = customId.slice(PREFIJO_CONTENIDO.length);
+  if (!pedidoId) return;
+  await prisma.pedidoContenido.updateMany({
+    where: { id: pedidoId },
     data: { estado },
   });
 }

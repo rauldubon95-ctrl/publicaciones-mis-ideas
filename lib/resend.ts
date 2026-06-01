@@ -124,6 +124,46 @@ export function htmlNuevaPublicacion(
   `);
 }
 
+export function htmlAccesoContenido(
+  titulo: string,
+  slug: string,
+  token: string,
+  nombre?: string | null
+): string {
+  const url = `${BASE_URL}/leer/${encodeURIComponent(token)}`;
+  const saludo = nombre ? `Hola <strong>${escapeHtml(nombre)}</strong>,` : "Hola,";
+  return baseLayout(`
+    <p style="font-size:16px;color:#3f3f46;margin:0 0 16px;">${saludo}</p>
+    <p style="font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 24px;">
+      Gracias por tu compra. Aquí tienes el enlace para acceder al artículo:
+    </p>
+    <h2 style="font-size:22px;font-weight:600;color:#18181b;margin:0 0 24px;line-height:1.3;font-family:Georgia,serif;">
+      ${escapeHtml(titulo)}
+    </h2>
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+      <tr>
+        <td style="background:#1d4ed8;border-radius:6px;">
+          <a href="${url}" style="display:inline-block;padding:12px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;font-family:sans-serif;">
+            Abrir artículo →
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:13px;color:#71717a;margin:0 0 8px;font-family:sans-serif;">
+      Si el botón no funciona, copia y pega este enlace en tu navegador:
+    </p>
+    <p style="font-size:12px;color:#a1a1aa;word-break:break-all;font-family:monospace;margin:0 0 32px;">${url}</p>
+    <hr style="border:none;border-top:1px solid #e4e4e7;margin:0 0 16px;">
+    <p style="font-size:12px;color:#a1a1aa;margin:0;font-family:sans-serif;">
+      Guarda este correo: el enlace funciona indefinidamente desde cualquier
+      dispositivo. Al abrirlo, tu navegador recordará tu acceso a este artículo.
+    </p>
+    <p style="font-size:11px;color:#d4d4d8;margin:8px 0 0;font-family:sans-serif;">
+      Artículo: <a href="${BASE_URL}/publicaciones/${encodeURIComponent(slug)}" style="color:#a1a1aa;">${BASE_URL}/publicaciones/${escapeHtml(slug)}</a>
+    </p>
+  `);
+}
+
 export function htmlNotificacionDonacion(
   montoUSD: string,
   nombreDonante: string,
@@ -189,6 +229,27 @@ export async function enviarConfirmacion(
       to: email,
       subject: "Confirma tu suscripción — Raúl Dubón",
       html: htmlConfirmacion(token, nombre),
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function enviarEnlaceAccesoContenido(
+  email: string,
+  titulo: string,
+  slug: string,
+  token: string,
+  nombre?: string | null
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: `Tu acceso a: ${titulo}`,
+      html: htmlAccesoContenido(titulo, slug, token, nombre),
     });
     return !error;
   } catch {

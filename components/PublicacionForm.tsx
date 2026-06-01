@@ -16,6 +16,9 @@ interface Props {
     publicado: boolean;
     categoriaId: string | null;
     etiquetas: { etiqueta: { nombre: string } }[];
+    esPremium?: boolean;
+    precioCentavos?: number | null;
+    resumenPublico?: string | null;
   };
 }
 
@@ -31,6 +34,15 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   const [categoriaId, setCategoriaId] = useState(publicacion?.categoriaId ?? "");
   const [etiquetasText, setEtiquetasText] = useState(
     publicacion?.etiquetas.map((e) => e.etiqueta.nombre).join(", ") ?? ""
+  );
+  const [esPremium, setEsPremium] = useState(publicacion?.esPremium ?? false);
+  const [precioStr, setPrecioStr] = useState(
+    publicacion?.precioCentavos != null
+      ? (publicacion.precioCentavos / 100).toFixed(2)
+      : ""
+  );
+  const [resumenPublico, setResumenPublico] = useState(
+    publicacion?.resumenPublico ?? ""
   );
   const [estado, setEstado] = useState<"idle" | "guardando" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -87,10 +99,27 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
         : "/api/publicaciones";
       const method = esEdicion ? "PUT" : "POST";
 
+      const precioParsed = parseFloat(precioStr.replace(",", "."));
+      const precioCentavos =
+        esPremium && !isNaN(precioParsed) && precioParsed > 0
+          ? Math.round(precioParsed * 100)
+          : null;
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titulo, slug, resumen, contenido, publicado, categoriaId: categoriaId || null, etiquetas }),
+        body: JSON.stringify({
+          titulo,
+          slug,
+          resumen,
+          contenido,
+          publicado,
+          categoriaId: categoriaId || null,
+          etiquetas,
+          esPremium,
+          precioCentavos,
+          resumenPublico: esPremium ? resumenPublico.trim() || null : null,
+        }),
       });
 
       if (!res.ok) {
@@ -270,6 +299,73 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
             </span>
           </label>
         </div>
+      </div>
+
+      {/* ─── Monetización: artículo premium ──────────────────────────── */}
+      <div className="border border-amber-200 bg-amber-50/40 rounded-xl p-5 space-y-4">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div
+            onClick={() => setEsPremium(!esPremium)}
+            className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${
+              esPremium ? "bg-amber-600" : "bg-zinc-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                esPremium ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </div>
+          <div>
+            <span className="text-sm text-zinc-800 font-medium">
+              Artículo de pago (premium)
+            </span>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Los visitantes verán el resumen público y un botón para comprar
+              acceso vía PayPal. Tras pagar, reciben un enlace mágico por correo.
+            </p>
+          </div>
+        </label>
+
+        {esPremium && (
+          <div className="grid sm:grid-cols-3 gap-4 pt-2 border-t border-amber-200">
+            <div>
+              <label className={labelClass}>Precio (USD)</label>
+              <div className="flex items-center border border-zinc-200 rounded-lg px-3 py-2 bg-white focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all">
+                <span className="text-zinc-400 mr-1 text-sm">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  step="0.01"
+                  value={precioStr}
+                  onChange={(e) => setPrecioStr(e.target.value)}
+                  placeholder="5.00"
+                  className="flex-1 outline-none text-sm text-zinc-800 placeholder:text-zinc-300 bg-transparent"
+                />
+                <span className="text-zinc-400 text-xs ml-1">USD</span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">Mínimo $1.00.</p>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={labelClass}>
+                Resumen público{" "}
+                <span className="text-zinc-300 normal-case tracking-normal font-normal">
+                  — lo que se muestra antes del muro de pago
+                </span>
+              </label>
+              <textarea
+                value={resumenPublico}
+                onChange={(e) => setResumenPublico(e.target.value)}
+                rows={3}
+                maxLength={1500}
+                className="input resize-none text-sm"
+                placeholder="Si lo dejas vacío, se mostrarán las primeras 800 letras del contenido."
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Notificar suscriptores — solo en edición de artículo publicado */}

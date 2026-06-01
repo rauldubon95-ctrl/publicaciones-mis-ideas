@@ -11,6 +11,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import type { ComentarioArbol } from "@/app/api/comentarios/route";
 import { isAdminAuthorized } from "@/lib/adminAuth";
+import { tieneAccesoComprado } from "@/lib/accesoContenido";
+import MuroPago from "@/components/MuroPago";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +87,18 @@ export default async function PublicacionPage({ params }: Props) {
   }, {});
 
   const comentariosArbol = construirArbol(publicacion.comentarios);
+
+  // Premium: el admin siempre ve el contenido completo. Los demás necesitan
+  // un PedidoContenido COMPLETADO para esta publicación (cookie).
+  const requierePago =
+    publicacion.esPremium &&
+    (publicacion.precioCentavos ?? 0) > 0 &&
+    !adminOk &&
+    !(await tieneAccesoComprado(publicacion.id));
+  const contenidoParaMostrar = requierePago
+    ? publicacion.resumenPublico?.trim() ||
+      publicacion.contenido.slice(0, 800) + "…"
+    : publicacion.contenido;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
@@ -170,31 +184,41 @@ export default async function PublicacionPage({ params }: Props) {
             tr: ({ ...props }) => <tr className="even:bg-zinc-50" {...props} />,
           }}
         >
-          {publicacion.contenido}
+          {contenidoParaMostrar}
         </ReactMarkdown>
       </div>
 
-      <hr className="border-zinc-100 mb-10" />
+      {requierePago && publicacion.precioCentavos ? (
+        <MuroPago
+          publicacionId={publicacion.id}
+          titulo={publicacion.titulo}
+          precioCentavos={publicacion.precioCentavos}
+        />
+      ) : (
+        <>
+          <hr className="border-zinc-100 mb-10" />
 
-      {/* Reacciones */}
-      <section className="mb-10">
-        <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-4">
-          ¿Qué te pareció?
-        </p>
-        <ReaccionButtons publicacionId={publicacion.id} conteos={conteos} />
-      </section>
+          {/* Reacciones */}
+          <section className="mb-10">
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-4">
+              ¿Qué te pareció?
+            </p>
+            <ReaccionButtons publicacionId={publicacion.id} conteos={conteos} />
+          </section>
 
-      {/* Tarjeta del autor */}
-      <TarjetaAutor />
+          {/* Tarjeta del autor */}
+          <TarjetaAutor />
 
-      <hr className="border-zinc-100 my-10" />
+          <hr className="border-zinc-100 my-10" />
 
-      {/* Comentarios anidados */}
-      <SeccionComentarios
-        comentariosIniciales={comentariosArbol}
-        publicacionId={publicacion.id}
-        esAdmin={adminOk}
-      />
+          {/* Comentarios anidados */}
+          <SeccionComentarios
+            comentariosIniciales={comentariosArbol}
+            publicacionId={publicacion.id}
+            esAdmin={adminOk}
+          />
+        </>
+      )}
     </div>
   );
 }

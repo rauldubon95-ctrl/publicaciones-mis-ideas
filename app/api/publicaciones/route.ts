@@ -44,7 +44,18 @@ export async function POST(req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
   const body = await req.json();
-  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } = body;
+  const {
+    titulo,
+    slug,
+    resumen,
+    contenido,
+    publicado,
+    categoriaId,
+    etiquetas,
+    esPremium,
+    precioCentavos,
+    resumenPublico,
+  } = body;
 
   if (!titulo || !resumen || !contenido) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
@@ -57,6 +68,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ya existe una publicación con ese slug" }, { status: 409 });
   }
 
+  // Validación de premium
+  const esPremiumBool = !!esPremium;
+  let precioValidado: number | null = null;
+  if (esPremiumBool) {
+    if (typeof precioCentavos !== "number" || precioCentavos < 100 || precioCentavos > 1_000_000) {
+      return NextResponse.json(
+        { error: "El precio debe estar entre $1.00 y $10,000.00." },
+        { status: 422 }
+      );
+    }
+    precioValidado = Math.round(precioCentavos);
+  }
+
   const publicacion = await prisma.publicacion.create({
     data: {
       titulo,
@@ -66,6 +90,11 @@ export async function POST(req: NextRequest) {
       publicado: !!publicado,
       publicadoAt: publicado ? new Date() : null,
       categoriaId: categoriaId || null,
+      esPremium: esPremiumBool,
+      precioCentavos: precioValidado,
+      resumenPublico: esPremiumBool && typeof resumenPublico === "string"
+        ? resumenPublico.slice(0, 1500)
+        : null,
       etiquetas: etiquetas?.length
         ? {
             create: await Promise.all(

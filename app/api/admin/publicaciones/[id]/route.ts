@@ -12,8 +12,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
   }
-  const { titulo, slug, resumen, contenido, publicado, categoriaId, etiquetas } =
-    body as Record<string, unknown>;
+  const {
+    titulo,
+    slug,
+    resumen,
+    contenido,
+    publicado,
+    categoriaId,
+    etiquetas,
+    esPremium,
+    precioCentavos,
+    resumenPublico,
+  } = body as Record<string, unknown>;
 
   if (
     typeof titulo !== "string" || titulo.trim().length === 0 || titulo.length > 200 ||
@@ -26,6 +36,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (etiquetas !== undefined && !Array.isArray(etiquetas)) {
     return NextResponse.json({ error: "Etiquetas debe ser un array" }, { status: 400 });
   }
+
+  // Validación de premium
+  const esPremiumBool = !!esPremium;
+  let precioValidado: number | null = null;
+  if (esPremiumBool) {
+    if (typeof precioCentavos !== "number" || precioCentavos < 100 || precioCentavos > 1_000_000) {
+      return NextResponse.json(
+        { error: "El precio debe estar entre $1.00 y $10,000.00." },
+        { status: 422 }
+      );
+    }
+    precioValidado = Math.round(precioCentavos);
+  }
+  const resumenPublicoFinal =
+    esPremiumBool && typeof resumenPublico === "string"
+      ? resumenPublico.slice(0, 1500)
+      : null;
 
   const existente = await prisma.publicacion.findUnique({ where: { id } });
   if (!existente) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
@@ -65,6 +92,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       publicado: !!publicado,
       publicadoAt: publicado && !existente.publicadoAt ? new Date() : existente.publicadoAt,
       categoriaId: categoriaId || null,
+      esPremium: esPremiumBool,
+      precioCentavos: precioValidado,
+      resumenPublico: resumenPublicoFinal,
       etiquetas: { create: nuevasEtiquetas },
     },
   });
