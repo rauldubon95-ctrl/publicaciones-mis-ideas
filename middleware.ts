@@ -55,6 +55,19 @@ export async function middleware(request: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
+  // Defensa en profundidad para /api/admin/*: si no hay cookie admin_auth,
+  // rechazar 401 antes de llegar al handler. La validación real de la cookie
+  // (JTI vs SesionAdmin) sigue en cada endpoint vía isAdminAuthorized() —
+  // esto solo evita que un endpoint admin nuevo que olvide el guard quede
+  // accesible sin estar logueado. Ver §18 P3 en CLAUDE.md.
+  if (pathname.startsWith("/api/admin/") && !request.cookies.get("admin_auth")?.value) {
+    logEvento("ACCESO_DENEGADO", ip, pathname, traceId, { motivo: "sin-cookie-admin" });
+    return new NextResponse(
+      JSON.stringify({ error: "No autorizado" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   if (!pathname.startsWith("/admin")) {
     const response = NextResponse.next();
     response.headers.set("x-trace-id", traceId);
