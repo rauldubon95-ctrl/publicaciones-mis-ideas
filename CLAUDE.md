@@ -371,7 +371,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 3. **No pushear a `main` sin confirmar con el usuario** — Vercel Y Cloudflare auto-despliegan.
 4. **Actualizar este archivo** en cada sesión.
 5. **Verificar rama activa** al inicio: `git branch --show-current`.
-6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker.
+6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker. Son **dos tablas de secrets independientes** — configurarlo en Vercel no lo propaga a Cloudflare. Si `/admin/observabilidad` muestra "Worker respondió 500: No configurado", el secret falta en Cloudflare Dashboard → Workers → `sociologia` → Settings → Variables and Secrets. **No es bug del código** — síntoma real confirmado en sesión 17.
 7. **El admin siempre ve el contenido completo** de artículos premium Y libros de pago (diseño intencional). Barra azul lo indica. Para probar el muro, usar ventana de incógnito.
 8. **El precio siempre viene del servidor** — nunca del cliente. `/api/comprar` y `/api/libros/comprar` lo leen de la DB.
 9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Discrimina por prefijo `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, `"recurso:"` = recurso HTML, `"dashboard:"` = tablero Excel, sin prefijo = donación.
@@ -525,5 +525,5 @@ Si reporta `false`, ir a Vercel → Settings → Environment Variables y añadir
 
 ---
 
-*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad: P2/P3 cerrados, P1 abierto para próxima sesión)*
-*Commit activo en main: `1cb2ca0`*
+*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad: P2/P3 cerrados, P1 abierto para próxima sesión; troubleshooting: D1_SYNC_SECRET en Cloudflare es independiente de Vercel)*
+*Commit activo en main: `887fcde`*
