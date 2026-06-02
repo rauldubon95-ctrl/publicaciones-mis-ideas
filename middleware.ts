@@ -60,7 +60,13 @@ export async function middleware(request: NextRequest) {
   // (JTI vs SesionAdmin) sigue en cada endpoint vía isAdminAuthorized() —
   // esto solo evita que un endpoint admin nuevo que olvide el guard quede
   // accesible sin estar logueado. Ver §18 P3 en CLAUDE.md.
-  if (pathname.startsWith("/api/admin/") && !request.cookies.get("admin_auth")?.value) {
+  // El endpoint de login en sí debe ser accesible sin cookie, porque es
+  // precisamente cómo se obtiene la cookie inicial.
+  if (
+    pathname.startsWith("/api/admin/") &&
+    pathname !== "/api/admin/login" &&
+    !request.cookies.get("admin_auth")?.value
+  ) {
     logEvento("ACCESO_DENEGADO", ip, pathname, traceId, { motivo: "sin-cookie-admin" });
     return new NextResponse(
       JSON.stringify({ error: "No autorizado" }),
