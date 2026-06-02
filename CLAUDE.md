@@ -345,14 +345,14 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. | **Alta** |
+| CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. **= M2, pendiente para próxima sesión (ver §18).** | **Alta** |
 | Más limpieza corpus D1 | 804 docs, aún hay documentos de baja calidad | Alta |
-| **Buckets Supabase públicos** (sesión 17 hallazgo medio — ABIERTO) | Archivos PDF (`libros`), HTML embebidos del recurso y Excel (`datos`) son públicos. Visitante que paga obtiene la URL del bucket → puede redistribuirla. **Mitigación:** bucket privado + signed URLs con expiración 15min. Cambiar uploads + reemplazar redirect 302 por stream en los endpoints `/api/recursos/[slug]/descargar`, `/api/libros/[slug]/descargar`, `/api/dashboard/[id]/descargar`. Ver §18 P1. | **Media** |
+| ~~Buckets Supabase públicos~~ (sesión 17 — **MITIGADO sesión 18**) | Los endpoints `/api/libros/[slug]/descargar` y `/api/dashboard/[id]/descargar` ya hacen **stream** del archivo (service role) en vez de redirigir a la URL pública; la URL del bucket nunca se entrega al cliente. Recursos premium ya no usan bucket (HTML en DB + RLS cerrado). Buckets siguen públicos pero **ya no son enumerables**. Residual BAJO: iframe Office Online de dashboards. Ver §18. | ~~Media~~ → Baja |
 | ~~`PAYPAL_WEBHOOK_ID` no validado~~ (sesión 17, **CERRADO** PR #20) | `/api/health` con `HEALTH_TOKEN` válido reporta `config.paypal_webhook_id` y otras envs críticas como booleans. Verificación operativa pendiente solo en Vercel env vars. | ~~Baja~~ |
 | ~~Sin middleware-level guard para `/api/admin/*`~~ (sesión 17, **CERRADO** PR #21) | `middleware.ts` rechaza 401 JSON cualquier `/api/admin/*` sin cookie `admin_auth`. `isAdminAuthorized()` en cada endpoint sigue siendo la verificación real. | ~~Baja~~ |
 | Compartir social en `/dashboard/[id]` | Pendiente. Es client component sin metadata SEO. Refactor server+client para `BotonesCompartir` + canonical + og:image. | Baja |
 | Factorizar `MuroPago`/`MuroLibro`/`MuroRecurso`/`MuroDashboard` | ~95% código compartido. Crear `components/MuroPagoBase.tsx` parametrizable. **PR aislada**, sin tocar nada más. | Baja |
-| `xlsx` vulnerabilidad | `app/api/admin/tableros/route.ts` usa `xlsx` (Prototype Pollution + ReDoS). Solo admin. Considerar `exceljs`. | Media |
+| ~~`xlsx` vulnerabilidad~~ (**N/A — verificado sesión 18**) | `app/api/admin/tableros/route.ts` usa **`exceljs`**, no `xlsx`. `xlsx` no es dependencia del proyecto. Sin acción. | ~~Media~~ |
 | Vectorize desactivado | Retrieval es solo FTS5+LIKE. Requiere `wrangler vectorize create` + pipeline embeddings. | Media |
 | Telemetría en KV (no D1) | Datos de IA duran solo 7 días. Dashboard persistente requeriría D1. | Media |
 | Campo `stripeId` en Donacion | Nombre legacy: hoy guarda paypalOrderId. Renombrar requiere migración Supabase + Prisma. | Baja |
@@ -479,51 +479,92 @@ Cliente (Next.js)
 
 ## 18. PENDIENTES ACCIONABLES PARA PRÓXIMA SESIÓN
 
-> **Inicio de sesión: lee este bloque primero.** Era el conjunto de hallazgos de la auditoría de seguridad de la sesión 17 (Fase 6). **P2 y P3 ya fueron cerrados** (PRs #20 y #21). Queda **solo P1** para ejecutar en una sesión dedicada por su riesgo operativo.
+> **Inicio de sesión: lee este bloque primero.** La sesión 18 fue una auditoría
+> de seguridad y resiliencia completa. Se cerró todo lo crítico/alto y la mayoría
+> de lo medio. Queda **M2 (CSP sin `unsafe-inline`)** + remates de resiliencia.
+> Detalle + SQL de rollback de cada cambio en `docs/auditoria-seguridad-2026-06-02.md`.
 
-### ✅ P2 — `PAYPAL_WEBHOOK_ID` reportado en /api/health (CERRADO, PR #20)
+### ✅ Cerrado en sesión 18 (todo en producción)
 
-`/api/health` con `HEALTH_TOKEN` válido devuelve `config.paypal_webhook_id` y otras envs críticas como booleans (sin leakear valores). Para verificar:
+- **C1 (CRÍTICO)** — La clave pública `anon` de Supabase podía leer/escribir
+  `PedidoLibro/PedidoRecurso/PedidoDashboard/RespuestaCotizacion` vía PostgREST
+  (bypass de paywall por `tokenAcceso`, fuga de PII, manipulación de pedidos).
+  Se eliminaron las políticas RLS permisivas `FOR ALL USING(true)`. La app usa
+  Prisma (conexión directa), no la anon key, así que no rompió nada.
+- **H2** — La anon key leía el HTML de recursos premium (`RecursoHtml`) y permitía
+  escritura anónima en `Libro`/`DescargaLibro`. Políticas eliminadas.
+- **H3** — El bucket `comics` permitía INSERT/DELETE anónimo en `storage.objects`.
+  Eliminadas (la subida real usa presigned URLs). Enumeración de `datos` cerrada (L2).
+- **H1** — `/api/libros/[slug]/descargar` y `/api/dashboard/[id]/descargar` ya
+  **NO** redirigen (302) al bucket público: el server descarga con service role y
+  hace **stream** (`lib/supabase-admin.ts` → `descargarDesdeBucket`). La URL
+  permanente nunca llega al cliente. (Tamaños actuales ≤2.5MB, muy por debajo del
+  límite de respuesta de Vercel; ojo si algún día subes un PDF >~4.5MB.)
+- **M1** — Timeouts (`AbortController`) en todas las llamadas externas
+  (PayPal/Resend/Worker/D1). Helper `lib/timeout.ts` (`fetchConTimeout` 12s,
+  `conTimeout` para Resend 10s). No cambia el camino feliz.
+- **M4** — `req.json()` con try/catch en `/api/publicaciones` y `/api/admin/tableros/[id]`.
+- **M3** — Falsa alarma: el código usa `exceljs`, `xlsx` no es dependencia.
+- **Caching (Fase 3.3)** — `home, publicaciones, categorias, libros, comics,
+  recursos, dashboard, servicios` cachean su consulta con `unstable_cache`
+  (revalida 5 min, tags). Se mantienen `force-dynamic` a propósito (ver caveat
+  Preview abajo). Propagación de cambios de contenido: hasta 5 min.
 
-```bash
-curl -H "x-health-token: $HEALTH_TOKEN" https://rauldubon.org/api/health
-# Esperado: config.paypal_webhook_id === true
+### 🟡 Residual BAJO — Office Online iframe (dashboards)
+
+`app/dashboard/[id]/page.tsx` incrusta `view.officeapps.live.com/op/embed.aspx?src=<archivoUrl público>`.
+Un comprador con acceso puede copiar esa URL del Excel. Cerrarlo del todo =
+privatizar `datos` + servir el iframe con signed URL (frágil con Office Online).
+Como el bucket ya no es enumerable, la URL no es descubrible sin tener acceso.
+Decisión de producto: aceptar el residual o reemplazar el visor.
+
+### 🔴 M2 — CSP sin `unsafe-inline` (PENDIENTE, prioridad Alta)
+
+`next.config.mjs` tiene `script-src 'self' 'unsafe-inline' https://www.paypal.com`.
+El `'unsafe-inline'` debilita la protección XSS. Fix correcto = **nonces por
+request** vía `middleware.ts` (+ `'strict-dynamic'` si aplica). **Es delicado**:
+puede romper los scripts inline de Next y el SDK de PayPal si no se hace con
+cuidado. **Rama aislada + verificar en preview de Vercel en navegador** (consola
+sin violaciones de CSP, flujo PayPal completo) **antes** de mergear a main.
+
+### 🟡 Resiliencia (Fase 3, opcional)
+
+- La home ya resiste hipos de DB gracias a `unstable_cache` (sirve datos cacheados).
+- Falta `/api/health/deep` que chequee DB + Worker + Storage para detección de caídas.
+
+### ⚠️ Caveat de entorno descubierto en sesión 18
+
+El **entorno Preview de Vercel** parece NO tener `DATABASE_URL` (o no la misma que
+Production). Síntoma: un build de preview que intente **prerender** de una página
+con consulta Prisma falla con `Tenant or user not found`. **Producción NO tiene
+este problema** (su `DATABASE_URL` funciona). Por eso el caching usa `unstable_cache`
+con `force-dynamic` (sin prerender) en vez de ISR puro. Si en el futuro se quiere
+ISR estático, primero **configurar `DATABASE_URL` en el entorno Preview** de Vercel.
+
+### PROMPT para la próxima sesión IA
+
 ```
+Continúa la auditoría de resiliencia de rauldubon.org. La sesión 18 ya cerró
+seguridad crítica/alta (RLS anon, streaming de archivos de pago), timeouts
+externos y caching. Lee §18 de CLAUDE.md y docs/auditoria-seguridad-2026-06-02.md.
 
-Si reporta `false`, ir a Vercel → Settings → Environment Variables y añadir `PAYPAL_WEBHOOK_ID` desde PayPal Dashboard → Apps & Credentials → Webhooks.
+Tarea principal: M2 — eliminar 'unsafe-inline' del script-src del CSP en
+next.config.mjs usando nonces por request vía middleware.ts (+ 'strict-dynamic'
+si aplica), SIN romper los scripts inline de Next ni el SDK de PayPal.
 
-### ✅ P3 — Middleware-level guard para `/api/admin/*` (CERRADO, PR #21)
+Reglas estrictas:
+- Rama nueva claude/m2-csp-nonces. NO mergear a main sin mi OK explícito.
+- Desplegar primero a un PREVIEW de Vercel y pedirme verificar en el navegador
+  (consola sin violaciones de CSP, que cargue el SDK de PayPal y se pueda iniciar
+  una compra de prueba) ANTES de mergear a producción.
+- Si el nonce no se propaga bien a PayPal/Next, proponer alternativas (hashes en
+  el CSP, o documentar por qué se mantiene unsafe-inline) en vez de romper el sitio.
+- Al terminar, actualizar CLAUDE.md y este §18.
 
-`middleware.ts` rechaza con `401 JSON` cualquier `/api/admin/*` sin cookie `admin_auth`, antes de tocar el handler. `isAdminAuthorized()` en cada endpoint sigue siendo la verificación real (firma + JTI revocado vs `SesionAdmin`). Esto solo evita que un endpoint admin nuevo que olvide el guard quede abierto.
-
-### 🟡 P1 — Bucket privado + signed URLs (severidad MEDIA, ABIERTO)
-
-**Problema:** Buckets `libros`, recursos y `datos` (Excel) son **públicos** en Supabase Storage. Aunque el endpoint `/api/<x>/descargar` valida acceso antes de redirigir, una vez el visitante obtiene la URL del bucket puede compartirla y cualquiera la descarga sin pasar el muro de pago.
-
-**Archivos a tocar:**
-- `lib/supabase-admin.ts` — al crear bucket en upload, marcarlo privado (`{ public: false }`).
-- `app/api/admin/libros/upload/route.ts` y `app/api/admin/tableros/route.ts` — usar `createSignedUrl(path, 900)` (15min) en lugar de `getPublicUrl`. Guardar en DB solo el `path` del bucket, no la URL completa.
-- `app/api/libros/[slug]/descargar/route.ts` — generar signed URL on-demand y hacer **stream del archivo** en lugar de `redirect 302`.
-- `app/api/recursos/[slug]/descargar/route.ts` — idem si los recursos pasan a archivo en bucket (hoy el HTML vive en DB, no en bucket — esta sub-tarea no aplica a recursos hasta que se migren).
-- `app/api/dashboard/[id]/descargar/route.ts` — idem libros.
-- **Migración**: si hay libros/Excel ya subidos al bucket público, scriptar la migración para mover los `path` o regenerar URLs. **No romper enlaces ya enviados por correo** — el endpoint `/leer/libro/[token]` sigue funcionando porque el archivo se sirve por el server.
-
-**Cómo verificar:** después del cambio, en incógnito **sin** cookie, copiar la URL final que entrega el server tras el redirect; debe expirar en 15min. Compartirla pasado ese tiempo → 403 de Supabase.
-
-**Caveat — Office Online iframe (dashboards):** el visor de gráficas (`view.officeapps.live.com`) necesita una URL accesible públicamente para Microsoft. Si bucket es privado, esto se rompe. **Opciones:**
-- Aceptar que la vista "Dashboard (gráficas)" solo funciona con bucket público y limitar el cambio a libros y Excel descargable, dejando dashboards con caveat documentado.
-- O reemplazar Office Online por un renderer client-side de gráficas (más trabajo, fuera de scope).
-- Recomendación: empezar por libros (PDF) que es el caso más expuesto. Excel iframe queda en revisión separada.
-
-### Cómo abordar P1 en la próxima sesión
-
-- **Backup primero**: snapshot del bucket `libros` y `datos` en Supabase antes de tocar nada.
-- **PR aislada** — no mezclar con otros cambios. Es invasiva.
-- **Decidir el caveat de Office Online** antes de empezar: aceptar que la vista "Dashboard (gráficas)" se rompa con bucket privado, o limitar el cambio a libros + descarga de Excel manteniendo público el archivo solo para el iframe (parche híbrido).
-- **Probar en staging** si es posible (Supabase no tiene sandbox nativo; alternativa: crear un proyecto Supabase de pruebas o ejecutar bucket privado en una rama de Vercel preview).
-- **No romper enlaces ya enviados por correo**: los endpoints `/leer/libro/[token]` y similares siguen funcionando porque el archivo se sirve por el server (no por el bucket directo).
+Opcional si sobra tiempo: /api/health/deep (chequea DB+Worker+Storage).
+```
 
 ---
 
-*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad: P2/P3 cerrados, P1 abierto para próxima sesión; troubleshooting: D1_SYNC_SECRET en Cloudflare es independiente de Vercel)*
-*Commit activo en main: `887fcde`*
+*Última actualización: 2026-06-02 (sesión 18 — auditoría de seguridad y resiliencia: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts en llamadas externas [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]; pendiente para próxima sesión: M2 CSP nonces. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.)*
+*Commit activo en main: `05c8a52` (+ docs sesión 18)*

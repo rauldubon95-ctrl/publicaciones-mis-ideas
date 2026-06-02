@@ -18,8 +18,9 @@ exposiciones activas; el código va por esta rama para revisión.
 | H2 | 🟠 ALTO | `anon` podía leer el HTML completo de `RecursoHtml` (recursos premium) | ✅ Corregido |
 | H3 | 🟠 ALTO | `anon` podía INSERT/DELETE objetos en el bucket `comics` (subida arbitraria / borrado masivo) | ✅ Corregido |
 | H1 | 🟡 MEDIO | Buckets `libros` (PDF) y `datos` (Excel) públicos → un comprador puede recompartir la URL permanente del archivo | ✅ Mitigado (streaming) |
-| M1 | 🟡 MEDIO | Llamadas a servicios externos (PayPal/Resend/Worker/D1) sin timeout/AbortController | ⏳ Pendiente (PR aparte) |
-| M2 | 🟡 MEDIO | CSP con `script-src 'unsafe-inline'` | ⏳ Pendiente (PR aparte, requiere nonces) |
+| M1 | 🟡 MEDIO | Llamadas a servicios externos (PayPal/Resend/Worker/D1) sin timeout/AbortController | ✅ Corregido (en producción) |
+| Caching | 🟢 ROI | Páginas públicas sin cache (`force-dynamic`) → carga DB + latencia | ✅ `unstable_cache` en 8 páginas (en producción) |
+| M2 | 🟡 MEDIO | CSP con `script-src 'unsafe-inline'` | ⏳ Pendiente (próxima sesión, requiere nonces — rama aislada + preview) |
 | M3 | ⚪ — | "vuln de `xlsx`" → **NO aplica**: el código usa `exceljs`, `xlsx` no es dependencia | ✅ Sin acción |
 | M4 | 🟡 MEDIO | `req.json()` sin try/catch en `/api/publicaciones` POST y `/admin/tableros/[id]` PUT (500 ante body inválido) | ✅ Corregido (esta rama) |
 | L1 | 🔵 BAJO | `lectura_publica_comentario` expone comentarios a `anon` (sin email; solo `autorNombre`, ya público) | ℹ️ Aceptado |
