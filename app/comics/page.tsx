@@ -3,20 +3,28 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
+import { unstable_cache } from "next/cache";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Cómics",
   description: "Tiras cómicas y narrativas gráficas de Raúl Dubón.",
   alternates: { canonical: canonicalUrl("/comics") },
 };
 
+const getComics = unstable_cache(
+  async () =>
+    prisma.comic.findMany({
+      where: { publicado: true },
+      orderBy: { creadoAt: "desc" },
+      include: { _count: { select: { paginas: true } }, paginas: { take: 1, orderBy: { orden: "asc" } } },
+    }),
+  ["comics-publicados"],
+  { revalidate: 300, tags: ["comics"] }
+);
+
 export default async function ComicsPage() {
-  const comics = await prisma.comic.findMany({
-    where: { publicado: true },
-    orderBy: { creadoAt: "desc" },
-    include: { _count: { select: { paginas: true } }, paginas: { take: 1, orderBy: { orden: "asc" } } },
-  });
+  const comics = await getComics();
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">

@@ -3,19 +3,27 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
+import { unstable_cache } from "next/cache";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Recursos",
   description: "Documentos, hojas de cálculo y herramientas interactivas de Raúl Dubón.",
   alternates: { canonical: canonicalUrl("/recursos") },
 };
 
+const getRecursos = unstable_cache(
+  async () =>
+    prisma.recursoHtml.findMany({
+      where: { publicado: true },
+      orderBy: { creadoAt: "desc" },
+    }),
+  ["recursos-publicados"],
+  { revalidate: 300, tags: ["recursos"] }
+);
+
 export default async function RecursosPage() {
-  const recursos = await prisma.recursoHtml.findMany({
-    where: { publicado: true },
-    orderBy: { creadoAt: "desc" },
-  });
+  const recursos = await getRecursos();
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">

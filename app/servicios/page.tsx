@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import ServiciosConFormulario from "@/components/ServiciosConFormulario";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
+import { unstable_cache } from "next/cache";
 
 export const metadata: Metadata = {
   title: "Servicios de Consultoría",
@@ -10,21 +11,28 @@ export const metadata: Metadata = {
   alternates: { canonical: canonicalUrl("/servicios") },
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+
+const getServicios = unstable_cache(
+  async () =>
+    prisma.servicio.findMany({
+      where: { activo: true },
+      orderBy: [{ orden: "asc" }, { categoria: "asc" }, { titulo: "asc" }],
+      select: {
+        id: true,
+        titulo: true,
+        slug: true,
+        descripcion: true,
+        categoria: true,
+        icono: true,
+      },
+    }),
+  ["servicios-activos"],
+  { revalidate: 300, tags: ["servicios"] }
+);
 
 export default async function ServiciosPage() {
-  const servicios = await prisma.servicio.findMany({
-    where: { activo: true },
-    orderBy: [{ orden: "asc" }, { categoria: "asc" }, { titulo: "asc" }],
-    select: {
-      id: true,
-      titulo: true,
-      slug: true,
-      descripcion: true,
-      categoria: true,
-      icono: true,
-    },
-  });
+  const servicios = await getServicios();
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">

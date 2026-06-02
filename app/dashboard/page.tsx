@@ -3,8 +3,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { canonicalUrl } from "@/lib/seo";
+import { unstable_cache } from "next/cache";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Tableros y visualizaciones interactivas de Raúl Dubón.",
@@ -12,12 +13,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
+const getTableros = unstable_cache(
+  async () =>
+    prisma.tablero.findMany({
+      where: { publicado: true },
+      orderBy: [{ orden: "asc" }, { creadoAt: "desc" }],
+      select: { id: true, titulo: true, slug: true, descripcion: true, categoria: true, archivoNombre: true, creadoAt: true },
+    }),
+  ["tableros-publicados"],
+  { revalidate: 300, tags: ["tableros"] }
+);
+
 export default async function DashboardPage() {
-  const tableros = await prisma.tablero.findMany({
-    where: { publicado: true },
-    orderBy: [{ orden: "asc" }, { creadoAt: "desc" }],
-    select: { id: true, titulo: true, slug: true, descripcion: true, categoria: true, archivoNombre: true, creadoAt: true },
-  });
+  const tableros = await getTableros();
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">

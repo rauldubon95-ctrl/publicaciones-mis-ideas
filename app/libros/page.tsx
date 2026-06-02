@@ -3,23 +3,31 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
+import { unstable_cache } from "next/cache";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Libros",
   description: "Libros escritos por Raúl Dubón sobre ciencias sociales y realidad latinoamericana.",
   alternates: { canonical: canonicalUrl("/libros") },
 };
 
+const getLibros = unstable_cache(
+  async () =>
+    prisma.libro.findMany({
+      where: { publicado: true },
+      orderBy: { creadoAt: "desc" },
+      select: {
+        id: true, titulo: true, slug: true, descripcion: true,
+        paginas: true, precioCentavos: true, imagenPortada: true,
+      },
+    }),
+  ["libros-publicados"],
+  { revalidate: 300, tags: ["libros"] }
+);
+
 export default async function LibrosPage() {
-  const libros = await prisma.libro.findMany({
-    where: { publicado: true },
-    orderBy: { creadoAt: "desc" },
-    select: {
-      id: true, titulo: true, slug: true, descripcion: true,
-      paginas: true, precioCentavos: true, imagenPortada: true,
-    },
-  });
+  const libros = await getLibros();
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
