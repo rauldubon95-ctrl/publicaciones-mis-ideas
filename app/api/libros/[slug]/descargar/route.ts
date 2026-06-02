@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { tieneAccesoLibro } from "@/lib/accesoLibro";
 import { isAdminAuthorized } from "@/lib/adminAuth";
+import { descargarDesdeBucket, BUCKET_LIBROS } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(
   req: NextRequest,
@@ -30,6 +32,11 @@ export async function GET(
     }
   }
 
+  const blob = await descargarDesdeBucket(BUCKET_LIBROS, libro.urlPdf);
+  if (!blob) {
+    return NextResponse.json({ error: "Archivo no disponible" }, { status: 404 });
+  }
+
   const ua = req.headers.get("user-agent") ?? "";
   const dispositivo = /mobile|android|iphone|ipad/i.test(ua) ? "mobile" : "desktop";
 
@@ -37,5 +44,15 @@ export async function GET(
     .create({ data: { libroId: libro.id, dispositivo } })
     .catch(() => {});
 
-  return NextResponse.redirect(libro.urlPdf, { status: 302 });
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  return new NextResponse(buffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${slug}.pdf"`,
+      "Content-Length": String(buffer.byteLength),
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "private, no-store",
+    },
+  });
 }

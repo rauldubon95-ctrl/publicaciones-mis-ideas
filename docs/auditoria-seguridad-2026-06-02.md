@@ -17,7 +17,7 @@ exposiciones activas; el código va por esta rama para revisión.
 | C1 | 🔴 CRÍTICO | `anon` (clave pública) podía leer/escribir `PedidoLibro/Recurso/Dashboard` + `RespuestaCotizacion` vía PostgREST → bypass de paywall (tokens), fuga de PII (emails) y manipulación de pedidos | ✅ Corregido |
 | H2 | 🟠 ALTO | `anon` podía leer el HTML completo de `RecursoHtml` (recursos premium) | ✅ Corregido |
 | H3 | 🟠 ALTO | `anon` podía INSERT/DELETE objetos en el bucket `comics` (subida arbitraria / borrado masivo) | ✅ Corregido |
-| H1 | 🟡 MEDIO | Buckets `libros` (PDF) y `datos` (Excel) públicos → un comprador puede recompartir la URL permanente del archivo | 🔧 En curso (ver §H1) |
+| H1 | 🟡 MEDIO | Buckets `libros` (PDF) y `datos` (Excel) públicos → un comprador puede recompartir la URL permanente del archivo | ✅ Mitigado (streaming) |
 | M1 | 🟡 MEDIO | Llamadas a servicios externos (PayPal/Resend/Worker/D1) sin timeout/AbortController | ⏳ Pendiente (PR aparte) |
 | M2 | 🟡 MEDIO | CSP con `script-src 'unsafe-inline'` | ⏳ Pendiente (PR aparte, requiere nonces) |
 | M3 | ⚪ — | "vuln de `xlsx`" → **NO aplica**: el código usa `exceljs`, `xlsx` no es dependencia | ✅ Sin acción |
@@ -137,15 +137,26 @@ Restricciones descubiertas:
   (`view.officeapps.live.com/op/embed.aspx?src=<archivoUrl público>`) que
   requiere una URL accesible públicamente.
 
-Decisión de enfoque pendiente con el dueño (ver hilo de la sesión). Opciones:
-1. **Streaming por endpoint** (sin migración, sin romper nada): el servidor
-   descarga el archivo del bucket (service role) y lo reenvía; la URL pública
-   nunca se entrega al cliente. Consume ancho de banda de Vercel. El iframe de
-   gráficas de dashboards premium seguiría exponiendo su URL al comprador.
-2. **Bucket privado + signed URLs (15 min)**: más eficiente y cierra también el
-   iframe, pero rompe portadas y la vista Office Online (hay que servirlas
-   firmadas) y es más invasivo.
-3. **Solo libros (PDF) ahora; dashboards en PR aparte.**
+**Decisión tomada: opción 1 (streaming por endpoint).** Implementado en esta rama:
+- `lib/supabase-admin.ts`: nuevo helper `descargarDesdeBucket(bucket, urlOrPath)`
+  que baja el objeto con el service role a partir de su URL pública o path.
+- `app/api/libros/[slug]/descargar/route.ts`: en vez de `redirect(302)` a la URL
+  pública, valida acceso y reenvía el PDF como stream (`runtime = "nodejs"`).
+- `app/api/dashboard/[id]/descargar/route.ts`: ídem para el Excel.
+
+Así la URL permanente del bucket nunca se entrega al cliente y no puede
+recompartirse. Coste: ancho de banda de Vercel (PDFs ≤50MB, Excel ≤10MB).
+
+**Residual documentado:** la vista "Dashboard (gráficas)" usa un iframe de Office
+Online (`app/dashboard/[id]/page.tsx:225`) con `tablero.archivoUrl` público; un
+comprador con acceso aún puede copiar esa URL. Cerrarlo requiere privatizar
+`datos` + servir el iframe con signed URL (frágil) — queda para una revisión
+separada. El bucket ya no es enumerable (L2 cerrado), así que no hay forma de
+descubrir esa URL sin tener acceso al dashboard.
+
+**Pendiente operativo (opcional):** los buckets siguen marcados como públicos
+para no romper portadas (`libros`) ni el iframe (`datos`). El streaming hace que
+eso ya no exponga los archivos de pago a quien no tenga la URL exacta.
 
 ---
 

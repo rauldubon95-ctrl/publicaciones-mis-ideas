@@ -35,8 +35,29 @@ export async function eliminarImagen(url: string): Promise<void> {
   await sb.storage.from(BUCKET_COMICS).remove([ruta]);
 }
 
+// ─── Descarga server-side (stream gateado) ───────────────────────────────────
+// Descarga un objeto del bucket usando el service role, a partir de su URL
+// pública (o de su path interno). Permite que los endpoints /descargar reenvíen
+// el archivo sin entregar nunca la URL pública del bucket al cliente, de modo
+// que un comprador no pueda recompartir un enlace permanente. Ver H1 en
+// docs/auditoria-seguridad-2026-06-02.md.
+export async function descargarDesdeBucket(
+  bucket: string,
+  urlOrPath: string
+): Promise<Blob | null> {
+  const sb = getSupabaseAdmin();
+  const base = sb.storage.from(bucket).getPublicUrl("").data.publicUrl;
+  let ruta = urlOrPath.startsWith("http") ? urlOrPath.replace(base, "") : urlOrPath;
+  ruta = ruta.split("?")[0].replace(/^\/+/, "");
+  if (!ruta) return null;
+  const { data, error } = await sb.storage.from(bucket).download(ruta);
+  if (error || !data) return null;
+  return data;
+}
+
 // ─── Bucket para libros (PDFs y portadas) ────────────────────────────────────
 export const BUCKET_LIBROS = "libros";
+export const BUCKET_DATOS = "datos";
 
 export async function subirArchivoLibro(
   buffer: Buffer,

@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoDashboard } from "@/lib/accesoDashboard";
+import { descargarDesdeBucket, BUCKET_DATOS } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
 // Proxy gateado al Excel almacenado en Supabase Storage.
-// - Tableros NO premium: redirige al archivoUrl público sin más.
-// - Tableros premium: valida admin o cookie de acceso, y solo entonces redirige.
-// La URL del bucket en Supabase es pública, pero al esconderla detrás de este
-// endpoint nadie llega a ella sin pasar por el muro de pago.
+// - Tableros NO premium: cualquiera puede descargar.
+// - Tableros premium: valida admin o cookie de acceso.
+// El servidor reenvía el archivo (stream) en vez de redirigir a la URL pública
+// del bucket, de modo que el enlace permanente nunca se entrega al cliente y no
+// puede recompartirse. Ver H1 en docs/auditoria-seguridad-2026-06-02.md.
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
 
@@ -33,5 +38,19 @@ export async function GET(_req: NextRequest, { params }: Params) {
     }
   }
 
-  return NextResponse.redirect(tablero.archivoUrl, { status: 302 });
+  const blob = await descargarDesdeBucket(BUCKET_DATOS, tablero.archivoUrl);
+  if (!blob) return new NextResponse("Archivo no disponible", { status: 404 });
+
+  const nombre = (tablero.archivoNombre || "dashboard.xlsx").replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  return new NextResponse(buffer, {
+    status: 200,
+    headers: {
+      "Content-Type": XLSX_MIME,
+      "Content-Disposition": `attachment; filename="${nombre}"`,
+      "Content-Length": String(buffer.byteLength),
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "private, no-store",
+    },
+  });
 }
