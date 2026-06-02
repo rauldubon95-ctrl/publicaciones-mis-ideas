@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
+  }
   const {
     titulo,
     slug,

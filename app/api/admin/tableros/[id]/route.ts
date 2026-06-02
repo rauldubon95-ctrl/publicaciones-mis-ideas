@@ -12,11 +12,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const { id } = await params;
-  const body = await req.json() as {
+  const body = await req.json().catch(() => null) as {
     titulo?: string; descripcion?: string; categoria?: string;
     publicado?: boolean; orden?: number;
     esPremium?: boolean; precioCentavos?: number | null; resumenPublico?: string | null;
-  };
+  } | null;
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
+  }
 
   // Si se intenta marcar premium sin precio válido nuevo, exigir que ya haya uno guardado.
   if (body.esPremium === true) {
