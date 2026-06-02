@@ -55,6 +55,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Respuesta a cotizaciones | Producción sesión 17 | `RespuestaCotizacion` + estado `RESPONDIDA` + `respondidaAt`. Endpoint `POST /api/admin/cotizaciones/[id]/responder` (rate-limit 30/h, máx 5 respuestas/cot). UI con form inline + historial. Envía Resend. |
 | ✅ Monetización recursos HTML | Producción sesión 17 | `MuroRecurso.tsx`, PayPal, magic link `/leer/recurso/[token]`, cookie `rec_<id[:16]>` 1 año. Endpoints `/api/recursos/[slug]/html` y `/descargar` devuelven 402 si premium sin acceso. Admin ve completo + barra azul. |
 | ✅ Monetización dashboards Excel | Producción sesión 17 | `MuroDashboard.tsx`, PayPal, magic link `/leer/dashboard/[token]`, cookie `dash_<id[:16]>` 1 año. GET `/api/dashboard/[id]` omite `archivoUrl`/`preview` y devuelve `requiereAcceso:true` si premium sin acceso. Proxy `/api/dashboard/[id]/descargar` (302 con acceso, 402 sin). Admin ve completo + barra azul. |
+| ✅ Fix middleware login | Producción sesión 18 (PR #24) | `middleware.ts:63-73` excluye explícitamente `/api/admin/login` del guard de cookie añadido en #21. Sin esta exención el endpoint de login devolvía 401 antes de llegar al handler y nadie podía iniciar sesión. El frontend mostraba "Clave incorrecta" enmascarando el bug. |
 | ✅ PayPal Orders API v2 — Recursos | Producción sesión 17 | `custom_id="recurso:<pedidoId>"` en webhook. |
 | ✅ PayPal Orders API v2 — Dashboards | Producción sesión 17 | `custom_id="dashboard:<pedidoId>"` en webhook. |
 | ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
@@ -385,6 +386,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 17. **Endpoints `/api/recursos/<slug>/html|descargar` devuelven 402** si recurso premium sin acceso. **`/api/dashboard/<id>/descargar` devuelve 402 o redirige 302** según acceso. **`/api/dashboard/<id>` GET devuelve metadata sin `archivoUrl`/`preview` + `requiereAcceso:true`** si premium sin acceso (no 402 — el cliente lo necesita para renderizar el muro con precio).
 18. **Cotizaciones**: estado `RESPONDIDA` activo. `/api/admin/cotizaciones/[id]/responder` enforcea máx 5 respuestas/cot. El cuerpo viaja como texto plano; los `\n` se preservan en el correo.
 19. **`MuroPago/MuroLibro/MuroRecurso/MuroDashboard` son copias** — ~95% idénticos. Factorización es deuda técnica explícita. **No** la hagas en una PR que toque otra cosa: necesita su propia PR aislada.
+20. **Middleware bloquea `/api/admin/*` sin cookie `admin_auth`** (PR #21) PERO **`/api/admin/login` está explícitamente excluido** (PR #24). Si añades un endpoint admin público en el futuro (ej. recuperación de contraseña), también debe excluirse explícitamente, o nadie podrá llamarlo sin estar ya logueado. Lección de la sesión 18: el frontend muestra "Clave incorrecta" ante CUALQUIER respuesta no-2xx, así que un 401 del middleware se confunde con contraseña mala. Si ves "Clave incorrecta" sin `LOGIN_FALLIDO` en `EventoSeguridad`, sospecha del middleware antes que de la contraseña.
 
 ---
 
@@ -525,5 +527,5 @@ Si reporta `false`, ir a Vercel → Settings → Environment Variables y añadir
 
 ---
 
-*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad: P2/P3 cerrados, P1 abierto para próxima sesión; troubleshooting: D1_SYNC_SECRET en Cloudflare es independiente de Vercel)*
-*Commit activo en main: `887fcde`*
+*Última actualización: 2026-06-02 (sesión 18 — fix middleware login PR #24: exentar `/api/admin/login` del guard de cookie introducido en #21. Lección: "Clave incorrecta" sin `LOGIN_FALLIDO` en DB = sospechar del middleware, no de la contraseña.)*
+*Commit activo en main: ver `git log -1 main` al inicio de cada sesión*
