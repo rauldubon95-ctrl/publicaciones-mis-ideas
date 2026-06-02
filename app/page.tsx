@@ -6,8 +6,7 @@ import CentroCategoriasGrid from "@/components/CentroCategoriasGrid";
 import SubscriptionForm from "@/components/SubscriptionForm";
 import type { Metadata } from "next";
 import { canonicalWithPage } from "@/lib/seo";
-
-export const dynamic = "force-dynamic";
+import { unstable_cache } from "next/cache";
 
 export async function generateMetadata({
   searchParams,
@@ -23,6 +22,35 @@ export async function generateMetadata({
 
 const POR_PAGINA = 4;
 
+// Datos de la home cacheados (ISR a nivel de datos). Se revalida cada 5 min o
+// vía revalidateTag("publicaciones"/"categorias"). formatFecha hace new Date()
+// sobre el valor serializado, así que las fechas siguen funcionando.
+const getHomeData = unstable_cache(
+  async (pagina: number) =>
+    Promise.all([
+      prisma.publicacion.findMany({
+        where: { publicado: true },
+        orderBy: { publicadoAt: "desc" },
+        skip: (pagina - 1) * POR_PAGINA,
+        take: POR_PAGINA,
+        include: {
+          categoria: true,
+          etiquetas: { include: { etiqueta: true } },
+          _count: { select: { comentarios: true, reacciones: true } },
+        },
+      }),
+      prisma.publicacion.count({ where: { publicado: true } }),
+      prisma.categoria.findMany({
+        orderBy: { nombre: "asc" },
+        include: {
+          _count: { select: { publicaciones: { where: { publicado: true } } } },
+        },
+      }),
+    ]),
+  ["home-data"],
+  { revalidate: 300, tags: ["publicaciones", "categorias"] }
+);
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -31,26 +59,7 @@ export default async function HomePage({
   const params = await searchParams;
   const pagina = Math.max(1, parseInt(params.pagina ?? "1") || 1);
 
-  const [publicaciones, total, categorias] = await Promise.all([
-    prisma.publicacion.findMany({
-      where: { publicado: true },
-      orderBy: { publicadoAt: "desc" },
-      skip: (pagina - 1) * POR_PAGINA,
-      take: POR_PAGINA,
-      include: {
-        categoria: true,
-        etiquetas: { include: { etiqueta: true } },
-        _count: { select: { comentarios: true, reacciones: true } },
-      },
-    }),
-    prisma.publicacion.count({ where: { publicado: true } }),
-    prisma.categoria.findMany({
-      orderBy: { nombre: "asc" },
-      include: {
-        _count: { select: { publicaciones: { where: { publicado: true } } } },
-      },
-    }),
-  ]);
+  const [publicaciones, total, categorias] = await getHomeData(pagina);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);

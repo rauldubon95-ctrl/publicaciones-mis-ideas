@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Libros",
   description: "Libros escritos por Raúl Dubón sobre ciencias sociales y realidad latinoamericana.",

@@ -3,8 +3,7 @@ import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import type { Metadata } from "next";
 import { canonicalWithPage } from "@/lib/seo";
-
-export const dynamic = "force-dynamic";
+import { unstable_cache } from "next/cache";
 
 export async function generateMetadata({
   searchParams,
@@ -23,6 +22,26 @@ export async function generateMetadata({
 
 const POR_PAGINA = 8;
 
+const getPublicacionesData = unstable_cache(
+  async (pagina: number) =>
+    Promise.all([
+      prisma.publicacion.findMany({
+        where: { publicado: true },
+        orderBy: { publicadoAt: "desc" },
+        skip: (pagina - 1) * POR_PAGINA,
+        take: POR_PAGINA,
+        include: {
+          categoria: true,
+          etiquetas: { include: { etiqueta: true } },
+          _count: { select: { comentarios: true, reacciones: true } },
+        },
+      }),
+      prisma.publicacion.count({ where: { publicado: true } }),
+    ]),
+  ["publicaciones-data"],
+  { revalidate: 300, tags: ["publicaciones"] }
+);
+
 export default async function PublicacionesPage({
   searchParams,
 }: {
@@ -31,20 +50,7 @@ export default async function PublicacionesPage({
   const params = await searchParams;
   const pagina = Math.max(1, parseInt(params.pagina ?? "1") || 1);
 
-  const [publicaciones, total] = await Promise.all([
-    prisma.publicacion.findMany({
-      where: { publicado: true },
-      orderBy: { publicadoAt: "desc" },
-      skip: (pagina - 1) * POR_PAGINA,
-      take: POR_PAGINA,
-      include: {
-        categoria: true,
-        etiquetas: { include: { etiqueta: true } },
-        _count: { select: { comentarios: true, reacciones: true } },
-      },
-    }),
-    prisma.publicacion.count({ where: { publicado: true } }),
-  ]);
+  const [publicaciones, total] = await getPublicacionesData(pagina);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 

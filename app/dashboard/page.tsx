@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 import { canonicalUrl } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Tableros y visualizaciones interactivas de Raúl Dubón.",

@@ -4,10 +4,37 @@ import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import Link from "next/link";
 import type { Metadata } from "next";
-
-export const dynamic = "force-dynamic";
+import { unstable_cache } from "next/cache";
 
 const POR_PAGINA = 8;
+
+// Datos de la categoría cacheados. Devuelve null si la categoría no existe
+// (el componente llama notFound()). Revalida cada 5 min o por tag.
+const getCategoriaData = unstable_cache(
+  async (slug: string, pagina: number) => {
+    const categoria = await prisma.categoria.findUnique({ where: { slug } });
+    if (!categoria) return null;
+    const [publicaciones, total] = await Promise.all([
+      prisma.publicacion.findMany({
+        where: { publicado: true, categoriaId: categoria.id },
+        orderBy: { publicadoAt: "desc" },
+        skip: (pagina - 1) * POR_PAGINA,
+        take: POR_PAGINA,
+        include: {
+          categoria: true,
+          etiquetas: { include: { etiqueta: true } },
+          _count: { select: { comentarios: true, reacciones: true } },
+        },
+      }),
+      prisma.publicacion.count({
+        where: { publicado: true, categoriaId: categoria.id },
+      }),
+    ]);
+    return { categoria, publicaciones, total };
+  },
+  ["categoria-data"],
+  { revalidate: 300, tags: ["publicaciones", "categorias"] }
+);
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -45,25 +72,9 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const pagina = Math.max(1, parseInt(sp.pagina ?? "1") || 1);
 
-  const categoria = await prisma.categoria.findUnique({ where: { slug } });
-  if (!categoria) notFound();
-
-  const [publicaciones, total] = await Promise.all([
-    prisma.publicacion.findMany({
-      where: { publicado: true, categoriaId: categoria.id },
-      orderBy: { publicadoAt: "desc" },
-      skip: (pagina - 1) * POR_PAGINA,
-      take: POR_PAGINA,
-      include: {
-        categoria: true,
-        etiquetas: { include: { etiqueta: true } },
-        _count: { select: { comentarios: true, reacciones: true } },
-      },
-    }),
-    prisma.publicacion.count({
-      where: { publicado: true, categoriaId: categoria.id },
-    }),
-  ]);
+  const data = await getCategoriaData(slug, pagina);
+  if (!data) notFound();
+  const { categoria, publicaciones, total } = data;
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 

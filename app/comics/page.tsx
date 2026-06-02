@@ -4,7 +4,7 @@ import { formatFecha } from "@/lib/utils";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Cómics",
   description: "Tiras cómicas y narrativas gráficas de Raúl Dubón.",
