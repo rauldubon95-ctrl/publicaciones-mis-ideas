@@ -347,9 +347,9 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 |---|---|---|
 | CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. | **Alta** |
 | Más limpieza corpus D1 | 804 docs, aún hay documentos de baja calidad | Alta |
-| **Buckets Supabase públicos** (sesión 17 hallazgo medio) | Archivos PDF (`libros`), HTML embebidos del recurso y Excel (`datos`) son públicos. Visitante que paga obtiene la URL del bucket → puede redistribuirla. **Mitigación:** bucket privado + signed URLs con expiración 15min. Cambiar uploads + reemplazar redirect 302 por stream en los endpoints `/api/recursos/[slug]/descargar`, `/api/libros/[slug]/descargar`, `/api/dashboard/[id]/descargar`. | **Media** |
-| **`PAYPAL_WEBHOOK_ID` no validado en boot** (sesión 17 hallazgo bajo) | Si la variable falta, los webhooks fallan silenciosamente (firma inválida → 401) y los compradores no reciben magic link por correo, aunque sí tengan cookie. **Mitigación:** verificar en Vercel env vars. Añadir asserción en `lib/paypal.ts` o un check en `/api/health`. | Baja |
-| **Sin middleware-level guard para `/api/admin/*`** (sesión 17 hallazgo bajo) | Hoy cada endpoint admin valida con `isAdminAuthorized()`. Si un endpoint admin nuevo olvida el guard, queda abierto. **Mitigación:** añadir en `middleware.ts` rechazo 401 a todo `/api/admin/*` sin cookie `admin_auth`. Defensa en profundidad. | Baja |
+| **Buckets Supabase públicos** (sesión 17 hallazgo medio — ABIERTO) | Archivos PDF (`libros`), HTML embebidos del recurso y Excel (`datos`) son públicos. Visitante que paga obtiene la URL del bucket → puede redistribuirla. **Mitigación:** bucket privado + signed URLs con expiración 15min. Cambiar uploads + reemplazar redirect 302 por stream en los endpoints `/api/recursos/[slug]/descargar`, `/api/libros/[slug]/descargar`, `/api/dashboard/[id]/descargar`. Ver §18 P1. | **Media** |
+| ~~`PAYPAL_WEBHOOK_ID` no validado~~ (sesión 17, **CERRADO** PR #20) | `/api/health` con `HEALTH_TOKEN` válido reporta `config.paypal_webhook_id` y otras envs críticas como booleans. Verificación operativa pendiente solo en Vercel env vars. | ~~Baja~~ |
+| ~~Sin middleware-level guard para `/api/admin/*`~~ (sesión 17, **CERRADO** PR #21) | `middleware.ts` rechaza 401 JSON cualquier `/api/admin/*` sin cookie `admin_auth`. `isAdminAuthorized()` en cada endpoint sigue siendo la verificación real. | ~~Baja~~ |
 | Compartir social en `/dashboard/[id]` | Pendiente. Es client component sin metadata SEO. Refactor server+client para `BotonesCompartir` + canonical + og:image. | Baja |
 | Factorizar `MuroPago`/`MuroLibro`/`MuroRecurso`/`MuroDashboard` | ~95% código compartido. Crear `components/MuroPagoBase.tsx` parametrizable. **PR aislada**, sin tocar nada más. | Baja |
 | `xlsx` vulnerabilidad | `app/api/admin/tableros/route.ts` usa `xlsx` (Prototype Pollution + ReDoS). Solo admin. Considerar `exceljs`. | Media |
@@ -479,9 +479,24 @@ Cliente (Next.js)
 
 ## 18. PENDIENTES ACCIONABLES PARA PRÓXIMA SESIÓN
 
-> **Inicio de sesión: lee este bloque primero.** Son los hallazgos de la auditoría de seguridad de la sesión 17 (Fase 6) que quedaron documentados pero NO ejecutados. Cada uno tiene severidad, archivo a tocar y acción concreta.
+> **Inicio de sesión: lee este bloque primero.** Era el conjunto de hallazgos de la auditoría de seguridad de la sesión 17 (Fase 6). **P2 y P3 ya fueron cerrados** (PRs #20 y #21). Queda **solo P1** para ejecutar en una sesión dedicada por su riesgo operativo.
 
-### 🟡 P1 — Bucket privado + signed URLs (severidad MEDIA)
+### ✅ P2 — `PAYPAL_WEBHOOK_ID` reportado en /api/health (CERRADO, PR #20)
+
+`/api/health` con `HEALTH_TOKEN` válido devuelve `config.paypal_webhook_id` y otras envs críticas como booleans (sin leakear valores). Para verificar:
+
+```bash
+curl -H "x-health-token: $HEALTH_TOKEN" https://rauldubon.org/api/health
+# Esperado: config.paypal_webhook_id === true
+```
+
+Si reporta `false`, ir a Vercel → Settings → Environment Variables y añadir `PAYPAL_WEBHOOK_ID` desde PayPal Dashboard → Apps & Credentials → Webhooks.
+
+### ✅ P3 — Middleware-level guard para `/api/admin/*` (CERRADO, PR #21)
+
+`middleware.ts` rechaza con `401 JSON` cualquier `/api/admin/*` sin cookie `admin_auth`, antes de tocar el handler. `isAdminAuthorized()` en cada endpoint sigue siendo la verificación real (firma + JTI revocado vs `SesionAdmin`). Esto solo evita que un endpoint admin nuevo que olvide el guard quede abierto.
+
+### 🟡 P1 — Bucket privado + signed URLs (severidad MEDIA, ABIERTO)
 
 **Problema:** Buckets `libros`, recursos y `datos` (Excel) son **públicos** en Supabase Storage. Aunque el endpoint `/api/<x>/descargar` valida acceso antes de redirigir, una vez el visitante obtiene la URL del bucket puede compartirla y cualquiera la descarga sin pasar el muro de pago.
 
@@ -500,38 +515,15 @@ Cliente (Next.js)
 - O reemplazar Office Online por un renderer client-side de gráficas (más trabajo, fuera de scope).
 - Recomendación: empezar por libros (PDF) que es el caso más expuesto. Excel iframe queda en revisión separada.
 
-### 🟢 P2 — Validar `PAYPAL_WEBHOOK_ID` (severidad BAJA, 5 minutos)
+### Cómo abordar P1 en la próxima sesión
 
-**Problema:** si la variable falta o está mal en Vercel, todos los webhooks se rechazan con 401 silenciosamente. El comprador queda con cookie pero **nunca recibe magic link por correo** → no puede acceder desde otro dispositivo.
-
-**Acciones (elige una o ambas):**
-1. **Verificación operativa (1 min):** confirmar en Vercel → Settings → Environment Variables que `PAYPAL_WEBHOOK_ID` existe en `production` y coincide con el dashboard de PayPal (Apps & Credentials → Webhooks).
-2. **Defensa en código (5 min):** añadir en `app/api/health/route.ts` un check que reporte `paypal_webhook_id: !!process.env.PAYPAL_WEBHOOK_ID`. Opcionalmente: en `lib/paypal.ts:verificarFirmaWebhookPayPal`, ya devuelve `false` con un `console.error`; mejorar para emitir un `EventoSeguridad` tipo `CONFIG_FALTANTE` solo la primera vez por proceso (con flag in-memory para no spamear).
-
-### 🟢 P3 — Middleware-level guard para `/api/admin/*` (severidad BAJA)
-
-**Problema:** hoy cada endpoint admin valida con `isAdminAuthorized()` individualmente. Si un endpoint nuevo en una sesión futura olvida el guard, queda abierto.
-
-**Archivo a tocar:** `middleware.ts`. Añadir un matcher para `/api/admin/*` que rechace 401 si no existe la cookie `admin_auth`. **Importante:** sigue siendo defensa en profundidad — `isAdminAuthorized()` en cada endpoint debe permanecer porque también valida JTI revocado vs `SesionAdmin`. El middleware solo rechaza el caso "sin cookie alguna".
-
-**Esqueleto sugerido (no implementar sin revisar el middleware actual primero):**
-```ts
-// dentro de middleware.ts, antes del fin
-if (pathname.startsWith("/api/admin/") && !req.cookies.get("admin_auth")?.value) {
-  return new NextResponse(JSON.stringify({ error: "No autorizado" }), {
-    status: 401,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-```
-
-### Cómo abordar estos pendientes
-
-- **Una PR por hallazgo.** Cada uno es aislado y revertible.
-- **Orden recomendado:** P2 (5 min, sin código de producción), luego P3 (cambio pequeño en middleware con riesgo controlado), luego P1 (más invasivo, requiere planificar la migración de archivos ya subidos).
-- **Antes de P1**, considera hacer backup del bucket `libros` y `datos` por si la migración requiere mover paths.
+- **Backup primero**: snapshot del bucket `libros` y `datos` en Supabase antes de tocar nada.
+- **PR aislada** — no mezclar con otros cambios. Es invasiva.
+- **Decidir el caveat de Office Online** antes de empezar: aceptar que la vista "Dashboard (gráficas)" se rompa con bucket privado, o limitar el cambio a libros + descarga de Excel manteniendo público el archivo solo para el iframe (parche híbrido).
+- **Probar en staging** si es posible (Supabase no tiene sandbox nativo; alternativa: crear un proyecto Supabase de pruebas o ejecutar bucket privado en una rama de Vercel preview).
+- **No romper enlaces ya enviados por correo**: los endpoints `/leer/libro/[token]` y similares siguen funcionando porque el archivo se sirve por el server (no por el bucket directo).
 
 ---
 
-*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad documentada en §18)*
-*Commit activo en main: `5c845f7`*
+*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad: P2/P3 cerrados, P1 abierto para próxima sesión)*
+*Commit activo en main: `1cb2ca0`*
