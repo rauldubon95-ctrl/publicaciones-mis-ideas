@@ -1,6 +1,15 @@
 import { Resend } from "resend";
+import { conTimeout } from "@/lib/timeout";
 
 export const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Envoltura con timeout para el SDK de Resend (no acepta AbortSignal). Si el
+// envío excede 10s, rechaza con TimeoutError, que cada función de envío ya
+// captura en su try/catch y traduce a `false` (o `{ ok: false }`). Evita que un
+// Resend lento deje colgada la respuesta del webhook/endpoint.
+function enviarConResend(opts: Parameters<typeof resend.emails.send>[0]) {
+  return conTimeout(resend.emails.send(opts), 10_000, "envío de correo (Resend)");
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -224,7 +233,7 @@ export async function enviarConfirmacion(
 ): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) return false;
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: "Confirma tu suscripción — Raúl Dubón",
@@ -245,7 +254,7 @@ export async function enviarEnlaceAccesoContenido(
 ): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) return false;
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: `Tu acceso a: ${titulo}`,
@@ -265,7 +274,7 @@ export async function enviarNotificacionDonacion(
 ): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) return false;
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: ADMIN_EMAIL,
       subject: `💰 Nueva donación de $${montoUSD} — ${nombreDonante || "Anónimo"}`,
@@ -287,7 +296,7 @@ export async function enviarNuevaPublicacion(
 ): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) return false;
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: `${titulo} — Raúl Dubón`,
@@ -326,7 +335,7 @@ export async function enviarEnlaceDescargaLibro(
     </p>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: `Tu libro "${titulo}" — descarga disponible`,
@@ -365,7 +374,7 @@ export async function enviarEnlaceAccesoRecurso(
     </p>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: `Tu recurso "${titulo}" — acceso disponible`,
@@ -394,7 +403,7 @@ export async function enviarNotificacionCompraRecurso(
     </table>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: ADMIN_EMAIL,
       subject: `🧩 Venta de recurso: ${titulo} — $${montoUSD}`,
@@ -433,7 +442,7 @@ export async function enviarEnlaceAccesoDashboard(
     </p>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: `Tu tablero "${titulo}" — acceso disponible`,
@@ -462,7 +471,7 @@ export async function enviarNotificacionCompraDashboard(
     </table>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: ADMIN_EMAIL,
       subject: `📊 Venta de tablero: ${titulo} — $${montoUSD}`,
@@ -510,7 +519,7 @@ export async function enviarRespuestaCotizacion(
     return { ok: false, error: "RESEND_API_KEY no configurado" };
   }
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await enviarConResend({
       from: FROM,
       to: email,
       subject: asunto,
@@ -541,7 +550,7 @@ export async function enviarNotificacionCompraLibro(
     </table>
   `);
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await enviarConResend({
       from: FROM,
       to: ADMIN_EMAIL,
       subject: `📚 Venta de libro: ${titulo} — $${montoUSD}`,

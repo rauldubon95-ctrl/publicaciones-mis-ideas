@@ -2,6 +2,7 @@
 // Se llama tras PUT en admin/publicaciones/[id] — fallo no bloquea la respuesta.
 import { createHmac } from "crypto";
 import { d1SyncSecret } from "@/lib/secrets";
+import { fetchConTimeout } from "@/lib/timeout";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 const SYNC_MESSAGE = "d1-sync-v1";
@@ -36,14 +37,14 @@ export async function syncPublicacionToD1(
   };
 
   try {
-    await fetch(`${WORKER_URL}/sync`, {
+    await fetchConTimeout(`${WORKER_URL}/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Sync-Token": syncToken,
       },
       body: JSON.stringify(body),
-    });
+    }, 8_000);
   } catch {
     console.error("[d1sync] No se pudo sincronizar a D1:", payload.slug, action);
   }

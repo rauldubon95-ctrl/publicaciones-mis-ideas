@@ -1,3 +1,5 @@
+import { fetchConTimeout } from "@/lib/timeout";
+
 function getBase(): string {
   return process.env.PAYPAL_ENV === "live"
     ? "https://api-m.paypal.com"
@@ -11,7 +13,7 @@ async function getToken(): Promise<string> {
 if (!id || !secret) throw new Error("Credenciales PayPal no configuradas");
 
   const creds = btoa(`${id}:${secret}`);
-  const res = await fetch(`${BASE}/v1/oauth2/token`, {
+  const res = await fetchConTimeout(`${BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${creds}`,
@@ -48,7 +50,7 @@ export async function crearOrdenPayPal(
   };
   if (opciones.customId) purchaseUnit.custom_id = opciones.customId;
 
-  const res = await fetch(`${BASE}/v2/checkout/orders`, {
+  const res = await fetchConTimeout(`${BASE}/v2/checkout/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -120,7 +122,7 @@ export async function verificarFirmaWebhookPayPal(
   const token = await getToken();
   const BASE = getBase();
 
-  const res = await fetch(`${BASE}/v1/notifications/verify-webhook-signature`, {
+  const res = await fetchConTimeout(`${BASE}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -154,7 +156,7 @@ export async function capturarOrdenPayPal(orderId: string): Promise<{
   const token = await getToken();
   const BASE = getBase();
 
-  const res = await fetch(`${BASE}/v2/checkout/orders/${orderId}/capture`, {
+  const res = await fetchConTimeout(`${BASE}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

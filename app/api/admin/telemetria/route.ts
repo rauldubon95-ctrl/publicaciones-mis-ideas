@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { createHmac } from "crypto";
 import { d1SyncSecret } from "@/lib/secrets";
+import { fetchConTimeout } from "@/lib/timeout";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 
@@ -19,10 +20,10 @@ export async function GET() {
   const token = createHmac("sha256", secret).update("telemetria-v1").digest("hex");
 
   try {
-    const res = await fetch(`${WORKER_URL}/telemetria`, {
+    const res = await fetchConTimeout(`${WORKER_URL}/telemetria`, {
       headers: { "X-Sync-Token": token },
       next: { revalidate: 60 },
-    });
+    }, 8_000);
 
     if (!res.ok) {
       const err = await res.text();
