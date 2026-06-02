@@ -12,7 +12,24 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const { id } = await params;
-  const body = await req.json() as { titulo?: string; descripcion?: string; categoria?: string; publicado?: boolean; orden?: number };
+  const body = await req.json() as {
+    titulo?: string; descripcion?: string; categoria?: string;
+    publicado?: boolean; orden?: number;
+    esPremium?: boolean; precioCentavos?: number | null; resumenPublico?: string | null;
+  };
+
+  // Si se intenta marcar premium sin precio válido nuevo, exigir que ya haya uno guardado.
+  if (body.esPremium === true) {
+    const precioNuevo = typeof body.precioCentavos === "number" ? body.precioCentavos : null;
+    if (precioNuevo == null) {
+      const actual = await prisma.tablero.findUnique({ where: { id }, select: { precioCentavos: true } });
+      if (!actual?.precioCentavos || actual.precioCentavos < 100) {
+        return NextResponse.json({ error: "El precio mínimo es $1.00 USD para tableros premium." }, { status: 400 });
+      }
+    } else if (precioNuevo < 100) {
+      return NextResponse.json({ error: "El precio mínimo es $1.00 USD para tableros premium." }, { status: 400 });
+    }
+  }
 
   const tablero = await prisma.tablero.update({
     where: { id },
@@ -22,6 +39,15 @@ export async function PUT(req: NextRequest, { params }: Params) {
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.publicado !== undefined && { publicado: body.publicado }),
       ...(body.orden !== undefined && { orden: body.orden }),
+      ...(body.esPremium !== undefined && { esPremium: body.esPremium }),
+      ...(body.precioCentavos !== undefined && {
+        precioCentavos: body.precioCentavos != null && body.precioCentavos >= 100 ? Math.round(body.precioCentavos) : null,
+      }),
+      ...(body.resumenPublico !== undefined && {
+        resumenPublico: typeof body.resumenPublico === "string" && body.resumenPublico.trim()
+          ? body.resumenPublico.trim().slice(0, 2000)
+          : null,
+      }),
     },
   });
   return NextResponse.json(tablero);

@@ -318,8 +318,34 @@ model Tablero {
   orden         Int      @default(0)
   creadoAt      DateTime @default(now())
   actualizadoAt DateTime @updatedAt
+  // Tablero premium (Fase 5, sesión 17)
+  esPremium      Boolean           @default(false)
+  precioCentavos Int?              // null = sin precio; >0 = precio en USD centavos
+  resumenPublico String?           // texto visible antes del muro (fallback a descripcion)
+  pedidos        PedidoDashboard[]
 
   @@index([publicado, orden])
+}
+
+model PedidoDashboard {
+  id              String    @id @default(cuid())
+  tableroId       String
+  tablero         Tablero   @relation(fields: [tableroId], references: [id], onDelete: Cascade)
+  emailComprador  String
+  nombreComprador String?
+  montoCentavos   Int
+  moneda          String    @default("USD")
+  paypalOrderId   String?   @unique
+  estado          String    @default("PENDIENTE") // PENDIENTE | COMPLETADO | CANCELADO | FALLIDO
+  tokenAcceso     String    @unique @default(cuid())
+  creadoAt        DateTime  @default(now())
+  completadoAt    DateTime?
+  ultimoAccesoAt  DateTime?
+
+  @@index([emailComprador])
+  @@index([estado])
+  @@index([tableroId, estado])
+  @@index([creadoAt])
 }
 
 model SesionAdmin {

@@ -31,6 +31,7 @@ export async function GET() {
       id: true, titulo: true, slug: true, descripcion: true,
       categoria: true, archivoNombre: true, publicado: true,
       orden: true, creadoAt: true,
+      esPremium: true, precioCentavos: true, resumenPublico: true,
     },
   });
   return NextResponse.json(tableros);
@@ -46,6 +47,18 @@ export async function POST(req: NextRequest) {
   const titulo = (form.get("titulo") as string | null)?.trim() ?? "";
   const descripcion = (form.get("descripcion") as string | null)?.trim() ?? "";
   const categoria = (form.get("categoria") as string | null)?.trim() ?? "";
+  const esPremiumRaw = (form.get("esPremium") as string | null) ?? "";
+  const precioInput = (form.get("precioCentavos") as string | null) ?? "";
+  const resumenPublicoRaw = (form.get("resumenPublico") as string | null)?.trim() ?? "";
+  const esPremium = esPremiumRaw === "true" || esPremiumRaw === "1";
+  const precioCentavos = (() => {
+    const n = parseInt(precioInput, 10);
+    return Number.isFinite(n) && n >= 100 ? Math.round(n) : null;
+  })();
+  if (esPremium && precioCentavos == null) {
+    return NextResponse.json({ error: "El precio mínimo es $1.00 USD para tableros premium." }, { status: 400 });
+  }
+  const resumenPublico = resumenPublicoRaw ? resumenPublicoRaw.slice(0, 2000) : null;
 
   if (!archivo || !titulo) {
     return NextResponse.json({ error: "Faltan campos obligatorios (titulo, archivo)" }, { status: 400 });
@@ -128,6 +141,9 @@ export async function POST(req: NextRequest) {
       archivoNombre: archivo.name,
       preview: JSON.stringify(preview),
       publicado: false,
+      esPremium,
+      precioCentavos: esPremium ? precioCentavos : null,
+      resumenPublico,
     },
   });
 
