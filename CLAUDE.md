@@ -50,6 +50,13 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ Agentes IA GitHub Actions | Producción | `code-review.yml` + `prioritize.yml` — GitHub Models (gratis) |
 | ✅ Botones compartir redes sociales | Producción sesión 15 | `BotonesCompartir.tsx` en `/publicaciones/[slug]`. WhatsApp, Facebook, X, LinkedIn, copiar enlace. Share intents nativos, sin API keys. |
 | ✅ SEO/GEO correcciones | Producción sesión 16 | `lib/seo.ts` central. Canonical propio por página (fin del bug heredado). JSON-LD Person/WebSite/Article/Book. og:image fallback. robots.txt permite ChatGPT-User/OAI-SearchBot/PerplexityBot/ClaudeBot, bloquea entrenamiento. Sitemap incluye libros. Noindex en rutas transaccionales. Artículos relacionados automáticos. |
+| ✅ og:image objeto explícito | Producción sesión 17 | `app/layout.tsx`: `images` como `[{url,width:1200,height:630,alt,type}]`. Facebook deja de marcar "propiedad inferida". |
+| ✅ Botones compartir universales | Producción sesión 17 | `BotonesCompartir` acepta `path` (no `slug` hardcoded). Integrado en libros, recursos, dashboards. JSON-LD `CreativeWork` en recursos. Pendiente integrar en dashboard individual junto al refactor server+client. |
+| ✅ Respuesta a cotizaciones | Producción sesión 17 | `RespuestaCotizacion` + estado `RESPONDIDA` + `respondidaAt`. Endpoint `POST /api/admin/cotizaciones/[id]/responder` (rate-limit 30/h, máx 5 respuestas/cot). UI con form inline + historial. Envía Resend. |
+| ✅ Monetización recursos HTML | Producción sesión 17 | `MuroRecurso.tsx`, PayPal, magic link `/leer/recurso/[token]`, cookie `rec_<id[:16]>` 1 año. Endpoints `/api/recursos/[slug]/html` y `/descargar` devuelven 402 si premium sin acceso. Admin ve completo + barra azul. |
+| ✅ Monetización dashboards Excel | Producción sesión 17 | `MuroDashboard.tsx`, PayPal, magic link `/leer/dashboard/[token]`, cookie `dash_<id[:16]>` 1 año. GET `/api/dashboard/[id]` omite `archivoUrl`/`preview` y devuelve `requiereAcceso:true` si premium sin acceso. Proxy `/api/dashboard/[id]/descargar` (302 con acceso, 402 sin). Admin ve completo + barra azul. |
+| ✅ PayPal Orders API v2 — Recursos | Producción sesión 17 | `custom_id="recurso:<pedidoId>"` en webhook. |
+| ✅ PayPal Orders API v2 — Dashboards | Producción sesión 17 | `custom_id="dashboard:<pedidoId>"` en webhook. |
 | ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
 | ❌ Multi-worker / orquestación | Pendiente | Ver §17. Solo existe 1 worker hoy. |
 | ❌ Vectorize (retrieval semántico) | Pendiente | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create`. |
@@ -201,11 +208,17 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `/libros` | Grid de libros publicados |
 | `/libros/[slug]` | Página individual de libro (descarga o muro de pago) |
 | `/libros/comprar/exito` | Retorno de PayPal tras compra de libro |
+| `/recursos/comprar/exito` | Retorno de PayPal tras compra de recurso premium (sesión 17) |
+| `/dashboard` | Listado público de tableros Excel |
+| `/dashboard/[id]` | Tablero individual (gratis o muro de pago). Param es slug. |
+| `/dashboard/comprar/exito` | Retorno de PayPal tras compra de dashboard premium (sesión 17) |
 | `/donar` | Donaciones vía PayPal (`FormularioDonacion.tsx`) |
 | `/servicios` | Servicios de consultoría |
 | `/comprar/exito` | Retorno de PayPal tras compra de artículo premium |
 | `/leer/[token]` | Magic link artículo: valida token → cookie → redirige |
 | `/leer/libro/[token]` | Magic link libro: valida token → cookie → redirige |
+| `/leer/recurso/[token]` | Magic link recurso: valida token → cookie → redirige (sesión 17) |
+| `/leer/dashboard/[token]` | Magic link dashboard: valida token → cookie → redirige (sesión 17) |
 | `/suscribir/*` | Formulario y confirmaciones de suscripción |
 
 ### Next.js — Admin (todas requieren cookie `admin_auth`)
@@ -219,13 +232,15 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `/admin/recursos` + `/nueva` + `/editar/[id]` | CRUD de recursos |
 | `/admin/libros` + `/nueva` + `/editar/[id]` | CRUD de libros (PDF + portada) |
 | `/admin/servicios` | CRUD de servicios de consultoría |
-| `/admin/cotizaciones` | Solicitudes de clientes |
+| `/admin/cotizaciones` | Solicitudes de clientes + responder vía Resend (sesión 17) |
 | `/admin/donaciones` | Historial de donaciones PayPal |
 | `/admin/compras` | Historial de compras de artículos premium |
 | `/admin/ventas-libros` | Historial de ventas de libros |
+| `/admin/ventas-recursos` | Historial de ventas de recursos HTML premium (sesión 17) |
+| `/admin/ventas-dashboards` | Historial de ventas de dashboards Excel premium (sesión 17) |
 | `/admin/suscriptores` | Lista de correo + analítica |
 | `/admin/metricas` | Dashboard de vistas, descargas, reacciones |
-| `/admin/tableros` | Subir y publicar plantillas Excel |
+| `/admin/tableros` | Subir/publicar plantillas Excel + edición inline de premium/precio/resumen (sesión 17) |
 | `/admin/seguridad` | Log de eventos de seguridad |
 | `/admin/observabilidad` | Telemetría del asistente IA (7 días) |
 
@@ -236,10 +251,19 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/comprar/route.ts` | POST: inicia compra artículo premium → PedidoContenido + orden PayPal |
 | `app/api/libros/comprar/route.ts` | POST: inicia compra libro → PedidoLibro + orden PayPal |
 | `app/api/libros/[slug]/descargar/route.ts` | GET: descarga PDF (verifica pago si libro es de pago) |
-| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina `contenido:`, `libro:`, donación. Idempotente. |
+| `app/api/recursos/comprar/route.ts` | POST: inicia compra recurso → PedidoRecurso + orden PayPal (sesión 17) |
+| `app/api/recursos/[slug]/html/route.ts` | GET: sirve HTML para iframe. 402 si premium sin acceso (sesión 17) |
+| `app/api/recursos/[slug]/descargar/route.ts` | GET: descarga HTML. 402 si premium sin acceso (sesión 17) |
+| `app/api/dashboard/comprar/route.ts` | POST: inicia compra dashboard → PedidoDashboard + orden PayPal (sesión 17) |
+| `app/api/dashboard/[id]/route.ts` | GET: tablero. Si premium && !admin && !acceso → omite `archivoUrl`/`preview` + `requiereAcceso:true` (sesión 17) |
+| `app/api/dashboard/[id]/descargar/route.ts` | GET: proxy gateado al Excel. 302 al bucket con acceso, 402 sin (sesión 17) |
+| `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina `contenido:`, `libro:`, `recurso:`, `dashboard:`, donación. Idempotente. |
 | `app/api/donaciones/checkout/route.ts` | POST: crea orden PayPal para donación |
+| `app/api/admin/cotizaciones/[id]/responder/route.ts` | POST admin: responde cotización vía Resend (rate-limit 30/h, máx 5 respuestas/cot) (sesión 17) |
 | `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido + total recaudado |
 | `app/api/admin/ventas-libros/route.ts` | GET admin: lista PedidoLibro + total recaudado |
+| `app/api/admin/ventas-recursos/route.ts` | GET admin: lista PedidoRecurso + total recaudado (sesión 17) |
+| `app/api/admin/ventas-dashboards/route.ts` | GET admin: lista PedidoDashboard + total recaudado (sesión 17) |
 | `app/api/admin/libros/route.ts` | GET + POST admin: listar y crear libros |
 | `app/api/admin/libros/[id]/route.ts` | PUT + DELETE admin: editar y eliminar libro |
 | `app/api/admin/libros/upload/route.ts` | POST admin: subir PDF o portada a Supabase Storage bucket `libros` |
@@ -268,18 +292,33 @@ Publicacion     → campos premium: esPremium Boolean, precioCentavos Int?, resu
 Categoria       → campos: icono String?, imagen String?
 Etiqueta        → PublicacionEtiqueta → Publicacion
 Comic           → VistaComic
-Recurso         → VistaRecurso
+RecursoHtml     → campos premium (sesión 17): esPremium Boolean, precioCentavos Int?, resumenPublico String?
+                  relaciones: VistaRecurso[], PedidoRecurso[]
 Libro           → titulo, slug (unique), descripcion, paginas?, precioCentavos?, urlPdf, imagenPortada?,
                   publicado, creadoAt, actualizadoAt
                   relaciones: DescargaLibro[], PedidoLibro[]
+Tablero         → titulo, slug (unique), descripcion?, categoria?, archivoUrl, archivoNombre, preview,
+                  publicado, orden, creadoAt, actualizadoAt
+                  + campos premium (sesión 17): esPremium, precioCentavos?, resumenPublico?
+                  relaciones: PedidoDashboard[]
 DescargaLibro   → libroId, creadoAt, pais?, dispositivo?
 PedidoLibro     → libroId, emailComprador, nombreComprador?, montoCentavos, moneda, paypalOrderId? (unique),
                   estado (PENDIENTE/COMPLETADO/FALLIDO/CANCELADO), tokenAcceso (unique cuid),
+                  creadoAt, completadoAt?, ultimoAccesoAt?
+PedidoRecurso   → (sesión 17) recursoId, emailComprador, nombreComprador?, montoCentavos, moneda,
+                  paypalOrderId? (unique), estado, tokenAcceso (unique cuid),
+                  creadoAt, completadoAt?, ultimoAccesoAt?
+PedidoDashboard → (sesión 17) tableroId, emailComprador, nombreComprador?, montoCentavos, moneda,
+                  paypalOrderId? (unique), estado, tokenAcceso (unique cuid),
                   creadoAt, completadoAt?, ultimoAccesoAt?
 RateLimitDb     → rate limiting persistente
 EventoSeguridad → log de seguridad
 SesionAdmin     → jti, revocadaAt, expiraAt (revocación de sesiones)
 Servicio        → SolicitudCotizacion
+SolicitudCotizacion → + estado RESPONDIDA, + respondidaAt?, + respuestas RespuestaCotizacion[] (sesión 17)
+RespuestaCotizacion → (sesión 17) cotizacionId (FK CASCADE), asunto, cuerpoHtml, cuerpoTexto,
+                  enviadoPor, resendMessageId?, estadoEnvio (PENDIENTE/ENVIADO/FALLIDO),
+                  errorMensaje?, creadoAt
 Subscription    → email, nombre, status, token, confirmedAt, unsubscribedAt
 EmailEnvio      → asunto, publicacionId, totalEnviados, totalAbiertos
 Donacion        → stripeId (campo legacy — guarda paypalOrderId), estado, monto, moneda
@@ -308,12 +347,19 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 |---|---|---|
 | CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. | **Alta** |
 | Más limpieza corpus D1 | 804 docs, aún hay documentos de baja calidad | Alta |
+| **Buckets Supabase públicos** (sesión 17 hallazgo medio) | Archivos PDF (`libros`), HTML embebidos del recurso y Excel (`datos`) son públicos. Visitante que paga obtiene la URL del bucket → puede redistribuirla. **Mitigación:** bucket privado + signed URLs con expiración 15min. Cambiar uploads + reemplazar redirect 302 por stream en los endpoints `/api/recursos/[slug]/descargar`, `/api/libros/[slug]/descargar`, `/api/dashboard/[id]/descargar`. | **Media** |
+| **`PAYPAL_WEBHOOK_ID` no validado en boot** (sesión 17 hallazgo bajo) | Si la variable falta, los webhooks fallan silenciosamente (firma inválida → 401) y los compradores no reciben magic link por correo, aunque sí tengan cookie. **Mitigación:** verificar en Vercel env vars. Añadir asserción en `lib/paypal.ts` o un check en `/api/health`. | Baja |
+| **Sin middleware-level guard para `/api/admin/*`** (sesión 17 hallazgo bajo) | Hoy cada endpoint admin valida con `isAdminAuthorized()`. Si un endpoint admin nuevo olvida el guard, queda abierto. **Mitigación:** añadir en `middleware.ts` rechazo 401 a todo `/api/admin/*` sin cookie `admin_auth`. Defensa en profundidad. | Baja |
+| Compartir social en `/dashboard/[id]` | Pendiente. Es client component sin metadata SEO. Refactor server+client para `BotonesCompartir` + canonical + og:image. | Baja |
+| Factorizar `MuroPago`/`MuroLibro`/`MuroRecurso`/`MuroDashboard` | ~95% código compartido. Crear `components/MuroPagoBase.tsx` parametrizable. **PR aislada**, sin tocar nada más. | Baja |
 | `xlsx` vulnerabilidad | `app/api/admin/tableros/route.ts` usa `xlsx` (Prototype Pollution + ReDoS). Solo admin. Considerar `exceljs`. | Media |
 | Vectorize desactivado | Retrieval es solo FTS5+LIKE. Requiere `wrangler vectorize create` + pipeline embeddings. | Media |
 | Telemetría en KV (no D1) | Datos de IA duran solo 7 días. Dashboard persistente requeriría D1. | Media |
 | Campo `stripeId` en Donacion | Nombre legacy: hoy guarda paypalOrderId. Renombrar requiere migración Supabase + Prisma. | Baja |
 | CF_API_TOKEN con restricción IP | GitHub Actions no puede deployar Worker. Cloudflare Git integration lo cubre por ahora. | Baja |
 | `config/prompts/v1.1.txt` desconectado | Worker usa SYSTEM_PROMPT en `prompts.ts`, no este archivo. | Baja |
+| `cuerpoHtml` vacío en `RespuestaCotizacion` (sesión 17) | Por simplicidad guardamos `""`. La plantilla HTML se reconstruye desde `cuerpoTexto` si hace falta. Llenar es trivial sin migración. | Baja |
+| URL `/dashboard/[id]` con param que en realidad es slug | Confunde al leer (el folder es `[id]` pero el valor es slug). Renombrar a `[slug]` cambia el path interno, no rompe URLs públicas, pero perdería historial git. Cosmético. | Baja |
 | Multi-worker / orquestación | Ver §17 — pendiente | Futura |
 
 ---
@@ -328,11 +374,17 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 6. **SESSION_SIGNING_SECRET y D1_SYNC_SECRET deben coincidir** en Vercel Y en el Worker.
 7. **El admin siempre ve el contenido completo** de artículos premium Y libros de pago (diseño intencional). Barra azul lo indica. Para probar el muro, usar ventana de incógnito.
 8. **El precio siempre viene del servidor** — nunca del cliente. `/api/comprar` y `/api/libros/comprar` lo leen de la DB.
-9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Discrimina por prefijo `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, sin prefijo = donación.
+9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Discrimina por prefijo `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, `"recurso:"` = recurso HTML, `"dashboard:"` = tablero Excel, sin prefijo = donación.
 10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados.
 11. **`FormularioDonacion.tsx` es el componente activo de donaciones** — no `BotonesPayPal`. Montos $3/$5/$10/$25 + personalizado.
 12. **3 skills activas en el Worker**: `sociological-analysis`, `historical-analysis`, `political-analysis`.
-13. **La tabla `PedidoLibro` debe existir en Supabase** — ver SQL en §7. Si falla con "tabla no encontrada", es que no se ha ejecutado aún.
+13. **Las tablas `PedidoLibro`, `PedidoRecurso`, `PedidoDashboard`, `RespuestaCotizacion` deben existir en Supabase** — SQL en `migrations/sql/`. Si falla con "tabla no encontrada", no se ha ejecutado aún.
+14. **Cookies de acceso por contenido** (sesión 17): `acc_<id[:16]>` artículos, `lib_<id[:16]>` libros, `rec_<id[:16]>` recursos, `dash_<id[:16]>` dashboards. Todas `httpOnly`, `secure` prod, `sameSite: lax`, 1 año.
+15. **Helpers de acceso** en `lib/`: `accesoContenido.ts`, `accesoLibro.ts`, `accesoRecurso.ts`, `accesoDashboard.ts`. Patrón uniforme `tieneAcceso<X>()` + `setearCookieAcceso<X>()`.
+16. **Premium en recursos y dashboards funciona igual que libros**: admin ve todo + barra azul; visitante sin pago ve resumenPublico (o descripción) + Muro; con pago ve completo.
+17. **Endpoints `/api/recursos/<slug>/html|descargar` devuelven 402** si recurso premium sin acceso. **`/api/dashboard/<id>/descargar` devuelve 402 o redirige 302** según acceso. **`/api/dashboard/<id>` GET devuelve metadata sin `archivoUrl`/`preview` + `requiereAcceso:true`** si premium sin acceso (no 402 — el cliente lo necesita para renderizar el muro con precio).
+18. **Cotizaciones**: estado `RESPONDIDA` activo. `/api/admin/cotizaciones/[id]/responder` enforcea máx 5 respuestas/cot. El cuerpo viaja como texto plano; los `\n` se preservan en el correo.
+19. **`MuroPago/MuroLibro/MuroRecurso/MuroDashboard` son copias** — ~95% idénticos. Factorización es deuda técnica explícita. **No** la hagas en una PR que toque otra cosa: necesita su propia PR aislada.
 
 ---
 
@@ -364,8 +416,9 @@ Automático al publicar/despublicar. Para sincronizar todos:
 
 - `locale: "es-MX"` → interfaz en español latinoamericano ✅ (formato BCP-47 con guión; `es_MX` con guión bajo es rechazado por PayPal Orders v2)
 - `landing_page: "BILLING"` → formulario de tarjeta directo
-- Donaciones, artículos y libros usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
-- Webhook discrimina por prefijo en `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, sin prefijo = donación
+- Donaciones, artículos, libros, recursos y dashboards usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
+- Webhook discrimina por prefijo en `custom_id`: `"contenido:"` artículo, `"libro:"` libro, `"recurso:"` recurso HTML, `"dashboard:"` tablero Excel, sin prefijo = donación
+- 4 prefijos × 3 estados PayPal (COMPLETED/DENIED/REFUNDED) = 12 ramas en el switch del webhook. Idempotencia con `WebhookEventoProcesado`.
 
 ---
 
@@ -380,12 +433,15 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Donaciones PayPal con webhook firmado | ✅ Producción |
 | Artículos premium con muro de pago PayPal | ✅ Producción |
 | Libros en PDF con muro de pago PayPal | ✅ Producción sesión 13 |
+| Recursos HTML con muro de pago PayPal | ✅ Producción sesión 17 |
+| Dashboards Excel con muro de pago PayPal | ✅ Producción sesión 17 |
+| Respuesta a cotizaciones (máx 5/cot) desde admin | ✅ Producción sesión 17 |
 | Asistente IA con 3 skills académicas | ✅ Producción |
 | Telemetría IA en /admin/observabilidad | ✅ Producción |
 | Security hardening completo (fases 1–5) | ✅ Producción |
 | Retrieval semántico (Vectorize) | ❌ Pendiente |
 | Multi-worker / orquestación de agentes | ❌ Pendiente |
-| Botones compartir en redes sociales | ✅ Producción sesión 15 |
+| Botones compartir en redes sociales | ✅ Producción sesión 15 (extendido a libros/recursos sesión 17) |
 | SEO/GEO (canonical, JSON-LD, robots.txt, sitemap) | ✅ Producción sesión 16 |
 
 ---
@@ -421,5 +477,61 @@ Cliente (Next.js)
 
 ---
 
-*Última actualización: 2026-06-01 (sesión 16 — SEO/GEO: canonical, JSON-LD, robots.txt, sitemap)*
-*Commit activo en main: `4031b6e`*
+## 18. PENDIENTES ACCIONABLES PARA PRÓXIMA SESIÓN
+
+> **Inicio de sesión: lee este bloque primero.** Son los hallazgos de la auditoría de seguridad de la sesión 17 (Fase 6) que quedaron documentados pero NO ejecutados. Cada uno tiene severidad, archivo a tocar y acción concreta.
+
+### 🟡 P1 — Bucket privado + signed URLs (severidad MEDIA)
+
+**Problema:** Buckets `libros`, recursos y `datos` (Excel) son **públicos** en Supabase Storage. Aunque el endpoint `/api/<x>/descargar` valida acceso antes de redirigir, una vez el visitante obtiene la URL del bucket puede compartirla y cualquiera la descarga sin pasar el muro de pago.
+
+**Archivos a tocar:**
+- `lib/supabase-admin.ts` — al crear bucket en upload, marcarlo privado (`{ public: false }`).
+- `app/api/admin/libros/upload/route.ts` y `app/api/admin/tableros/route.ts` — usar `createSignedUrl(path, 900)` (15min) en lugar de `getPublicUrl`. Guardar en DB solo el `path` del bucket, no la URL completa.
+- `app/api/libros/[slug]/descargar/route.ts` — generar signed URL on-demand y hacer **stream del archivo** en lugar de `redirect 302`.
+- `app/api/recursos/[slug]/descargar/route.ts` — idem si los recursos pasan a archivo en bucket (hoy el HTML vive en DB, no en bucket — esta sub-tarea no aplica a recursos hasta que se migren).
+- `app/api/dashboard/[id]/descargar/route.ts` — idem libros.
+- **Migración**: si hay libros/Excel ya subidos al bucket público, scriptar la migración para mover los `path` o regenerar URLs. **No romper enlaces ya enviados por correo** — el endpoint `/leer/libro/[token]` sigue funcionando porque el archivo se sirve por el server.
+
+**Cómo verificar:** después del cambio, en incógnito **sin** cookie, copiar la URL final que entrega el server tras el redirect; debe expirar en 15min. Compartirla pasado ese tiempo → 403 de Supabase.
+
+**Caveat — Office Online iframe (dashboards):** el visor de gráficas (`view.officeapps.live.com`) necesita una URL accesible públicamente para Microsoft. Si bucket es privado, esto se rompe. **Opciones:**
+- Aceptar que la vista "Dashboard (gráficas)" solo funciona con bucket público y limitar el cambio a libros y Excel descargable, dejando dashboards con caveat documentado.
+- O reemplazar Office Online por un renderer client-side de gráficas (más trabajo, fuera de scope).
+- Recomendación: empezar por libros (PDF) que es el caso más expuesto. Excel iframe queda en revisión separada.
+
+### 🟢 P2 — Validar `PAYPAL_WEBHOOK_ID` (severidad BAJA, 5 minutos)
+
+**Problema:** si la variable falta o está mal en Vercel, todos los webhooks se rechazan con 401 silenciosamente. El comprador queda con cookie pero **nunca recibe magic link por correo** → no puede acceder desde otro dispositivo.
+
+**Acciones (elige una o ambas):**
+1. **Verificación operativa (1 min):** confirmar en Vercel → Settings → Environment Variables que `PAYPAL_WEBHOOK_ID` existe en `production` y coincide con el dashboard de PayPal (Apps & Credentials → Webhooks).
+2. **Defensa en código (5 min):** añadir en `app/api/health/route.ts` un check que reporte `paypal_webhook_id: !!process.env.PAYPAL_WEBHOOK_ID`. Opcionalmente: en `lib/paypal.ts:verificarFirmaWebhookPayPal`, ya devuelve `false` con un `console.error`; mejorar para emitir un `EventoSeguridad` tipo `CONFIG_FALTANTE` solo la primera vez por proceso (con flag in-memory para no spamear).
+
+### 🟢 P3 — Middleware-level guard para `/api/admin/*` (severidad BAJA)
+
+**Problema:** hoy cada endpoint admin valida con `isAdminAuthorized()` individualmente. Si un endpoint nuevo en una sesión futura olvida el guard, queda abierto.
+
+**Archivo a tocar:** `middleware.ts`. Añadir un matcher para `/api/admin/*` que rechace 401 si no existe la cookie `admin_auth`. **Importante:** sigue siendo defensa en profundidad — `isAdminAuthorized()` en cada endpoint debe permanecer porque también valida JTI revocado vs `SesionAdmin`. El middleware solo rechaza el caso "sin cookie alguna".
+
+**Esqueleto sugerido (no implementar sin revisar el middleware actual primero):**
+```ts
+// dentro de middleware.ts, antes del fin
+if (pathname.startsWith("/api/admin/") && !req.cookies.get("admin_auth")?.value) {
+  return new NextResponse(JSON.stringify({ error: "No autorizado" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+```
+
+### Cómo abordar estos pendientes
+
+- **Una PR por hallazgo.** Cada uno es aislado y revertible.
+- **Orden recomendado:** P2 (5 min, sin código de producción), luego P3 (cambio pequeño en middleware con riesgo controlado), luego P1 (más invasivo, requiere planificar la migración de archivos ya subidos).
+- **Antes de P1**, considera hacer backup del bucket `libros` y `datos` por si la migración requiere mover paths.
+
+---
+
+*Última actualización: 2026-06-02 (sesión 17 — recursos premium, dashboards premium, respuestas a cotizaciones, og:image objeto, compartir universal, auditoría de seguridad documentada en §18)*
+*Commit activo en main: `5c845f7`*
