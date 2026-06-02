@@ -20,6 +20,8 @@ import {
   enviarNotificacionCompraLibro,
   enviarEnlaceAccesoRecurso,
   enviarNotificacionCompraRecurso,
+  enviarEnlaceAccesoDashboard,
+  enviarNotificacionCompraDashboard,
 } from "@/lib/resend";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,7 @@ interface PayPalWebhookEvent {
 const PREFIJO_CONTENIDO = "contenido:";
 const PREFIJO_LIBRO = "libro:";
 const PREFIJO_RECURSO = "recurso:";
+const PREFIJO_DASHBOARD = "dashboard:";
 
 export async function POST(req: NextRequest) {
   // Necesitamos el body crudo (texto exacto) para que PayPal pueda verificar la firma.
@@ -85,6 +88,7 @@ export async function POST(req: NextRequest) {
     const esCompraContenido = customId.startsWith(PREFIJO_CONTENIDO);
     const esCompraLibro = customId.startsWith(PREFIJO_LIBRO);
     const esCompraRecurso = customId.startsWith(PREFIJO_RECURSO);
+    const esCompraDashboard = customId.startsWith(PREFIJO_DASHBOARD);
 
     switch (event.event_type) {
       case "PAYMENT.CAPTURE.COMPLETED":
@@ -94,6 +98,8 @@ export async function POST(req: NextRequest) {
           await procesarCompraLibroCompletada(event, customId);
         } else if (esCompraRecurso) {
           await procesarCompraRecursoCompletada(event, customId);
+        } else if (esCompraDashboard) {
+          await procesarCompraDashboardCompletada(event, customId);
         } else {
           await procesarDonacionCompletada(event);
         }
@@ -106,6 +112,8 @@ export async function POST(req: NextRequest) {
           await marcarPedidoLibroPorCustomId(customId, "FALLIDO");
         } else if (esCompraRecurso) {
           await marcarPedidoRecursoPorCustomId(customId, "FALLIDO");
+        } else if (esCompraDashboard) {
+          await marcarPedidoDashboardPorCustomId(customId, "FALLIDO");
         } else {
           await marcarDonacionPorOrderId(event, "FALLIDO");
         }
@@ -117,6 +125,8 @@ export async function POST(req: NextRequest) {
           await marcarPedidoLibroPorCustomId(customId, "CANCELADO");
         } else if (esCompraRecurso) {
           await marcarPedidoRecursoPorCustomId(customId, "CANCELADO");
+        } else if (esCompraDashboard) {
+          await marcarPedidoDashboardPorCustomId(customId, "CANCELADO");
         } else {
           await marcarDonacionPorOrderId(event, "CANCELADO");
         }
@@ -321,6 +331,58 @@ async function marcarPedidoRecursoPorCustomId(customId: string, estado: string) 
   const pedidoId = customId.slice(PREFIJO_RECURSO.length);
   if (!pedidoId) return;
   await prisma.pedidoRecurso.updateMany({
+    where: { id: pedidoId },
+    data: { estado },
+  });
+}
+
+async function procesarCompraDashboardCompletada(
+  event: PayPalWebhookEvent,
+  customId: string
+) {
+  const pedidoId = customId.slice(PREFIJO_DASHBOARD.length);
+  if (!pedidoId) return;
+
+  const montoStr = event.resource?.amount?.value ?? "0";
+
+  const r = await prisma.pedidoDashboard.updateMany({
+    where: { id: pedidoId, estado: "PENDIENTE" },
+    data: { estado: "COMPLETADO", completadoAt: new Date() },
+  });
+
+  if (r.count === 0) return; // ya estaba procesado
+
+  const pedido = await prisma.pedidoDashboard.findUnique({
+    where: { id: pedidoId },
+    select: {
+      tokenAcceso: true,
+      emailComprador: true,
+      nombreComprador: true,
+      tablero: { select: { titulo: true } },
+    },
+  });
+  if (!pedido) return;
+
+  await Promise.all([
+    enviarEnlaceAccesoDashboard(
+      pedido.emailComprador,
+      pedido.tablero.titulo,
+      pedido.tokenAcceso,
+      pedido.nombreComprador ?? undefined
+    ).catch(() => {}),
+    enviarNotificacionCompraDashboard(
+      montoStr,
+      pedido.tablero.titulo,
+      pedido.emailComprador,
+      pedido.nombreComprador
+    ).catch(() => {}),
+  ]);
+}
+
+async function marcarPedidoDashboardPorCustomId(customId: string, estado: string) {
+  const pedidoId = customId.slice(PREFIJO_DASHBOARD.length);
+  if (!pedidoId) return;
+  await prisma.pedidoDashboard.updateMany({
     where: { id: pedidoId },
     data: { estado },
   });
