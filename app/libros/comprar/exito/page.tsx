@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
+import { nuevaExpiracionAcceso } from "@/lib/accesoLibro";
 import {
   enviarEnlaceDescargaLibro,
   enviarNotificacionCompraLibro,
@@ -51,7 +52,11 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
           if (captura.completado) {
             const r = await prisma.pedidoLibro.updateMany({
               where: { id: pedido.id, estado: "PENDIENTE" },
-              data: { estado: "COMPLETADO", completadoAt: new Date() },
+              data: {
+                estado: "COMPLETADO",
+                completadoAt: new Date(),
+                expiraAccesoAt: nuevaExpiracionAcceso(),
+              },
             });
             if (r.count > 0) {
               exito = true;

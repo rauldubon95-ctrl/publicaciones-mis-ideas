@@ -491,6 +491,8 @@ model PedidoLibro {
   creadoAt        DateTime  @default(now())
   completadoAt    DateTime?
   ultimoAccesoAt  DateTime?
+  descargas       Int       @default(0) // nº de descargas consumidas (tope anti-reshare)
+  expiraAccesoAt  DateTime? // caducidad del acceso. null = legacy (sin caducidad)
 
   @@index([emailComprador])
   @@index([estado])

@@ -12,7 +12,10 @@ import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/se
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ acceso?: string }>;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -42,8 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function LibroPage({ params }: Props) {
+export default async function LibroPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const acceso = (await searchParams)?.acceso;
   const libro = await prisma.libro.findUnique({
     where: { slug, publicado: true },
     include: { _count: { select: { descargas: true } } },
@@ -100,6 +104,17 @@ export default async function LibroPage({ params }: Props) {
       </nav>
 
       <BotonesCompartir titulo={libro.titulo} path={`/libros/${slug}`} />
+
+      {esDePago && !adminOk && !tieneAcceso && (acceso === "caducado" || acceso === "limite") && (
+        <div className="mb-6 border border-amber-200 bg-amber-50 rounded px-4 py-3">
+          <p className="text-sm text-amber-800">
+            {acceso === "caducado"
+              ? "El enlace de acceso a este libro ha caducado."
+              : "Has alcanzado el número máximo de descargas de este libro."}{" "}
+            Si compraste el libro y necesitas volver a descargarlo, escríbeme y te reactivo el acceso.
+          </p>
+        </div>
+      )}
 
       {esDePago && adminOk && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-3">

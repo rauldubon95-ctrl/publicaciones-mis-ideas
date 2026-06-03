@@ -20,11 +20,24 @@ export async function GET(
 
   const pedido = await prisma.pedidoLibro.findUnique({
     where: { tokenAcceso: token },
-    select: { estado: true, libroId: true, libro: { select: { slug: true } } },
+    select: {
+      estado: true,
+      libroId: true,
+      expiraAccesoAt: true,
+      libro: { select: { slug: true } },
+    },
   });
 
   if (!pedido || pedido.estado !== "COMPLETADO") {
     return NextResponse.redirect(new URL("/libros?acceso=invalido", req.url));
+  }
+
+  // Caducidad: si el acceso expiró, no se fija cookie. expiraAccesoAt null =
+  // legacy (sin caducidad). El admin puede renovar con "Reenviar enlace".
+  if (pedido.expiraAccesoAt && pedido.expiraAccesoAt <= new Date()) {
+    return NextResponse.redirect(
+      new URL(`/libros/${pedido.libro.slug}?acceso=caducado`, req.url)
+    );
   }
 
   // Tracking suave del último acceso — fire-and-forget.

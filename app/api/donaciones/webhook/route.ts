@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarFirmaWebhookPayPal } from "@/lib/paypal";
+import { nuevaExpiracionAcceso } from "@/lib/accesoLibro";
 import {
   enviarNotificacionDonacion,
   enviarEnlaceAccesoContenido,
@@ -243,7 +244,11 @@ async function procesarCompraLibroCompletada(
 
   const r = await prisma.pedidoLibro.updateMany({
     where: { id: pedidoId, estado: "PENDIENTE" },
-    data: { estado: "COMPLETADO", completadoAt: new Date() },
+    data: {
+      estado: "COMPLETADO",
+      completadoAt: new Date(),
+      expiraAccesoAt: nuevaExpiracionAcceso(),
+    },
   });
 
   if (r.count === 0) return; // ya estaba procesado

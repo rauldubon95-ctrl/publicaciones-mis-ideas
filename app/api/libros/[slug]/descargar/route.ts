@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { tieneAccesoLibro } from "@/lib/accesoLibro";
+import { consumirDescargaLibro } from "@/lib/accesoLibro";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { descargarDesdeBucket, BUCKET_LIBROS } from "@/lib/supabase-admin";
 
@@ -23,12 +23,26 @@ export async function GET(
   const esDePago = libro.precioCentavos != null && libro.precioCentavos > 0;
 
   if (esDePago) {
-    const [adminOk, acceso] = await Promise.all([
-      isAdminAuthorized(),
-      tieneAccesoLibro(libro.id),
-    ]);
-    if (!adminOk && !acceso) {
-      return NextResponse.redirect(new URL(`/libros/${slug}`, req.url), { status: 302 });
+    // El admin descarga siempre y no consume tope. El comprador pasa por
+    // consumirDescargaLibro: valida compra + vigencia + tope y suma 1 descarga.
+    const adminOk = await isAdminAuthorized();
+    if (!adminOk) {
+      const r = await consumirDescargaLibro(libro.id);
+      if (!r.ok) {
+        if (r.motivo === "caducado") {
+          return NextResponse.redirect(
+            new URL(`/libros/${slug}?acceso=caducado`, req.url),
+            { status: 302 }
+          );
+        }
+        if (r.motivo === "limite") {
+          return NextResponse.redirect(
+            new URL(`/libros/${slug}?acceso=limite`, req.url),
+            { status: 302 }
+          );
+        }
+        return NextResponse.redirect(new URL(`/libros/${slug}`, req.url), { status: 302 });
+      }
     }
   }
 

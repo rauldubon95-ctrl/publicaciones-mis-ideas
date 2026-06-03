@@ -324,7 +324,8 @@ export async function enviarEnlaceDescargaLibro(
     <p style="margin:0 0 8px;color:#52525b;font-size:16px;">${saludo}</p>
     <p style="margin:0 0 24px;color:#52525b;font-size:16px;">
       Gracias por adquirir <strong>${escapeHtml(titulo)}</strong>.
-      Usa el botón de abajo para descargar tu PDF. El enlace es permanente — puedes volver a usarlo cuando quieras.
+      Usa el botón de abajo para descargar tu PDF. Este enlace es personal: válido por 30 días
+      y hasta 5 descargas. Si lo necesitas de nuevo más adelante, escríbeme y te reactivo el acceso.
     </p>
     <a href="${enlace}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
       Descargar PDF
