@@ -276,6 +276,7 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/admin/telemetria/route.ts` | GET admin: proxy autenticado → Worker `/telemetria` |
 | `app/api/admin/sync-d1-all/route.ts` | POST: sincroniza todos los artículos publicados a D1 |
 | `app/api/track/route.ts` | POST: registra vista de artículo |
+| `app/api/health/deep/route.ts` | GET (sesión 20): health profundo — sondea DB+Worker+Storage con timeouts. `HEALTH_TOKEN`. 200 sano / 503 degradado |
 | `app/api/subscribe/route.ts` | POST: registrar suscripción email |
 
 ### Cloudflare Worker (`workers/sociologia/`)
@@ -553,10 +554,10 @@ rama `claude/m2-csp-nonces` (restaura el CSP estático con `unsafe-inline`).
 > añade un `<script src>` plano (sin `next/script` ni nonce), quedará bloqueado:
 > usar `next/script` o añadirle el nonce manualmente.
 
-### 🟡 Resiliencia (Fase 3, opcional)
+### ✅ Resiliencia (Fase 3) — CERRADO sesión 20
 
 - La home ya resiste hipos de DB gracias a `unstable_cache` (sirve datos cacheados).
-- Falta `/api/health/deep` que chequee DB + Worker + Storage para detección de caídas.
+- **`/api/health/deep`** (sesión 20): sondea DB (Prisma `SELECT 1`) + Worker (`/telemetria` GET → 401 = vivo) + Storage (Supabase `listBuckets`), cada uno con timeout 5s y latencia. Solo lectura, protegido con `HEALTH_TOKEN` (sin token válido → 200 mínimo). Devuelve `200` si todo sano o `503` si algo falla, con detalle por dependencia. Útil para alertas de uptime.
 
 ### ⚠️ Caveat de entorno descubierto en sesión 18
 
@@ -591,7 +592,7 @@ actualizar CLAUDE.md y este §18.
 
 ---
 
-*Última actualización: 2026-06-03 (sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin "Reenviar enlace" en los **4 tipos** de venta (libros, artículos/compras, recursos, dashboards): botón en cada panel + endpoint `POST /api/admin/<panel>/[id]/reenviar` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Rama de respaldo del incidente: `fix/incidente-pagos-sesion20`. Commits directos a `main`: `3dda7a0`, `df38836` (incidente), `9c680eb` (reenviar libros + limpieza), `fdd838c` (reenviar artículos/recursos/dashboards). **Anti-reshare de libros PDF**: caducidad 30 días + tope 5 descargas por pedido (`PedidoLibro.expiraAccesoAt`/`descargas`, migración Supabase `pedidolibro_caducidad_y_tope_descargas`; lógica en `lib/accesoLibro.ts` → `consumirDescargaLibro`; legacy con `expiraAccesoAt=null` = acceso permanente; "Reenviar enlace" reinicia tope y renueva ventana). Ver §7. Pendiente: Fase 3 `/api/health/deep`.)*
+*Última actualización: 2026-06-03 (sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin "Reenviar enlace" en los **4 tipos** de venta (libros, artículos/compras, recursos, dashboards): botón en cada panel + endpoint `POST /api/admin/<panel>/[id]/reenviar` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Rama de respaldo del incidente: `fix/incidente-pagos-sesion20`. Commits directos a `main`: `3dda7a0`, `df38836` (incidente), `9c680eb` (reenviar libros + limpieza), `fdd838c` (reenviar artículos/recursos/dashboards). **Anti-reshare de libros PDF**: caducidad 30 días + tope 5 descargas por pedido (`PedidoLibro.expiraAccesoAt`/`descargas`, migración Supabase `pedidolibro_caducidad_y_tope_descargas`; lógica en `lib/accesoLibro.ts` → `consumirDescargaLibro`; legacy con `expiraAccesoAt=null` = acceso permanente; "Reenviar enlace" reinicia tope y renueva ventana). Ver §7. **Fase 3 (resiliencia) cerrada:** `/api/health/deep` sondea DB+Worker+Storage con timeouts (solo lectura, `HEALTH_TOKEN`, 200/503). Auditoría de seguridad+resiliencia completa.)*
 *Sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático].*
 *Sesión 18 — auditoría de seguridad: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts externos [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.*
 *Commit activo en main: sesión 20 — reenvío de enlaces (4 tipos) + anti-reshare de libros PDF (caducidad + tope de descargas) + este commit de docs*
