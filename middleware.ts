@@ -20,6 +20,55 @@ function generarTraceId(): string {
     .replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
 }
 
+// Genera un nonce criptográfico de 16 bytes codificado en base64.
+// Disponible en Edge runtime via Web Crypto API + btoa.
+function generarNonce(): string {
+  const arr = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(Array.from(arr, (b) => String.fromCharCode(b)).join(""));
+}
+
+// Construye el header Content-Security-Policy para la petición dada.
+// Reemplaza 'unsafe-inline' en script-src por un nonce por petición +
+// 'strict-dynamic' (los scripts cargados por un script con nonce son
+// confiables automáticamente, lo que permite que Next.js y PayPal funcionen).
+function construirCSP(nonce: string): string {
+  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+    : "*.supabase.co";
+
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.paypal.com`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    `img-src 'self' data: blob: https://${supabaseHost} https://www.paypal.com`,
+    `connect-src 'self' https://${supabaseHost} https://sociologia.raul-dubon95.workers.dev https://www.paypal.com https://api.paypal.com`,
+    "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+// Crea un NextResponse.next() con el nonce inyectado en las request headers
+// (para que los Server Components puedan leerlo vía headers()) y con el CSP
+// dinámico en la response.
+function crearRespuestaConNonce(
+  request: NextRequest,
+  traceId: string,
+  nonce: string
+): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set("x-trace-id", traceId);
+  response.headers.set("Content-Security-Policy", construirCSP(nonce));
+  return response;
+}
+
 function logEvento(
   tipo: string,
   ip: string,
@@ -44,6 +93,7 @@ export async function middleware(request: NextRequest) {
   const ip = getIp(request);
   const ua = request.headers.get("user-agent");
   const traceId = request.headers.get("x-trace-id") ?? generarTraceId();
+  const nonce = generarNonce();
 
   if (esScanPath(pathname)) {
     logEvento("SCAN_PATH", ip, pathname, traceId, { ua: ua?.slice(0, 120) ?? "n/a" });
@@ -75,13 +125,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!pathname.startsWith("/admin")) {
-    const response = NextResponse.next();
-    response.headers.set("x-trace-id", traceId);
-    return response;
+    return crearRespuestaConNonce(request, traceId, nonce);
   }
 
   if (pathname === "/admin/login") {
-    return NextResponse.next();
+    return crearRespuestaConNonce(request, traceId, nonce);
   }
 
   const cookie = request.cookies.get("admin_auth")?.value;
@@ -95,9 +143,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (cookie && (await verifySessionToken(cookie, secret))) {
-    const response = NextResponse.next();
-    response.headers.set("x-trace-id", traceId);
-    return response;
+    return crearRespuestaConNonce(request, traceId, nonce);
   }
 
   logEvento("ACCESO_DENEGADO", ip, pathname, traceId);

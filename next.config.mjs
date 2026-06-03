@@ -17,21 +17,9 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://www.paypal.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      `img-src 'self' data: blob: https://${SUPABASE_HOST} https://www.paypal.com`,
-      `connect-src 'self' https://${SUPABASE_HOST} https://sociologia.raul-dubon95.workers.dev https://www.paypal.com https://api.paypal.com`,
-      "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
-  },
+  // Content-Security-Policy se establece dinámicamente en middleware.ts
+  // (nonce por petición + strict-dynamic). No establecer aquí para evitar
+  // conflictos con el header dinámico que genera el middleware.
 ];
 
 const nextConfig = {
