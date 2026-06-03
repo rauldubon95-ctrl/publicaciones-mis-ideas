@@ -58,14 +58,22 @@ function crearRespuestaConNonce(
   traceId: string,
   nonce: string
 ): NextResponse {
+  const csp = construirCSP(nonce);
+
+  // IMPORTANTE: Next.js extrae el nonce del header Content-Security-Policy
+  // presente en las REQUEST headers (no de x-nonce) para propagarlo a sus
+  // propios scripts de framework y a los componentes next/script (PayPal).
+  // Por eso el CSP debe ir tanto en request como en response. x-nonce queda
+  // como conveniencia para que JsonLd.tsx lo lea vía headers().
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
   response.headers.set("x-trace-id", traceId);
-  response.headers.set("Content-Security-Policy", construirCSP(nonce));
+  response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 
