@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
-import { setearCookieAccesoLibro } from "@/lib/accesoLibro";
 import {
   enviarEnlaceDescargaLibro,
   enviarNotificacionCompraLibro,
@@ -22,7 +21,7 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
 
   let exito = false;
   let titulo = "";
-  let slug = "";
+  let token = "";
   let email = "";
 
   if (pedido_id && paypalOrderId) {
@@ -37,11 +36,14 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
 
     if (pedido) {
       titulo = pedido.libro.titulo;
-      slug   = pedido.libro.slug;
+      token  = pedido.tokenAcceso;
       email  = pedido.emailComprador;
 
+      // No seteamos la cookie aquí: hacerlo durante el render de una página lanza
+      // "Cookies can only be modified in a Server Action or Route Handler" en
+      // Next.js 15. El botón "Descargar ahora" pasa por /leer/libro/<token>
+      // (Route Handler) que sí puede setear la cookie y luego redirige al libro.
       if (pedido.estado === "COMPLETADO") {
-        await setearCookieAccesoLibro(pedido.libroId, pedido.tokenAcceso);
         exito = true;
       } else {
         try {
@@ -52,7 +54,6 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
             if (r.count > 0) {
-              await setearCookieAccesoLibro(pedido.libroId, pedido.tokenAcceso);
               exito = true;
               // Enviar el enlace de descarga por correo desde aquí. El webhook
               // de PayPal es el respaldo, pero esta página es el camino fiable
@@ -114,7 +115,7 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
         También enviamos el enlace de descarga a{" "}
         <span className="font-mono text-zinc-700">{email}</span> para que puedas acceder desde cualquier dispositivo.
       </p>
-      <Link href={`/libros/${slug}`} className="btn-primary">Descargar ahora →</Link>
+      <Link href={`/leer/libro/${token}`} className="btn-primary">Descargar ahora →</Link>
     </div>
   );
 }

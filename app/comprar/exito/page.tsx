@@ -11,7 +11,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
-import { setearCookieAcceso } from "@/lib/accesoContenido";
 import { enviarEnlaceAccesoContenido } from "@/lib/resend";
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
 
   let exito = false;
   let titulo = "";
-  let slug = "";
+  let token = "";
   let email = "";
 
   if (pedido_id && paypalOrderId) {
@@ -47,12 +46,12 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
 
     if (pedido) {
       titulo = pedido.publicacion.titulo;
-      slug = pedido.publicacion.slug;
+      token = pedido.tokenAcceso;
       email = pedido.emailComprador;
 
+      // La cookie NO se setea aquí (lanza error en render de página en Next 15).
+      // El botón pasa por /leer/<token> (Route Handler) que setea la cookie.
       if (pedido.estado === "COMPLETADO") {
-        // Webhook ya lo procesó antes; solo seteamos cookie y mostramos éxito.
-        await setearCookieAcceso(pedido.publicacionId, pedido.tokenAcceso);
         exito = true;
       } else {
         try {
@@ -63,7 +62,6 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
             if (r.count > 0) {
-              await setearCookieAcceso(pedido.publicacionId, pedido.tokenAcceso);
               exito = true;
               // Enviar el correo con el enlace mágico desde aquí (camino fiable).
               // El webhook es respaldo; el guard updateMany(estado:PENDIENTE)
@@ -149,7 +147,7 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
         volver a leerlo desde cualquier dispositivo.
       </p>
 
-      <Link href={`/publicaciones/${slug}`} className="btn-primary">
+      <Link href={`/leer/${token}`} className="btn-primary">
         Leer el artículo →
       </Link>
     </div>

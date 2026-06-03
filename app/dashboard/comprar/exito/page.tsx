@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
-import { setearCookieAccesoDashboard } from "@/lib/accesoDashboard";
 import {
   enviarEnlaceAccesoDashboard,
   enviarNotificacionCompraDashboard,
@@ -22,7 +21,7 @@ export default async function ComprarDashboardExitoPage({ searchParams }: Props)
 
   let exito = false;
   let titulo = "";
-  let slug = "";
+  let token = "";
   let email = "";
 
   if (pedido_id && paypalOrderId) {
@@ -37,11 +36,12 @@ export default async function ComprarDashboardExitoPage({ searchParams }: Props)
 
     if (pedido) {
       titulo = pedido.tablero.titulo;
-      slug   = pedido.tablero.slug;
+      token  = pedido.tokenAcceso;
       email  = pedido.emailComprador;
 
+      // La cookie NO se setea aquí (lanza error en render de página en Next 15).
+      // El botón pasa por /leer/dashboard/<token> (Route Handler) que la setea.
       if (pedido.estado === "COMPLETADO") {
-        await setearCookieAccesoDashboard(pedido.tableroId, pedido.tokenAcceso);
         exito = true;
       } else {
         try {
@@ -52,7 +52,6 @@ export default async function ComprarDashboardExitoPage({ searchParams }: Props)
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
             if (r.count > 0) {
-              await setearCookieAccesoDashboard(pedido.tableroId, pedido.tokenAcceso);
               exito = true;
               // Correo con el enlace mágico desde el camino fiable (respaldo: webhook).
               await Promise.all([
@@ -110,7 +109,7 @@ export default async function ComprarDashboardExitoPage({ searchParams }: Props)
         También enviamos el enlace de acceso a{" "}
         <span className="font-mono text-zinc-700">{email}</span> para que puedas acceder desde cualquier dispositivo.
       </p>
-      <Link href={`/dashboard/${slug}`} className="btn-primary">Abrir tablero →</Link>
+      <Link href={`/leer/dashboard/${token}`} className="btn-primary">Abrir tablero →</Link>
     </div>
   );
 }
