@@ -345,7 +345,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| CSP `unsafe-inline` | `next.config.mjs`: `script-src 'self' 'unsafe-inline'`. Fix requiere nonces via middleware. **= M2, pendiente para próxima sesión (ver §18).** | **Alta** |
+| ~~CSP `unsafe-inline`~~ (**CERRADO sesión 19 — M2**) | `script-src` ya no usa `'unsafe-inline'`: nonce por petición vía `middleware.ts` (`construirCSP` + `'strict-dynamic'`), CSP en request+response. `JsonLd.tsx` async lee `x-nonce`. `next.config.mjs` ya no define CSP estático. Verificación operativa en navegador pendiente. Ver §18. | ~~Alta~~ |
 | Más limpieza corpus D1 | 804 docs, aún hay documentos de baja calidad | Alta |
 | ~~Buckets Supabase públicos~~ (sesión 17 — **MITIGADO sesión 18**) | Los endpoints `/api/libros/[slug]/descargar` y `/api/dashboard/[id]/descargar` ya hacen **stream** del archivo (service role) en vez de redirigir a la URL pública; la URL del bucket nunca se entrega al cliente. Recursos premium ya no usan bucket (HTML en DB + RLS cerrado). Buckets siguen públicos pero **ya no son enumerables**. Residual BAJO: iframe Office Online de dashboards. Ver §18. | ~~Media~~ → Baja |
 | ~~`PAYPAL_WEBHOOK_ID` no validado~~ (sesión 17, **CERRADO** PR #20) | `/api/health` con `HEALTH_TOKEN` válido reporta `config.paypal_webhook_id` y otras envs críticas como booleans. Verificación operativa pendiente solo en Vercel env vars. | ~~Baja~~ |
@@ -509,6 +509,17 @@ Cliente (Next.js)
   recursos, dashboard, servicios` cachean su consulta con `unstable_cache`
   (revalida 5 min, tags). Se mantienen `force-dynamic` a propósito (ver caveat
   Preview abajo). Propagación de cambios de contenido: hasta 5 min.
+- **M2 (sesión 19)** — CSP **sin `unsafe-inline`** en `script-src`. Nonce
+  criptográfico por petición generado en `middleware.ts` (`generarNonce`, Web
+  Crypto + `btoa`). El CSP se construye dinámicamente (`construirCSP`) con
+  `'nonce-<nonce>' 'strict-dynamic'` y se inyecta **tanto en las request headers
+  como en las response headers** (Next.js lee el nonce del header CSP de la
+  *request* para propagarlo a sus scripts de framework y a `next/script`/PayPal;
+  `x-nonce` queda como conveniencia para `JsonLd.tsx`, que ahora es async y lo lee
+  vía `headers()`). `next.config.mjs` **ya no** define el header CSP estático
+  (lo hace el middleware). Mergeado a `main` directo (build local compiló OK; el
+  fallo de `next build` local es solo `RESEND_API_KEY` ausente en el contenedor,
+  no en Vercel).
 
 ### 🟡 Residual BAJO — Office Online iframe (dashboards)
 
@@ -518,14 +529,22 @@ privatizar `datos` + servir el iframe con signed URL (frágil con Office Online)
 Como el bucket ya no es enumerable, la URL no es descubrible sin tener acceso.
 Decisión de producto: aceptar el residual o reemplazar el visor.
 
-### 🔴 M2 — CSP sin `unsafe-inline` (PENDIENTE, prioridad Alta)
+### ✅ M2 — CSP sin `unsafe-inline` (CERRADO sesión 19)
 
-`next.config.mjs` tiene `script-src 'self' 'unsafe-inline' https://www.paypal.com`.
-El `'unsafe-inline'` debilita la protección XSS. Fix correcto = **nonces por
-request** vía `middleware.ts` (+ `'strict-dynamic'` si aplica). **Es delicado**:
-puede romper los scripts inline de Next y el SDK de PayPal si no se hace con
-cuidado. **Rama aislada + verificar en preview de Vercel en navegador** (consola
-sin violaciones de CSP, flujo PayPal completo) **antes** de mergear a main.
+Resuelto con nonces por petición (ver bloque "Cerrado" arriba). `script-src`
+ahora es `'self' 'nonce-<nonce>' 'strict-dynamic' https://www.paypal.com`, sin
+`'unsafe-inline'`. **Verificación operativa pendiente en producción**: abrir el
+sitio y confirmar en la consola que no hay violaciones de CSP, que el SDK de
+PayPal carga (`/donar` o un muro de pago) y que el `<script application/ld+json>`
+lleva atributo `nonce`. Si algo fallara, el rollback es revertir el merge de la
+rama `claude/m2-csp-nonces` (restaura el CSP estático con `unsafe-inline`).
+
+> **Nota sobre `strict-dynamic`:** anula el allowlist de hosts (`'self'`,
+> `https://www.paypal.com`) en navegadores CSP3. Funciona porque PayPal se carga
+> vía `next/script` (`components/BotonesPayPal.tsx`), al que Next.js le propaga el
+> nonce automáticamente al leerlo del header CSP de la request. Si en el futuro se
+> añade un `<script src>` plano (sin `next/script` ni nonce), quedará bloqueado:
+> usar `next/script` o añadirle el nonce manualmente.
 
 ### 🟡 Resiliencia (Fase 3, opcional)
 
@@ -544,27 +563,27 @@ ISR estático, primero **configurar `DATABASE_URL` en el entorno Preview** de Ve
 ### PROMPT para la próxima sesión IA
 
 ```
-Continúa la auditoría de resiliencia de rauldubon.org. La sesión 18 ya cerró
-seguridad crítica/alta (RLS anon, streaming de archivos de pago), timeouts
-externos y caching. Lee §18 de CLAUDE.md y docs/auditoria-seguridad-2026-06-02.md.
+Continúa la resiliencia de rauldubon.org. Las sesiones 18–19 ya cerraron toda
+la seguridad crítica/alta/media: RLS anon, streaming de archivos de pago,
+timeouts externos, caching y M2 (CSP sin unsafe-inline con nonces por request).
+Lee §18 de CLAUDE.md y docs/auditoria-seguridad-2026-06-02.md.
 
-Tarea principal: M2 — eliminar 'unsafe-inline' del script-src del CSP en
-next.config.mjs usando nonces por request vía middleware.ts (+ 'strict-dynamic'
-si aplica), SIN romper los scripts inline de Next ni el SDK de PayPal.
+Primero (operativo, 2 min): verifica en producción que M2 no rompió nada —
+abre el sitio, consola del navegador sin violaciones de CSP, que el SDK de
+PayPal cargue (/donar o un muro de pago) y que el <script application/ld+json>
+lleve atributo nonce. Si algo falla, revertir el merge de claude/m2-csp-nonces.
 
-Reglas estrictas:
-- Rama nueva claude/m2-csp-nonces. NO mergear a main sin mi OK explícito.
-- Desplegar primero a un PREVIEW de Vercel y pedirme verificar en el navegador
-  (consola sin violaciones de CSP, que cargue el SDK de PayPal y se pueda iniciar
-  una compra de prueba) ANTES de mergear a producción.
-- Si el nonce no se propaga bien a PayPal/Next, proponer alternativas (hashes en
-  el CSP, o documentar por qué se mantiene unsafe-inline) en vez de romper el sitio.
-- Al terminar, actualizar CLAUDE.md y este §18.
+Tarea principal (Fase 3, resiliencia): añadir /api/health/deep que chequee
+DB (Prisma) + Worker (sociologia) + Storage (Supabase) con timeouts, devolviendo
+un JSON con el estado de cada dependencia. Proteger con HEALTH_TOKEN como
+/api/health. Útil para detección de caídas.
 
-Opcional si sobra tiempo: /api/health/deep (chequea DB+Worker+Storage).
+Reglas: rama nueva, NO mergear a main sin mi OK explícito. Al terminar,
+actualizar CLAUDE.md y este §18.
 ```
 
 ---
 
-*Última actualización: 2026-06-02 (sesión 18 — auditoría de seguridad y resiliencia: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts en llamadas externas [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]; pendiente para próxima sesión: M2 CSP nonces. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.)*
-*Commit activo en main: `05c8a52` (+ docs sesión 18)*
+*Última actualización: 2026-06-03 (sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático]. Mergeado a `main`. Pendiente: verificación operativa en navegador + Fase 3 `/api/health/deep`.)*
+*Sesión 18 — auditoría de seguridad: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts externos [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.*
+*Commit activo en main: `34678cd` (M2) — actualizar tras commit de docs sesión 19*
