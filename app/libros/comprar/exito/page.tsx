@@ -3,6 +3,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
 import { setearCookieAccesoLibro } from "@/lib/accesoLibro";
+import {
+  enviarEnlaceDescargaLibro,
+  enviarNotificacionCompraLibro,
+} from "@/lib/resend";
 
 export const metadata: Metadata = {
   title: "Compra confirmada",
@@ -25,7 +29,8 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
     const pedido = await prisma.pedidoLibro.findUnique({
       where: { id: pedido_id },
       select: {
-        id: true, estado: true, tokenAcceso: true, libroId: true, emailComprador: true,
+        id: true, estado: true, tokenAcceso: true, libroId: true,
+        emailComprador: true, nombreComprador: true, montoCentavos: true,
         libro: { select: { titulo: true, slug: true } },
       },
     });
@@ -46,9 +51,28 @@ export default async function ComprarLibroExitoPage({ searchParams }: Props) {
               where: { id: pedido.id, estado: "PENDIENTE" },
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
-            if (r.count > 0 || pedido.estado === "COMPLETADO") {
+            if (r.count > 0) {
               await setearCookieAccesoLibro(pedido.libroId, pedido.tokenAcceso);
               exito = true;
+              // Enviar el enlace de descarga por correo desde aquí. El webhook
+              // de PayPal es el respaldo, pero esta página es el camino fiable
+              // (el comprador siempre vuelve aquí tras pagar). El guard
+              // updateMany(estado:PENDIENTE) garantiza que solo quien hace la
+              // transición PENDIENTE→COMPLETADO envía el correo: nunca doble.
+              await Promise.all([
+                enviarEnlaceDescargaLibro(
+                  pedido.emailComprador,
+                  pedido.libro.titulo,
+                  pedido.tokenAcceso,
+                  pedido.nombreComprador ?? undefined
+                ).catch(() => {}),
+                enviarNotificacionCompraLibro(
+                  (pedido.montoCentavos / 100).toFixed(2),
+                  pedido.libro.titulo,
+                  pedido.emailComprador,
+                  pedido.nombreComprador
+                ).catch(() => {}),
+              ]);
             }
           }
         } catch {

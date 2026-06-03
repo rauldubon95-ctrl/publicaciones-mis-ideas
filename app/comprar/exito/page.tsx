@@ -12,6 +12,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
 import { setearCookieAcceso } from "@/lib/accesoContenido";
+import { enviarEnlaceAccesoContenido } from "@/lib/resend";
 
 export const metadata: Metadata = {
   title: "Compra confirmada",
@@ -39,6 +40,7 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
         tokenAcceso: true,
         publicacionId: true,
         emailComprador: true,
+        nombreComprador: true,
         publicacion: { select: { titulo: true, slug: true } },
       },
     });
@@ -60,9 +62,19 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
               where: { id: pedido.id, estado: "PENDIENTE" },
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
-            if (r.count > 0 || pedido.estado === "COMPLETADO") {
+            if (r.count > 0) {
               await setearCookieAcceso(pedido.publicacionId, pedido.tokenAcceso);
               exito = true;
+              // Enviar el correo con el enlace mágico desde aquí (camino fiable).
+              // El webhook es respaldo; el guard updateMany(estado:PENDIENTE)
+              // garantiza un único envío.
+              await enviarEnlaceAccesoContenido(
+                pedido.emailComprador,
+                pedido.publicacion.titulo,
+                pedido.publicacion.slug,
+                pedido.tokenAcceso,
+                pedido.nombreComprador
+              ).catch(() => {});
             }
           }
         } catch {

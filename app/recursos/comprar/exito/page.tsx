@@ -3,6 +3,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
 import { setearCookieAccesoRecurso } from "@/lib/accesoRecurso";
+import {
+  enviarEnlaceAccesoRecurso,
+  enviarNotificacionCompraRecurso,
+} from "@/lib/resend";
 
 export const metadata: Metadata = {
   title: "Compra confirmada",
@@ -25,7 +29,8 @@ export default async function ComprarRecursoExitoPage({ searchParams }: Props) {
     const pedido = await prisma.pedidoRecurso.findUnique({
       where: { id: pedido_id },
       select: {
-        id: true, estado: true, tokenAcceso: true, recursoId: true, emailComprador: true,
+        id: true, estado: true, tokenAcceso: true, recursoId: true,
+        emailComprador: true, nombreComprador: true, montoCentavos: true,
         recurso: { select: { titulo: true, slug: true } },
       },
     });
@@ -46,9 +51,24 @@ export default async function ComprarRecursoExitoPage({ searchParams }: Props) {
               where: { id: pedido.id, estado: "PENDIENTE" },
               data: { estado: "COMPLETADO", completadoAt: new Date() },
             });
-            if (r.count > 0 || pedido.estado === "COMPLETADO") {
+            if (r.count > 0) {
               await setearCookieAccesoRecurso(pedido.recursoId, pedido.tokenAcceso);
               exito = true;
+              // Correo con el enlace mágico desde el camino fiable (respaldo: webhook).
+              await Promise.all([
+                enviarEnlaceAccesoRecurso(
+                  pedido.emailComprador,
+                  pedido.recurso.titulo,
+                  pedido.tokenAcceso,
+                  pedido.nombreComprador ?? undefined
+                ).catch(() => {}),
+                enviarNotificacionCompraRecurso(
+                  (pedido.montoCentavos / 100).toFixed(2),
+                  pedido.recurso.titulo,
+                  pedido.emailComprador,
+                  pedido.nombreComprador
+                ).catch(() => {}),
+              ]);
             }
           }
         } catch {
