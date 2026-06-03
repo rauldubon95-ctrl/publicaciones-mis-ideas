@@ -261,10 +261,13 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/donaciones/checkout/route.ts` | POST: crea orden PayPal para donación |
 | `app/api/admin/cotizaciones/[id]/responder/route.ts` | POST admin: responde cotización vía Resend (rate-limit 30/h, máx 5 respuestas/cot) (sesión 17) |
 | `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido + total recaudado |
+| `app/api/admin/compras/[id]/reenviar/route.ts` | POST admin (sesión 20): reenvía el enlace de acceso al email del pedido (artículo premium, solo COMPLETADO, rate-limit 30/h) |
 | `app/api/admin/ventas-libros/route.ts` | GET admin: lista PedidoLibro + total recaudado |
 | `app/api/admin/ventas-libros/[id]/reenviar/route.ts` | POST admin (sesión 20): reenvía el correo con el enlace de descarga al email del pedido (solo COMPLETADO, rate-limit 30/h). Para compradores que perdieron el acceso. |
 | `app/api/admin/ventas-recursos/route.ts` | GET admin: lista PedidoRecurso + total recaudado (sesión 17) |
+| `app/api/admin/ventas-recursos/[id]/reenviar/route.ts` | POST admin (sesión 20): reenvía el enlace de acceso al email del pedido (recurso premium, solo COMPLETADO, rate-limit 30/h) |
 | `app/api/admin/ventas-dashboards/route.ts` | GET admin: lista PedidoDashboard + total recaudado (sesión 17) |
+| `app/api/admin/ventas-dashboards/[id]/reenviar/route.ts` | POST admin (sesión 20): reenvía el enlace de acceso al email del pedido (tablero premium, solo COMPLETADO, rate-limit 30/h) |
 | `app/api/admin/libros/route.ts` | GET + POST admin: listar y crear libros |
 | `app/api/admin/libros/[id]/route.ts` | PUT + DELETE admin: editar y eliminar libro |
 | `app/api/admin/libros/upload/route.ts` | POST admin: subir PDF o portada a Supabase Storage bucket `libros` |
@@ -585,7 +588,7 @@ actualizar CLAUDE.md y este §18.
 
 ---
 
-*Última actualización: 2026-06-03 (sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin: `POST /api/admin/ventas-libros/[id]/reenviar` + botón "Reenviar enlace" en `/admin/ventas-libros` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Commits directos a `main`: `3dda7a0`, `df38836` (incidente) + commit de esta sesión. Pendiente: Fase 3 `/api/health/deep`.)*
+*Última actualización: 2026-06-03 (sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin "Reenviar enlace" en los **4 tipos** de venta (libros, artículos/compras, recursos, dashboards): botón en cada panel + endpoint `POST /api/admin/<panel>/[id]/reenviar` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Rama de respaldo del incidente: `fix/incidente-pagos-sesion20`. Commits directos a `main`: `3dda7a0`, `df38836` (incidente), `9c680eb` (reenviar libros + limpieza) + commit de extensión a los otros 3 tipos. Pendiente: Fase 3 `/api/health/deep`.)*
 *Sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático].*
 *Sesión 18 — auditoría de seguridad: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts externos [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.*
 *Commit activo en main: actualizar tras commit de sesión 20*

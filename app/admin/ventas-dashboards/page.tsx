@@ -33,11 +33,35 @@ const ESTADO_ESTILOS: Record<Estado, string> = {
   CANCELADO: "bg-zinc-100 text-zinc-500",
 };
 
+type EstadoReenvio = { estado: "enviando" | "ok" | "error"; mensaje?: string };
+
 export default function AdminVentasDashboardsPage() {
   const router = useRouter();
   const [datos, setDatos] = useState<DatosAPI | null>(null);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState<string>("");
+  const [reenvios, setReenvios] = useState<Record<string, EstadoReenvio>>({});
+
+  const reenviarEnlace = useCallback(async (id: string) => {
+    setReenvios((prev) => ({ ...prev, [id]: { estado: "enviando" } }));
+    try {
+      const r = await fetch(`/api/admin/ventas-dashboards/${id}/reenviar`, {
+        method: "POST",
+      });
+      const d = (await r.json().catch(() => ({}))) as { email?: string; error?: string };
+      setReenvios((prev) => ({
+        ...prev,
+        [id]: r.ok
+          ? { estado: "ok", mensaje: `Enviado a ${d.email ?? "el comprador"}` }
+          : { estado: "error", mensaje: d.error ?? "No se pudo reenviar" },
+      }));
+    } catch {
+      setReenvios((prev) => ({
+        ...prev,
+        [id]: { estado: "error", mensaje: "Error de red" },
+      }));
+    }
+  }, []);
 
   const cargar = useCallback(() => {
     setCargando(true);
@@ -135,6 +159,7 @@ export default function AdminVentasDashboardsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tablero</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Comprador</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Estado</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
@@ -176,6 +201,27 @@ export default function AdminVentasDashboardsPage() {
                       >
                         {v.estado}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {v.estado === "COMPLETADO" ? (
+                        <div className="inline-flex flex-col items-end gap-1">
+                          <button
+                            onClick={() => reenviarEnlace(v.id)}
+                            disabled={reenvios[v.id]?.estado === "enviando"}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+                          >
+                            {reenvios[v.id]?.estado === "enviando" ? "Enviando…" : "Reenviar enlace"}
+                          </button>
+                          {reenvios[v.id]?.estado === "ok" && (
+                            <span className="text-[11px] text-emerald-600">{reenvios[v.id]?.mensaje}</span>
+                          )}
+                          {reenvios[v.id]?.estado === "error" && (
+                            <span className="text-[11px] text-red-600">{reenvios[v.id]?.mensaje}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-300">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
