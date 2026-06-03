@@ -215,10 +215,10 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `/donar` | Donaciones vía PayPal (`FormularioDonacion.tsx`) |
 | `/servicios` | Servicios de consultoría |
 | `/comprar/exito` | Retorno de PayPal tras compra de artículo premium |
-| `/leer/[token]` | Magic link artículo: valida token → cookie → redirige |
-| `/leer/libro/[token]` | Magic link libro: valida token → cookie → redirige |
-| `/leer/recurso/[token]` | Magic link recurso: valida token → cookie → redirige (sesión 17) |
-| `/leer/dashboard/[token]` | Magic link dashboard: valida token → cookie → redirige (sesión 17) |
+| `/leer/[token]` | Magic link artículo. **Route Handler** (sesión 20): valida token → setea cookie en la respuesta → redirige |
+| `/leer/libro/[token]` | Magic link libro. **Route Handler** (sesión 20): valida token → cookie → redirige |
+| `/leer/recurso/[token]` | Magic link recurso. **Route Handler** (sesión 20): valida token → cookie → redirige |
+| `/leer/dashboard/[token]` | Magic link dashboard. **Route Handler** (sesión 20): valida token → cookie → redirige |
 | `/suscribir/*` | Formulario y confirmaciones de suscripción |
 
 ### Next.js — Admin (todas requieren cookie `admin_auth`)
@@ -262,6 +262,7 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/admin/cotizaciones/[id]/responder/route.ts` | POST admin: responde cotización vía Resend (rate-limit 30/h, máx 5 respuestas/cot) (sesión 17) |
 | `app/api/admin/compras/route.ts` | GET admin: lista PedidoContenido + total recaudado |
 | `app/api/admin/ventas-libros/route.ts` | GET admin: lista PedidoLibro + total recaudado |
+| `app/api/admin/ventas-libros/[id]/reenviar/route.ts` | POST admin (sesión 20): reenvía el correo con el enlace de descarga al email del pedido (solo COMPLETADO, rate-limit 30/h). Para compradores que perdieron el acceso. |
 | `app/api/admin/ventas-recursos/route.ts` | GET admin: lista PedidoRecurso + total recaudado (sesión 17) |
 | `app/api/admin/ventas-dashboards/route.ts` | GET admin: lista PedidoDashboard + total recaudado (sesión 17) |
 | `app/api/admin/libros/route.ts` | GET + POST admin: listar y crear libros |
@@ -375,7 +376,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 7. **El admin siempre ve el contenido completo** de artículos premium Y libros de pago (diseño intencional). Barra azul lo indica. Para probar el muro, usar ventana de incógnito.
 8. **El precio siempre viene del servidor** — nunca del cliente. `/api/comprar` y `/api/libros/comprar` lo leen de la DB.
 9. **Webhook PayPal es idempotente** — usa `WebhookEventoProcesado`. Discrimina por prefijo `custom_id`: `"contenido:"` = artículo, `"libro:"` = libro, `"recurso:"` = recurso HTML, `"dashboard:"` = tablero Excel, sin prefijo = donación.
-10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados.
+10. **Next.js 15: `params` y `cookies()` son async** — deben ser `await`eados. **Setear cookies (`cookies().set()` / `cookieStore.set()`) SOLO es legal en Route Handlers (`route.ts`) y Server Actions, NUNCA durante el render de una página/Server Component** (lanza "Cookies can only be modified in a Server Action or Route Handler" → 500). Por eso los enlaces mágicos `/leer/*` son Route Handlers que setean la cookie **en la respuesta de redirección** (`res.cookies.set(...)`, no vía `next/headers`, que puede perderse al devolver un `NextResponse` propio). Las páginas de éxito NO setean cookie: enrutan el botón por `/leer/*`. Lección del incidente de sesión 20.
 11. **`FormularioDonacion.tsx` es el componente activo de donaciones** — no `BotonesPayPal`. Montos $3/$5/$10/$25 + personalizado.
 12. **3 skills activas en el Worker**: `sociological-analysis`, `historical-analysis`, `political-analysis`.
 13. **Las tablas `PedidoLibro`, `PedidoRecurso`, `PedidoDashboard`, `RespuestaCotizacion` deben existir en Supabase** — SQL en `migrations/sql/`. Si falla con "tabla no encontrada", no se ha ejecutado aún.
@@ -584,6 +585,7 @@ actualizar CLAUDE.md y este §18.
 
 ---
 
-*Última actualización: 2026-06-03 (sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático]. Mergeado a `main`. Pendiente: verificación operativa en navegador + Fase 3 `/api/health/deep`.)*
+*Última actualización: 2026-06-03 (sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin: `POST /api/admin/ventas-libros/[id]/reenviar` + botón "Reenviar enlace" en `/admin/ventas-libros` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Commits directos a `main`: `3dda7a0`, `df38836` (incidente) + commit de esta sesión. Pendiente: Fase 3 `/api/health/deep`.)*
+*Sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático].*
 *Sesión 18 — auditoría de seguridad: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts externos [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.*
-*Commit activo en main: `34678cd` (M2) — actualizar tras commit de docs sesión 19*
+*Commit activo en main: actualizar tras commit de sesión 20*

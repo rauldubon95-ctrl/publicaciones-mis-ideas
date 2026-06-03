@@ -22,17 +22,3 @@ export async function tieneAccesoLibro(libroId: string): Promise<boolean> {
 
   return true;
 }
-
-export async function setearCookieAccesoLibro(
-  libroId: string,
-  tokenAcceso: string
-): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(nombreCookie(libroId), tokenAcceso, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 365 * 24 * 60 * 60,
-    path: "/",
-  });
-}

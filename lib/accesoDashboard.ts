@@ -22,17 +22,3 @@ export async function tieneAccesoDashboard(tableroId: string): Promise<boolean> 
 
   return true;
 }
-
-export async function setearCookieAccesoDashboard(
-  tableroId: string,
-  tokenAcceso: string
-): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(nombreCookie(tableroId), tokenAcceso, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 365 * 24 * 60 * 60,
-    path: "/",
-  });
-}

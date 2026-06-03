@@ -1,14 +1,8 @@
 // Verificación de acceso a contenido premium.
 //
-// Hay dos formas en que un visitante demuestra que pagó por un artículo:
-//
-// 1. Cookie httpOnly con el tokenAcceso del PedidoContenido. La cookie se
-//    setea cuando el visitante abre el enlace mágico /leer/[token] enviado
-//    a su correo después del pago.
-//
-// 2. Pasa el token como query param `?acceso=<token>`. Útil para enviar el
-//    enlace directo. Si el token es válido para esa publicación, se setea
-//    la cookie y se valida la sesión.
+// Un visitante demuestra que pagó vía una cookie httpOnly con el tokenAcceso
+// del PedidoContenido. La cookie la setea el Route Handler /leer/[token]
+// (enlace mágico del correo) tras validar el token. Aquí solo se lee.
 //
 // El admin siempre tiene acceso a todo (verificado en la página antes de
 // llamar estos helpers).
@@ -47,20 +41,4 @@ export async function tieneAccesoComprado(
     .catch(() => {});
 
   return true;
-}
-
-// Setea la cookie de acceso. Se llama desde /leer/[token] cuando el token es
-// válido. Duración 1 año: el comprador puede volver a leer cuando quiera.
-export async function setearCookieAcceso(
-  publicacionId: string,
-  tokenAcceso: string
-): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(nombreCookie(publicacionId), tokenAcceso, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax", // lax para que funcione al hacer click en el enlace del correo
-    maxAge: 365 * 24 * 60 * 60,
-    path: "/",
-  });
 }

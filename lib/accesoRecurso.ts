@@ -22,17 +22,3 @@ export async function tieneAccesoRecurso(recursoId: string): Promise<boolean> {
 
   return true;
 }
-
-export async function setearCookieAccesoRecurso(
-  recursoId: string,
-  tokenAcceso: string
-): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(nombreCookie(recursoId), tokenAcceso, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 365 * 24 * 60 * 60,
-    path: "/",
-  });
-}
