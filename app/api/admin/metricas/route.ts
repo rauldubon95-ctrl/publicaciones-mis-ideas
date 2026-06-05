@@ -6,6 +6,38 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// Buckets de Storage que cuentan para el uso. Los archivos NO están en la raíz:
+// los cómics viven en subcarpetas por id y los libros en libros/pdfs y
+// libros/portadas. La API list() no es recursiva, así que bajamos por cada
+// carpeta (entradas con id=null) para no subcontar.
+const BUCKETS_STORAGE = ["comics", "libros", "datos"];
+
+async function sumarBucketStorage(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  bucket: string,
+  prefijo = ""
+): Promise<{ archivos: number; bytes: number }> {
+  const { data } = await sb.storage.from(bucket).list(prefijo, { limit: 1000 });
+  let archivos = 0;
+  let bytes = 0;
+  for (const item of data ?? []) {
+    const esCarpeta = item.id === null; // las carpetas no tienen id ni metadata
+    if (esCarpeta) {
+      const sub = await sumarBucketStorage(
+        sb,
+        bucket,
+        prefijo ? `${prefijo}/${item.name}` : item.name
+      );
+      archivos += sub.archivos;
+      bytes += sub.bytes;
+    } else {
+      archivos += 1;
+      bytes += (item.metadata as { size?: number } | null)?.size ?? 0;
+    }
+  }
+  return { archivos, bytes };
+}
+
 export async function GET(_req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
@@ -87,29 +119,19 @@ export async function GET(_req: NextRequest) {
       SELECT pg_database_size(current_database())::bigint AS bytes
     `.then((r) => Number(r[0]?.bytes ?? 0)).catch(() => 0),
 
-    // Archivos e tamaño en Supabase Storage
+    // Uso real de Supabase Storage: suma los 3 buckets (comics + libros + datos)
+    // recorriendo subcarpetas, no solo la raíz de uno.
     (async () => {
       try {
         const sb = getSupabaseAdmin();
-        const { data: buckets } = await sb.storage.listBuckets();
-        const comicsBucket = buckets?.find((b) => b.id === "comics");
-
-        // Obtener tamaño total de objetos en el bucket
-        const { data: files } = await sb.storage.from("comics").list("", {
-          limit: 1000,
-          offset: 0,
-        });
-
-        const totalBytes = files?.reduce((sum, f) => {
-          const size = (f.metadata as { size?: number } | null)?.size ?? 0;
-          return sum + size;
-        }, 0) ?? 0;
-
-        return {
-          bucketExiste: !!comicsBucket,
-          totalArchivos: files?.length ?? 0,
-          totalBytes,
-        };
+        let totalBytes = 0;
+        let totalArchivos = 0;
+        for (const bucket of BUCKETS_STORAGE) {
+          const r = await sumarBucketStorage(sb, bucket);
+          totalBytes += r.bytes;
+          totalArchivos += r.archivos;
+        }
+        return { bucketExiste: true, totalArchivos, totalBytes };
       } catch {
         return { bucketExiste: false, totalArchivos: 0, totalBytes: 0 };
       }
