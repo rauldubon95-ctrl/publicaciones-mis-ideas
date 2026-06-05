@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { capturarOrdenPayPal } from "@/lib/paypal";
+import { nuevaExpiracionAcceso } from "@/lib/accesoComun";
 import { enviarEnlaceAccesoContenido } from "@/lib/resend";
 
 export const metadata: Metadata = {
@@ -59,7 +60,11 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
           if (captura.completado) {
             const r = await prisma.pedidoContenido.updateMany({
               where: { id: pedido.id, estado: "PENDIENTE" },
-              data: { estado: "COMPLETADO", completadoAt: new Date() },
+              data: {
+                estado: "COMPLETADO",
+                completadoAt: new Date(),
+                expiraAccesoAt: nuevaExpiracionAcceso(),
+              },
             });
             if (r.count > 0) {
               exito = true;

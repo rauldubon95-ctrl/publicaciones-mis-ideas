@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarFirmaWebhookPayPal } from "@/lib/paypal";
-import { nuevaExpiracionAcceso } from "@/lib/accesoLibro";
+import { nuevaExpiracionAcceso } from "@/lib/accesoComun";
 import {
   enviarNotificacionDonacion,
   enviarEnlaceAccesoContenido,
@@ -199,7 +199,11 @@ async function procesarCompraContenidoCompletada(
 
   const r = await prisma.pedidoContenido.updateMany({
     where: { id: pedidoId, estado: "PENDIENTE" },
-    data: { estado: "COMPLETADO", completadoAt: new Date() },
+    data: {
+      estado: "COMPLETADO",
+      completadoAt: new Date(),
+      expiraAccesoAt: nuevaExpiracionAcceso(),
+    },
   });
 
   if (r.count === 0) return; // ya estaba procesado
@@ -300,7 +304,11 @@ async function procesarCompraRecursoCompletada(
 
   const r = await prisma.pedidoRecurso.updateMany({
     where: { id: pedidoId, estado: "PENDIENTE" },
-    data: { estado: "COMPLETADO", completadoAt: new Date() },
+    data: {
+      estado: "COMPLETADO",
+      completadoAt: new Date(),
+      expiraAccesoAt: nuevaExpiracionAcceso(),
+    },
   });
 
   if (r.count === 0) return; // ya estaba procesado
@@ -352,7 +360,11 @@ async function procesarCompraDashboardCompletada(
 
   const r = await prisma.pedidoDashboard.updateMany({
     where: { id: pedidoId, estado: "PENDIENTE" },
-    data: { estado: "COMPLETADO", completadoAt: new Date() },
+    data: {
+      estado: "COMPLETADO",
+      completadoAt: new Date(),
+      expiraAccesoAt: nuevaExpiracionAcceso(),
+    },
   });
 
   if (r.count === 0) return; // ya estaba procesado

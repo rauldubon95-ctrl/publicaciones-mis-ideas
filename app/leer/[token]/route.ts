@@ -17,11 +17,25 @@ export async function GET(
 
   const pedido = await prisma.pedidoContenido.findUnique({
     where: { tokenAcceso: token },
-    select: { estado: true, publicacionId: true, publicacion: { select: { slug: true } } },
+    select: {
+      estado: true,
+      publicacionId: true,
+      expiraAccesoAt: true,
+      publicacion: { select: { slug: true } },
+    },
   });
 
   if (!pedido || pedido.estado !== "COMPLETADO") {
     return NextResponse.redirect(new URL("/publicaciones?acceso=invalido", req.url));
+  }
+
+  // Caducidad de la lectura: si el acceso expiró, no se fija cookie.
+  // expiraAccesoAt null = legacy (sin caducidad). El admin puede renovar con
+  // "Reenviar enlace" desde /admin/compras.
+  if (pedido.expiraAccesoAt && pedido.expiraAccesoAt <= new Date()) {
+    return NextResponse.redirect(
+      new URL(`/publicaciones/${pedido.publicacion.slug}?acceso=caducado`, req.url)
+    );
   }
 
   prisma.pedidoContenido

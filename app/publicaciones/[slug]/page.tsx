@@ -19,7 +19,10 @@ import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/se
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ acceso?: string }>;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -79,8 +82,9 @@ function construirArbol(comentarios: {
   return raices;
 }
 
-export default async function PublicacionPage({ params }: Props) {
+export default async function PublicacionPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const acceso = (await searchParams)?.acceso;
   const adminOk = await isAdminAuthorized();
 
   const publicacion = await prisma.publicacion.findUnique({
@@ -170,6 +174,14 @@ export default async function PublicacionPage({ params }: Props) {
           >
             Editar y publicar
           </Link>
+        </div>
+      )}
+      {requierePago && acceso === "caducado" && (
+        <div className="mb-6 border border-amber-200 bg-amber-50 rounded px-4 py-3">
+          <p className="text-sm text-amber-800">
+            El enlace de acceso a este artículo ha caducado. Si lo compraste y
+            necesitas volver a leerlo, escríbeme y te reactivo el acceso.
+          </p>
         </div>
       )}
       {publicacion.esPremium && adminOk && (

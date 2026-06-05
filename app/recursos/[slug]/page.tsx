@@ -12,7 +12,10 @@ import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/se
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ acceso?: string }>;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -40,8 +43,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function RecursoPage({ params }: Props) {
+export default async function RecursoPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const acceso = (await searchParams)?.acceso;
   const recurso = await prisma.recursoHtml.findUnique({
     where: { slug, publicado: true },
   });
@@ -91,6 +95,17 @@ export default async function RecursoPage({ params }: Props) {
         <span>/</span>
         <span className="text-zinc-600 truncate">{recurso.titulo}</span>
       </nav>
+
+      {puedeVer && !adminOk && (acceso === "caducado" || acceso === "limite") && (
+        <div className="mb-3 border border-amber-200 bg-amber-50 rounded px-4 py-2.5">
+          <p className="text-sm text-amber-800">
+            {acceso === "caducado"
+              ? "El enlace para descargar el archivo de este recurso ha caducado."
+              : "Has alcanzado el número máximo de descargas del archivo de este recurso."}{" "}
+            Puedes seguir consultándolo en pantalla aquí abajo. Si necesitas descargarlo de nuevo, escríbeme y te reactivo el acceso.
+          </p>
+        </div>
+      )}
 
       {esPremium && adminOk && (
         <div className="mb-3 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-2.5">

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { enviarEnlaceAccesoRecurso } from "@/lib/resend";
+import { nuevaExpiracionAcceso } from "@/lib/accesoComun";
 import { checkRateLimitDb, getIp, registrarEvento } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,14 @@ export async function POST(
       { status: 502 }
     );
   }
+
+  // Reenviar es también "restaurar acceso": reinicia el contador de descargas y
+  // renueva la ventana de caducidad de la descarga, para un comprador legítimo
+  // que agotó el tope o cuya ventana caducó. La lectura nunca se ve afectada.
+  await prisma.pedidoRecurso.update({
+    where: { id },
+    data: { descargas: 0, expiraAccesoAt: nuevaExpiracionAcceso() },
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, email: pedido.emailComprador });
 }

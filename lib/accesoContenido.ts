@@ -9,6 +9,7 @@
 
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { dentroDeVentana } from "@/lib/accesoComun";
 
 // Nombre de la cookie por publicación. Una compra = acceso a UN artículo.
 function nombreCookie(publicacionId: string): string {
@@ -17,6 +18,11 @@ function nombreCookie(publicacionId: string): string {
 
 // Verifica si el visitante tiene un PedidoContenido COMPLETADO para esta
 // publicación, leyendo la cookie correspondiente.
+//
+// Anti-reshare (sesión 21): el artículo no tiene archivo descargable, así que la
+// única palanca es caducar la LECTURA a los 30 días (expiraAccesoAt). El admin
+// renueva la ventana con "Reenviar enlace". expiraAccesoAt == null = legacy
+// (acceso permanente, sin caducidad) para no romper a quien ya pagó.
 export async function tieneAccesoComprado(
   publicacionId: string
 ): Promise<boolean> {
@@ -26,11 +32,12 @@ export async function tieneAccesoComprado(
 
   const pedido = await prisma.pedidoContenido.findUnique({
     where: { tokenAcceso: token },
-    select: { publicacionId: true, estado: true },
+    select: { publicacionId: true, estado: true, expiraAccesoAt: true },
   });
   if (!pedido) return false;
   if (pedido.publicacionId !== publicacionId) return false;
   if (pedido.estado !== "COMPLETADO") return false;
+  if (!dentroDeVentana(pedido.expiraAccesoAt)) return false;
 
   // Tracking suave del último acceso — fire-and-forget
   prisma.pedidoContenido

@@ -41,6 +41,14 @@ export default function TableroPage() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [vista, setVista] = useState<"tabla" | "dashboard">("tabla");
+  // Aviso anti-reshare: el endpoint de descarga redirige aquí con ?acceso=
+  // caducado|limite cuando la descarga del Excel agotó su ventana o su tope.
+  // La lectura sigue disponible; solo se informa al comprador.
+  const [acceso, setAcceso] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAcceso(new URLSearchParams(window.location.search).get("acceso"));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/dashboard/${id}`)
@@ -87,6 +95,17 @@ export default function TableroPage() {
         <span>/</span>
         <span className="text-zinc-600 truncate">{tablero.titulo}</span>
       </nav>
+
+      {puedeVer && !tablero.esAdmin && (acceso === "caducado" || acceso === "limite") && (
+        <div className="mb-6 border border-amber-200 bg-amber-50 rounded px-4 py-2.5">
+          <p className="text-sm text-amber-800">
+            {acceso === "caducado"
+              ? "El enlace para descargar el Excel de este tablero ha caducado."
+              : "Has alcanzado el número máximo de descargas del Excel de este tablero."}{" "}
+            Puedes seguir consultando los datos en pantalla. Si necesitas descargarlo de nuevo, escríbeme y te reactivo el acceso.
+          </p>
+        </div>
+      )}
 
       {esPremium && tablero.esAdmin && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-2.5">

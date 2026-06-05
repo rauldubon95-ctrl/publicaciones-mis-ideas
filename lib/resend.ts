@@ -1,14 +1,23 @@
 import { Resend } from "resend";
 import { conTimeout } from "@/lib/timeout";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// Instanciación perezosa del cliente Resend. El SDK lanza ("Missing API key") si
+// se construye sin API key, lo que rompía `next build` al recolectar page data en
+// entornos sin RESEND_API_KEY (contenedores de CI / Preview de Vercel). Se
+// construye la primera vez que se envía un correo — momento en que las funciones
+// de envío ya garantizaron que la key existe (todas hacen el guard previo).
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 // Envoltura con timeout para el SDK de Resend (no acepta AbortSignal). Si el
 // envío excede 10s, rechaza con TimeoutError, que cada función de envío ya
 // captura en su try/catch y traduce a `false` (o `{ ok: false }`). Evita que un
 // Resend lento deje colgada la respuesta del webhook/endpoint.
-function enviarConResend(opts: Parameters<typeof resend.emails.send>[0]) {
-  return conTimeout(resend.emails.send(opts), 10_000, "envío de correo (Resend)");
+function enviarConResend(opts: Parameters<Resend["emails"]["send"]>[0]) {
+  return conTimeout(getResend().emails.send(opts), 10_000, "envío de correo (Resend)");
 }
 
 function escapeHtml(text: string): string {
@@ -364,7 +373,9 @@ export async function enviarEnlaceAccesoRecurso(
     <p style="margin:0 0 8px;color:#52525b;font-size:16px;">${saludo}</p>
     <p style="margin:0 0 24px;color:#52525b;font-size:16px;">
       Gracias por adquirir el recurso <strong>${escapeHtml(titulo)}</strong>.
-      Usa el botón de abajo para abrirlo. El enlace es permanente — puedes volver a usarlo cuando quieras.
+      Usa el botón de abajo para abrirlo. Podrás consultarlo en pantalla siempre que quieras;
+      la descarga del archivo está disponible durante 30 días (hasta 5 veces). Si la necesitas
+      de nuevo más adelante, escríbeme y te reactivo el acceso.
     </p>
     <a href="${enlace}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
       Abrir recurso
@@ -432,7 +443,9 @@ export async function enviarEnlaceAccesoDashboard(
     <p style="margin:0 0 8px;color:#52525b;font-size:16px;">${saludo}</p>
     <p style="margin:0 0 24px;color:#52525b;font-size:16px;">
       Gracias por adquirir el tablero <strong>${escapeHtml(titulo)}</strong>.
-      Usa el botón de abajo para abrirlo. El enlace es permanente — puedes volver a usarlo cuando quieras.
+      Usa el botón de abajo para abrirlo. Podrás consultarlo en pantalla siempre que quieras;
+      la descarga del Excel está disponible durante 30 días (hasta 5 veces). Si la necesitas
+      de nuevo más adelante, escríbeme y te reactivo el acceso.
     </p>
     <a href="${enlace}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
       Abrir tablero

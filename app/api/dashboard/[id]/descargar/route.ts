@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthorized } from "@/lib/adminAuth";
-import { tieneAccesoDashboard } from "@/lib/accesoDashboard";
+import { consumirDescargaDashboard } from "@/lib/accesoDashboard";
 import { descargarDesdeBucket, BUCKET_DATOS } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -17,24 +17,34 @@ const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 // El servidor reenvía el archivo (stream) en vez de redirigir a la URL pública
 // del bucket, de modo que el enlace permanente nunca se entrega al cliente y no
 // puede recompartirse. Ver H1 en docs/auditoria-seguridad-2026-06-02.md.
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
 
   const tablero = await prisma.tablero.findFirst({
     where: { OR: [{ id }, { slug: id }], publicado: true },
-    select: { id: true, archivoUrl: true, archivoNombre: true, esPremium: true, precioCentavos: true },
+    select: { id: true, slug: true, archivoUrl: true, archivoNombre: true, esPremium: true, precioCentavos: true },
   });
 
   if (!tablero) return new NextResponse("No encontrado", { status: 404 });
 
+  // El admin descarga siempre y no consume tope. El comprador pasa por
+  // consumirDescargaDashboard: valida compra + vigencia + tope y suma 1 descarga.
+  // La lectura en pantalla (tabla + visor Office) sigue siendo permanente; solo
+  // esta descarga del Excel está limitada (anti-reshare, sesión 21).
   const esPremium = tablero.esPremium && (tablero.precioCentavos ?? 0) > 0;
   if (esPremium) {
-    const [admin, acceso] = await Promise.all([
-      isAdminAuthorized(),
-      tieneAccesoDashboard(tablero.id),
-    ]);
-    if (!admin && !acceso) {
-      return new NextResponse("Pago requerido", { status: 402 });
+    const adminOk = await isAdminAuthorized();
+    if (!adminOk) {
+      const r = await consumirDescargaDashboard(tablero.id);
+      if (!r.ok) {
+        if (r.motivo === "caducado" || r.motivo === "limite") {
+          return NextResponse.redirect(
+            new URL(`/dashboard/${tablero.slug}?acceso=${r.motivo}`, req.url),
+            { status: 302 }
+          );
+        }
+        return new NextResponse("Pago requerido", { status: 402 });
+      }
     }
   }
 

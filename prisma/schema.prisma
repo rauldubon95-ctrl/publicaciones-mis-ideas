@@ -184,6 +184,8 @@ model PedidoRecurso {
   creadoAt        DateTime    @default(now())
   completadoAt    DateTime?
   ultimoAccesoAt  DateTime?
+  descargas       Int         @default(0) // nº de descargas consumidas (tope anti-reshare; solo aplica a la descarga del archivo)
+  expiraAccesoAt  DateTime?   // caducidad de la DESCARGA. null = legacy (sin caducidad). La lectura en pantalla no caduca.
 
   @@index([emailComprador])
   @@index([estado])
@@ -341,6 +343,8 @@ model PedidoDashboard {
   creadoAt        DateTime  @default(now())
   completadoAt    DateTime?
   ultimoAccesoAt  DateTime?
+  descargas       Int       @default(0) // nº de descargas consumidas (tope anti-reshare; solo aplica a la descarga del archivo)
+  expiraAccesoAt  DateTime? // caducidad de la DESCARGA. null = legacy (sin caducidad). La lectura en pantalla no caduca.
 
   @@index([emailComprador])
   @@index([estado])
@@ -426,6 +430,7 @@ model PedidoContenido {
   creadoAt        DateTime @default(now())
   completadoAt    DateTime?
   ultimoAccesoAt  DateTime?
+  expiraAccesoAt  DateTime? // caducidad de la LECTURA. null = legacy (sin caducidad). No hay archivo, por eso no hay tope de descargas.
 
   @@index([emailComprador])
   @@index([estado])
