@@ -3,7 +3,11 @@
 # Request en GitHub con el cambio. Tú lo ves, lo revisamos juntos siguiendo
 # docs/playbook-actualizacion-dependencias.md y lo mergeamos solo si pasa
 # (tsc + build + prueba en Preview). Agrupa parches/menores en un solo PR para
-# no llenarte de notificaciones; los "major" (que pueden romper) llegan aparte.
+# no llenarte de notificaciones.
+#
+# Los saltos "mayores" (semver-major, p. ej. Next 15→16 o Tailwind 3→4) NO se
+# proponen automáticamente: suelen romper el build y se hacen a mano en una
+# sesión dedicada. Por eso cada ecosistema npm los ignora abajo.
 version: 2
 updates:
   # La web (Next.js, Prisma, etc.)
@@ -17,6 +21,9 @@ updates:
     groups:
       menores-y-parches:
         update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # El Worker del asistente de IA (tiene sus propias dependencias)
   - package-ecosystem: "npm"
@@ -29,6 +36,9 @@ updates:
     groups:
       menores-y-parches:
         update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Las GitHub Actions (los flujos automáticos del repo)
   - package-ecosystem: "github-actions"
