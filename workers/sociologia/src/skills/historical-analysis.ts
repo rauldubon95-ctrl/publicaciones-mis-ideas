@@ -3,8 +3,7 @@ import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
-
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+import { CHAT_MODEL } from "../config";
 
 const SYSTEM_SKILL = `Eres el asistente académico de Raúl Dubón especializado en historia latinoamericana y procesos histórico-sociales.
 
@@ -64,7 +63,7 @@ export class HistoricalAnalysisSkill implements Skill {
 
     let rawOutput = "";
     try {
-      const aiRes = (await env.AI.run(MODEL, {
+      const aiRes = (await env.AI.run(CHAT_MODEL, {
         messages: construirPrompt(input, docs),
         max_tokens: maxTokens,
         temperature: 0.2,

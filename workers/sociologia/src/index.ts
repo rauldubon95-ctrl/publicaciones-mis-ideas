@@ -15,6 +15,7 @@ import { SociologicalAnalysisSkill } from "./skills/sociological-analysis";
 import { HistoricalAnalysisSkill } from "./skills/historical-analysis";
 import { PoliticalAnalysisSkill } from "./skills/political-analysis";
 import { handleSyncRequest } from "./sync";
+import { CHAT_MODEL } from "./config";
 
 const skillRegistry = new SkillRegistry();
 skillRegistry.register(new SociologicalAnalysisSkill());
@@ -28,8 +29,6 @@ const ORIGENES_PERMITIDOS = [
   "https://publicaciones-mis-ideas.vercel.app",
   "http://localhost:3000",
 ];
-
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -239,7 +238,7 @@ export default {
         docsRecuperados: docs.length,
         scoreConfianza: groundingRatio,
         groundingRatio,
-        modelId: MODEL,
+        modelId: CHAT_MODEL,
         viaRetrieval: docs[0]?.via ?? "none",
       },
       env, ctx

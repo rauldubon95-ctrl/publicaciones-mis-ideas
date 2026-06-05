@@ -3,8 +3,7 @@ import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
-
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+import { CHAT_MODEL } from "../config";
 
 const FRAMEWORK_KEYWORDS: Record<string, string[]> = {
   "conflict-theory": ["marx", "clase", "lucha", "weber", "dominacion", "poder", "conflicto", "capitalismo", "burgues", "proletariado", "explotacion"],
@@ -64,7 +63,7 @@ export class SociologicalAnalysisSkill implements Skill {
 
     let rawOutput = "";
     try {
-      const aiRes = (await env.AI.run(MODEL, {
+      const aiRes = (await env.AI.run(CHAT_MODEL, {
         messages,
         max_tokens: maxTokens,
         temperature: 0.2,
