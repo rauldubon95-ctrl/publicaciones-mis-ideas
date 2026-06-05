@@ -1,0 +1,39 @@
+# Dependabot — el "vigilante de piezas viejas".
+# Cada mes revisa si hay versiones nuevas de las dependencias y abre un Pull
+# Request en GitHub con el cambio. Tú lo ves, lo revisamos juntos siguiendo
+# docs/playbook-actualizacion-dependencias.md y lo mergeamos solo si pasa
+# (tsc + build + prueba en Preview). Agrupa parches/menores en un solo PR para
+# no llenarte de notificaciones; los "major" (que pueden romper) llegan aparte.
+version: 2
+updates:
+  # La web (Next.js, Prisma, etc.)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      menores-y-parches:
+        update-types: ["minor", "patch"]
+
+  # El Worker del asistente de IA (tiene sus propias dependencias)
+  - package-ecosystem: "npm"
+    directory: "/workers/sociologia"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(worker)"
+    groups:
+      menores-y-parches:
+        update-types: ["minor", "patch"]
+
+  # Las GitHub Actions (los flujos automáticos del repo)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci"

@@ -87,7 +87,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `PAYPAL_CLIENT_SECRET` | Secret Business PayPal. NUNCA `NEXT_PUBLIC_`. | ✅ Configurada |
 | `PAYPAL_ENV` | `live` producción / `sandbox` pruebas | ✅ `live` |
 | `PAYPAL_WEBHOOK_ID` | ID webhook en PayPal Dashboard | ✅ Sesión 12 |
-| `HEALTH_TOKEN` | Token para `/api/health` con métricas completas | Recomendado |
+| `HEALTH_TOKEN` | Token para `/api/health` y `/api/health/deep` con métricas completas | Recomendado |
+| `CRON_SECRET` | Autentica el vigilante `/api/cron/health-check`. Vercel lo envía solo al cron diario. Sin él, el endpoint rechaza todo (401). Sesión 21. | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
 | `PREMIUM_TOKEN` | **ELIMINADO** 2026-05-24. No reconfigurar. | ❌ |
 | `STRIPE_*` | **ELIMINADOS** sesión 12. Quitar de Vercel. | ❌ |
@@ -222,6 +223,7 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `/dashboard/comprar/exito` | Retorno de PayPal tras compra de dashboard premium (sesión 17) |
 | `/donar` | Donaciones vía PayPal (`FormularioDonacion.tsx`) |
 | `/servicios` | Servicios de consultoría |
+| `/privacidad` | Aviso de privacidad (sesión 21). Enlazado en el Footer. |
 | `/comprar/exito` | Retorno de PayPal tras compra de artículo premium |
 | `/leer/[token]` | Magic link artículo. **Route Handler** (sesión 20): valida token → setea cookie en la respuesta → redirige |
 | `/leer/libro/[token]` | Magic link libro. **Route Handler** (sesión 20): valida token → cookie → redirige |
@@ -282,7 +284,8 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/admin/telemetria/route.ts` | GET admin: proxy autenticado → Worker `/telemetria` |
 | `app/api/admin/sync-d1-all/route.ts` | POST: sincroniza todos los artículos publicados a D1 |
 | `app/api/track/route.ts` | POST: registra vista de artículo |
-| `app/api/health/deep/route.ts` | GET (sesión 20): health profundo — sondea DB+Worker+Storage con timeouts. `HEALTH_TOKEN`. 200 sano / 503 degradado |
+| `app/api/health/deep/route.ts` | GET (sesión 20): health profundo — sondea DB+Worker+Storage con timeouts. `HEALTH_TOKEN`. 200 sano / 503 degradado. Lógica compartida en `lib/healthChecks.ts` (sesión 21) |
+| `app/api/cron/health-check/route.ts` | GET (sesión 21): vigilante interno. Vercel Cron diario (vercel.json) → ejecuta `chequearDependencias()` → si algo falla, correo de alerta al admin (Resend). Auth con `CRON_SECRET`. Detecta fallos PARCIALES (no caída total → para eso, monitor externo). |
 | `app/api/subscribe/route.ts` | POST: registrar suscripción email |
 
 ### Cloudflare Worker (`workers/sociologia/`)
@@ -355,6 +358,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | `deploy-worker.yml` | Push a `main` con cambios en `workers/sociologia/**` | Intenta deploy del Worker (falla por CF_API_TOKEN con IP restringida — Cloudflare Git integration lo cubre) |
 | `code-review.yml` | PR o lunes 8:00 UTC | Revisa código, crea Issues — GitHub Models gratis |
 | `prioritize.yml` | Lunes 9:00 UTC | Prioriza Issues, reporte semanal — GitHub Models gratis |
+| `dependabot.yml` (config, no workflow) | Mensual | Abre PRs con dependencias nuevas (web + worker + actions). Revisar con `docs/playbook-actualizacion-dependencias.md`. Sesión 21. |
 
 ---
 
@@ -370,6 +374,9 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | Compartir social en `/dashboard/[id]` | Pendiente. Es client component sin metadata SEO. Refactor server+client para `BotonesCompartir` + canonical + og:image. | Baja |
 | Factorizar `MuroPago`/`MuroLibro`/`MuroRecurso`/`MuroDashboard` | ~95% código compartido. Crear `components/MuroPagoBase.tsx` parametrizable. **PR aislada**, sin tocar nada más. | Baja |
 | ~~`xlsx` vulnerabilidad~~ (**N/A — verificado sesión 18**) | `app/api/admin/tableros/route.ts` usa **`exceljs`**, no `xlsx`. `xlsx` no es dependencia del proyecto. Sin acción. | ~~Media~~ |
+| 4 vulnerabilidades npm moderadas (sesión 21) | Transitivas: `postcss` (vía `next`) + `uuid` (vía `exceljs`). NO usar `npm audit fix --force` (degrada Next a v9). Subir Next/exceljs cuando toque. Proceso en `docs/playbook-actualizacion-dependencias.md`. Dependabot las vigilará. | Media |
+| IP cruda en rate-limit (sesión 21) | `RateLimitDb.clave` = `"IP:ruta"` guarda IP real (transitoria, fin anti-abuso legítimo). El resto de IPs van cifradas (`ipHash`). Purista: hashear también la clave. | Baja |
+| Archivos `_test_*.png` en bucket `comics` (sesión 21) | ~12 archivos de prueba viejos en la raíz del bucket. Inofensivos pero ocupan espacio. Limpiar (borrado de Storage = destructivo, pedir confirmación). | Baja |
 | Vectorize desactivado | Retrieval es solo FTS5+LIKE. Requiere `wrangler vectorize create` + pipeline embeddings. | Media |
 | Telemetría en KV (no D1) | Datos de IA duran solo 7 días. Dashboard persistente requeriría D1. | Media |
 | Campo `stripeId` en Donacion | Nombre legacy: hoy guarda paypalOrderId. Renombrar requiere migración Supabase + Prisma. | Baja |
@@ -601,7 +608,7 @@ actualizar CLAUDE.md y este §18.
 
 ---
 
-*Última actualización: 2026-06-05 (sesión 21 — **rama `claude/affectionate-curie-OycfO`, NO mergeada a main** [punto de restauración: commit `e2b48cd`]. **B — anti-reshare extendido** a recursos, dashboards y artículos premium, con asimetría intencional: en recursos/dashboards la lectura en pantalla queda permanente y solo la **descarga del archivo** caduca (30 d) + tope (5); en artículos (sin archivo) caduca **solo la lectura**. Constantes/helpers compartidos en nuevo `lib/accesoComun.ts` (`accesoLibro.ts` ahora los reexporta). Nuevos `consumirDescargaRecurso`/`consumirDescargaDashboard`; `tieneAccesoComprado` valida vigencia. `expiraAccesoAt` se fija en páginas de éxito + webhook; "Reenviar enlace" renueva ventana y reinicia `descargas` donde aplica. Avisos `?acceso=caducado|limite` en las 3 páginas. Migración Supabase additive `anti_reshare_recursos_dashboards_articulos` (proyecto `yjgkhqapqiezvsrqoynl`) — **RLS verificado intacto, 0 políticas, C1 no reabierto**; SQL versionado en `migrations/sql/20260605_anti_reshare_recursos_dashboards_articulos.sql`. **D — Resend perezoso**: `lib/resend.ts` ya no construye el cliente a nivel de módulo (`getResend()` lazy) → `next build` deja de fallar en entornos sin `RESEND_API_KEY`. `tsc --noEmit` y `next build` limpios. Ver §7. PENDIENTE operativo del usuario (A): verificar CSP/PayPal en navegador + configurar `HEALTH_TOKEN` en Vercel.)*
+*Última actualización: 2026-06-05 (sesión 21 — **rama `claude/affectionate-curie-OycfO`, TODO MERGEADO A MAIN** [commits `d22d154`, `59fd6d7`, `b9bf583` + este de docs; punto de restauración previo: `e2b48cd`]. **B — anti-reshare extendido** a recursos, dashboards y artículos premium, con asimetría intencional: en recursos/dashboards la lectura en pantalla queda permanente y solo la **descarga del archivo** caduca (30 d) + tope (5); en artículos (sin archivo) caduca **solo la lectura**. Constantes/helpers compartidos en nuevo `lib/accesoComun.ts` (`accesoLibro.ts` ahora los reexporta). Nuevos `consumirDescargaRecurso`/`consumirDescargaDashboard`; `tieneAccesoComprado` valida vigencia. Migración Supabase additive `anti_reshare_recursos_dashboards_articulos` (proyecto `yjgkhqapqiezvsrqoynl`) — **RLS verificado intacto, 0 políticas, C1 no reabierto**; SQL en `migrations/sql/20260605_anti_reshare_recursos_dashboards_articulos.sql`. **D — Resend perezoso**: `getResend()` lazy → `next build` deja de fallar sin `RESEND_API_KEY`. **Métrica Storage corregida**: `/admin/metricas` ahora suma los 3 buckets recorriendo subcarpetas (antes solo la raíz de `comics` → contaba basura `_test_*` e ignoraba `libros`/`datos`). Uso real ~38.6 MB/1 GB. **Vigilante interno**: `/api/cron/health-check` (Vercel Cron diario, `vercel.json`) → `lib/healthChecks.ts` (extraído de `/api/health/deep`) → correo de alerta Resend si DB/Worker/Storage fallan; auth `CRON_SECRET`. Detecta fallos PARCIALES (caída total → monitor externo). **Privacidad**: nueva `/privacidad` (aviso redactado según lo que recoge el sitio) + enlace en Footer. **Dependabot** (`.github/dependabot.yml`, mensual, web+worker+actions) + **`docs/playbook-actualizacion-dependencias.md`** (proceso quirúrgico). `tsc`+`build` limpios en cada merge. PENDIENTES del usuario: configurar `CRON_SECRET` (+ opcional `HEALTH_TOKEN`) en Vercel; migración modelo IA `@cf/meta/llama-3.1-8b-instruct` la próxima semana (Cloudflare lo descontinúa). Frentes conceptuales sin cubrir: E (seguridad a fondo), F (despliegue).)*
 *Sesión 20 — INCIDENTE de pagos resuelto: los enlaces mágicos `/leer/*` y las páginas de éxito seteaban cookies durante el render de una página (prohibido en Next 15 → 500). Reparado: los 4 `/leer/*` ahora son Route Handlers que setean la cookie en la respuesta de redirección; las 4 páginas de éxito ya no setean cookie y envían el correo del enlace al completar el pago + enrutan el botón por `/leer/*`. Limpieza: eliminados los 4 `setearCookieAcceso*` (quedaron sin uso tras el refactor; sus call-sites se inlinearon en los Route Handlers). Nueva función admin "Reenviar enlace" en los **4 tipos** de venta (libros, artículos/compras, recursos, dashboards): botón en cada panel + endpoint `POST /api/admin/<panel>/[id]/reenviar` (reenvía al email del pedido, solo COMPLETADO, rate-limit 30/h, no devuelve el token). Rama de respaldo del incidente: `fix/incidente-pagos-sesion20`. Commits directos a `main`: `3dda7a0`, `df38836` (incidente), `9c680eb` (reenviar libros + limpieza), `fdd838c` (reenviar artículos/recursos/dashboards). **Anti-reshare de libros PDF**: caducidad 30 días + tope 5 descargas por pedido (`PedidoLibro.expiraAccesoAt`/`descargas`, migración Supabase `pedidolibro_caducidad_y_tope_descargas`; lógica en `lib/accesoLibro.ts` → `consumirDescargaLibro`; legacy con `expiraAccesoAt=null` = acceso permanente; "Reenviar enlace" reinicia tope y renueva ventana). Ver §7. **Fase 3 (resiliencia) cerrada:** `/api/health/deep` sondea DB+Worker+Storage con timeouts (solo lectura, `HEALTH_TOKEN`, 200/503). Auditoría de seguridad+resiliencia completa.)*
 *Sesión 19 — M2 cerrado: CSP sin `unsafe-inline` mediante nonces por petición [`middleware.ts` genera el nonce y construye el CSP dinámico en request+response; `JsonLd.tsx` async lee `x-nonce`; `next.config.mjs` ya no define CSP estático].*
 *Sesión 18 — auditoría de seguridad: RLS anon cerrado [C1 crítico + H2 + H3], enumeración `datos` [L2], streaming de archivos de pago [H1/P1], timeouts externos [M1], hardening `req.json` [M4], caching con `unstable_cache` [Fase 3.3]. Caveat: el entorno Preview de Vercel no tiene `DATABASE_URL` — usar `unstable_cache`+`force-dynamic`, no ISR puro.*
