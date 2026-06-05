@@ -9,14 +9,14 @@ export default function Footer() {
           <span>© {new Date().getFullYear()} — Divulgación de reflexiones e ideas</span>
           <Link
             href="/privacidad"
-            className="text-zinc-300 hover:text-zinc-500 transition-colors"
+            className="text-zinc-500 hover:text-zinc-800 underline underline-offset-2 transition-colors"
             title="Aviso de privacidad"
           >
             Privacidad
           </Link>
           <Link
             href="/donar"
-            className="text-zinc-300 hover:text-amber-500 transition-colors"
+            className="text-zinc-500 hover:text-amber-500 transition-colors"
             title="Apoya este proyecto"
           >
             ♥ Apoyar
