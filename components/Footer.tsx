@@ -8,6 +8,13 @@ export default function Footer() {
         <div className="flex items-center gap-4">
           <span>© {new Date().getFullYear()} — Divulgación de reflexiones e ideas</span>
           <Link
+            href="/privacidad"
+            className="text-zinc-300 hover:text-zinc-500 transition-colors"
+            title="Aviso de privacidad"
+          >
+            Privacidad
+          </Link>
+          <Link
             href="/donar"
             className="text-zinc-300 hover:text-amber-500 transition-colors"
             title="Apoya este proyecto"
