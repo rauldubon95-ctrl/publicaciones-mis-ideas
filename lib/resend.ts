@@ -547,6 +547,49 @@ export async function enviarRespuestaCotizacion(
   }
 }
 
+// ─── Alerta de salud (vigilante interno) ─────────────────────────────────────
+// La envía /api/cron/health-check al admin SOLO cuando alguna dependencia
+// (base de datos / Worker / Storage) falla. En estado sano no se envía nada.
+
+export async function enviarAlertaSalud(
+  fallidos: { nombre: string; error?: string }[]
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  const filas = fallidos
+    .map(
+      (f) =>
+        `<tr><td style="padding:8px 0;color:#b91c1c;font-weight:600;">${escapeHtml(f.nombre)}</td>
+         <td style="padding:8px 0;color:#52525b;font-family:monospace;font-size:13px;">${escapeHtml(f.error ?? "sin detalle")}</td></tr>`
+    )
+    .join("");
+  const html = baseLayout(`
+    <h1 style="font-size:22px;margin:0 0 12px;color:#b91c1c;">⚠️ Alerta: una dependencia está caída</h1>
+    <p style="margin:0 0 20px;color:#52525b;font-size:15px;">
+      El chequeo automático de salud detectó que ${fallidos.length === 1 ? "una dependencia no responde" : "varias dependencias no responden"}.
+      Tu web puede estar funcionando parcialmente. Revisa el panel y los servicios externos.
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e4e4e7;border-radius:6px;">
+      <tr style="background:#fafafa;"><th align="left" style="padding:8px;color:#71717a;">Dependencia</th><th align="left" style="padding:8px;color:#71717a;">Detalle</th></tr>
+      ${filas}
+    </table>
+    <p style="margin:24px 0 0;color:#a1a1aa;font-size:12px;">
+      Notificación automática del vigilante de salud. Si recibiste esto, conviene comprobar
+      ${BASE_URL}/admin/observabilidad y el estado de Supabase / Cloudflare.
+    </p>
+  `);
+  try {
+    const { error } = await enviarConResend({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `⚠️ rauldubon.org — ${fallidos.map((f) => f.nombre).join(", ")} no responde`,
+      html,
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 export async function enviarNotificacionCompraLibro(
   montoUSD: string,
   titulo: string,

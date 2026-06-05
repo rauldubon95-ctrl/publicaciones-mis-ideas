@@ -12,34 +12,11 @@
 // alertas de uptime).
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { safeCompare } from "@/lib/auth";
-import { conTimeout, fetchConTimeout } from "@/lib/timeout";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { chequearDependencias } from "@/lib/healthChecks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
-
-interface Estado {
-  ok: boolean;
-  latencyMs: number;
-  error?: string;
-}
-
-// Ejecuta un chequeo, mide su latencia y captura cualquier error/timeout sin
-// propagarlo (un chequeo que falla no debe tumbar al endpoint).
-async function medir(fn: () => Promise<void>): Promise<Estado> {
-  const inicio = Date.now();
-  try {
-    await fn();
-    return { ok: true, latencyMs: Date.now() - inicio };
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    return { ok: false, latencyMs: Date.now() - inicio, error: err.message.slice(0, 120) };
-  }
-}
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get("x-health-token");
@@ -49,29 +26,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: "ok" });
   }
 
-  const [db, worker, storage] = await Promise.all([
-    // Base de datos: un SELECT 1 con timeout corto.
-    medir(async () => {
-      await conTimeout(prisma.$queryRaw`SELECT 1`, 5000, "db");
-    }),
-    // Worker de IA: GET a /telemetria sin auth → responde 401 (reachable). No
-    // ejecuta trabajo. Cualquier respuesta HTTP = el Worker está vivo.
-    medir(async () => {
-      await fetchConTimeout(`${WORKER_URL}/telemetria`, { method: "GET" }, 5000);
-    }),
-    // Storage: listar buckets con el service role (operación barata).
-    medir(async () => {
-      const { error } = await conTimeout(
-        getSupabaseAdmin().storage.listBuckets(),
-        5000,
-        "storage"
-      );
-      if (error) throw new Error(error.message);
-    }),
-  ]);
-
-  const checks = { db, worker, storage };
-  const sano = db.ok && worker.ok && storage.ok;
+  const checks = await chequearDependencias();
+  const sano = checks.db.ok && checks.worker.ok && checks.storage.ok;
 
   return NextResponse.json(
     {
