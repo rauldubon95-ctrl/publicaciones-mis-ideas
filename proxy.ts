@@ -21,7 +21,7 @@ function generarTraceId(): string {
 }
 
 // Genera un nonce criptográfico de 16 bytes codificado en base64.
-// Disponible en Edge runtime via Web Crypto API + btoa.
+// crypto.getRandomValues + btoa están disponibles en el runtime Node de proxy.
 function generarNonce(): string {
   const arr = crypto.getRandomValues(new Uint8Array(16));
   return btoa(Array.from(arr, (b) => String.fromCharCode(b)).join(""));
@@ -96,7 +96,7 @@ function logEvento(
   }).catch(() => {});
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const ip = getIp(request);
   const ua = request.headers.get("user-agent");
@@ -141,8 +141,8 @@ export async function middleware(request: NextRequest) {
   }
 
   const cookie = request.cookies.get("admin_auth")?.value;
-  // Edge runtime no puede importar desde lib/secrets.ts si éste tuviera
-  // dependencias node:. Mantenemos la lectura inline aquí.
+  // Lectura inline del secreto (proxy corre en runtime Node; se mantiene
+  // simple e independiente de lib/secrets.ts).
   const secret =
     process.env.SESSION_SIGNING_SECRET ?? process.env.ADMIN_SECRET;
 

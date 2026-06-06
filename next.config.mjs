@@ -17,9 +17,9 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  // Content-Security-Policy se establece dinámicamente en middleware.ts
+  // Content-Security-Policy se establece dinámicamente en proxy.ts
   // (nonce por petición + strict-dynamic). No establecer aquí para evitar
-  // conflictos con el header dinámico que genera el middleware.
+  // conflictos con el header dinámico que genera el proxy.
 ];
 
 const nextConfig = {

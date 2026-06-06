@@ -163,7 +163,7 @@ export function sanitizarTexto(texto: string): string {
 
 // ──────────────────────────────────────────
 // Detección de bots / scanners por User-Agent
-// Fuente única de verdad — importada también por middleware.ts
+// Fuente única de verdad — importada también por proxy.ts
 // ──────────────────────────────────────────
 export const BOT_UA_PATTERNS = [
   /sqlmap/i,
