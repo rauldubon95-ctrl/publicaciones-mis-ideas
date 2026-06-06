@@ -97,7 +97,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
       </nav>
 
       {puedeVer && !adminOk && (acceso === "caducado" || acceso === "limite") && (
-        <div className="mb-3 border border-amber-200 bg-amber-50 rounded px-4 py-2.5">
+        <div className="mb-3 border border-amber-200 bg-amber-50 rounded-sm px-4 py-2.5">
           <p className="text-sm text-amber-800">
             {acceso === "caducado"
               ? "El enlace para descargar el archivo de este recurso ha caducado."
@@ -108,7 +108,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
       )}
 
       {esPremium && adminOk && (
-        <div className="mb-3 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-2.5">
+        <div className="mb-3 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded-sm px-4 py-2.5">
           <p className="text-sm text-blue-800 font-medium">
             Recurso de pago — estás viendo el contenido completo porque eres admin. Los visitantes deben comprarlo para acceder.
           </p>
@@ -129,7 +129,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
         {puedeVer && (
           <a
             href={`/api/recursos/${slug}/descargar`}
-            className="shrink-0 inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-brand-700 border border-zinc-200 hover:border-brand-300 px-3 py-1.5 rounded transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-brand-700 border border-zinc-200 hover:border-brand-300 px-3 py-1.5 rounded-sm transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

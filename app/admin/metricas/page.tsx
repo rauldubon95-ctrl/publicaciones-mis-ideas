@@ -163,7 +163,7 @@ function IndicadorSupabase({ stats }: { stats: SupabaseStats }) {
               { label: "Storage",       valor: "1 GB" },
               { label: "Bandwidth",     valor: "5 GB/mes" },
             ].map((item) => (
-              <div key={item.label} className="border border-zinc-100 rounded p-2.5">
+              <div key={item.label} className="border border-zinc-100 rounded-sm p-2.5">
                 <p className="text-xs text-zinc-400">{item.label}</p>
                 <p className="text-sm font-semibold text-zinc-700 mt-0.5">{item.valor}</p>
                 <p className="text-xs text-emerald-600 mt-0.5">Gratis</p>
@@ -214,7 +214,7 @@ function ConsejoCostos({ vistas }: { vistas: number }) {
         Asesor de Costos
       </h3>
 
-      <div className={`border rounded p-4 mb-5 text-sm flex gap-3 ${colores[estado]}`}>
+      <div className={`border rounded-sm p-4 mb-5 text-sm flex gap-3 ${colores[estado]}`}>
         <span className="font-bold text-base leading-none mt-0.5">{iconos[estado]}</span>
         <p>{consejo}</p>
       </div>
@@ -234,18 +234,18 @@ function ConsejoCostos({ vistas }: { vistas: number }) {
         <div className="pt-3 border-t border-zinc-100 space-y-2 text-xs text-zinc-600">
           <p className="font-semibold text-zinc-700 text-xs uppercase tracking-wider mb-2">Referencia de precios</p>
           <div className="grid grid-cols-2 gap-2">
-            <div className="border border-zinc-200 rounded p-3">
+            <div className="border border-zinc-200 rounded-sm p-3">
               <p className="font-semibold text-zinc-800">Vercel Hobby</p>
               <p className="text-emerald-700 font-bold text-base mt-0.5">Gratis</p>
               <p className="text-zinc-400 mt-1">100k vistas/mes · 1 proyecto · Sin dominio personalizado en SSL avanzado</p>
             </div>
-            <div className="border border-brand-200 bg-brand-50 rounded p-3">
+            <div className="border border-brand-200 bg-brand-50 rounded-sm p-3">
               <p className="font-semibold text-zinc-800">Vercel Pro</p>
               <p className="text-brand-700 font-bold text-base mt-0.5">$20 USD/mes</p>
               <p className="text-zinc-400 mt-1">Tráfico ilimitado · Analytics avanzado · Soporte prioritario</p>
             </div>
           </div>
-          <div className="border border-zinc-200 rounded p-3 mt-2">
+          <div className="border border-zinc-200 rounded-sm p-3 mt-2">
             <p className="font-semibold text-zinc-800">Dominio propio (.com)</p>
             <p className="text-zinc-600 mt-0.5">$10–$15 USD/año · Se conecta a Vercel en minutos</p>
             <p className="text-zinc-400 mt-1">Recomendado: Namecheap, Cloudflare Registrar (más baratos) o directamente en Vercel</p>

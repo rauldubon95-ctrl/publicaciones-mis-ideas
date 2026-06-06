@@ -106,7 +106,7 @@ export default async function LibroPage({ params, searchParams }: Props) {
       <BotonesCompartir titulo={libro.titulo} path={`/libros/${slug}`} />
 
       {esDePago && !adminOk && !tieneAcceso && (acceso === "caducado" || acceso === "limite") && (
-        <div className="mb-6 border border-amber-200 bg-amber-50 rounded px-4 py-3">
+        <div className="mb-6 border border-amber-200 bg-amber-50 rounded-sm px-4 py-3">
           <p className="text-sm text-amber-800">
             {acceso === "caducado"
               ? "El enlace de acceso a este libro ha caducado."
@@ -117,7 +117,7 @@ export default async function LibroPage({ params, searchParams }: Props) {
       )}
 
       {esDePago && adminOk && (
-        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-3">
+        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded-sm px-4 py-3">
           <p className="text-sm text-blue-800 font-medium">
             Libro de pago — estás viendo el contenido completo porque eres admin. Los visitantes deben comprarlo para descargar.
           </p>
@@ -144,7 +144,7 @@ export default async function LibroPage({ params, searchParams }: Props) {
                 priority
               />
             ) : (
-              <div className="w-full flex items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100" style={{ height: 330 }}>
+              <div className="w-full flex items-center justify-center bg-linear-to-br from-brand-50 to-zinc-100" style={{ height: 330 }}>
                 <svg className="w-20 h-20 text-brand-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
@@ -194,7 +194,7 @@ export default async function LibroPage({ params, searchParams }: Props) {
             <>
               <a
                 href={`/api/libros/${libro.slug}/descargar`}
-                className="inline-flex items-center justify-center gap-2.5 bg-brand-700 hover:bg-brand-800 text-white font-semibold px-8 py-4 rounded-xl transition-colors text-base shadow-sm w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2.5 bg-brand-700 hover:bg-brand-800 text-white font-semibold px-8 py-4 rounded-xl transition-colors text-base shadow-xs w-full sm:w-auto"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

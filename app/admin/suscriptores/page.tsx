@@ -110,7 +110,7 @@ export default function AdminSuscriptoresPage() {
                 <div key={item.mes} className="flex-1 flex flex-col items-center gap-1">
                   <span className="text-xs text-zinc-500 tabular-nums">{item.total}</span>
                   <div
-                    className="w-full bg-brand-200 rounded-sm"
+                    className="w-full bg-brand-200 rounded-xs"
                     style={{ height: `${Math.max(altura, 4)}%` }}
                   />
                   <span className="text-[10px] text-zinc-400 truncate w-full text-center">

@@ -159,7 +159,7 @@ export default function AdminDonacionesPage() {
 
       {/* Tabla de donaciones */}
       {datos.donaciones.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded">
+        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
           <p className="text-sm">
             No hay donaciones{filtro ? ` con estado ${filtro}` : ""}.
           </p>

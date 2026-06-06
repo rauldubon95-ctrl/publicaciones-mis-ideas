@@ -239,7 +239,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
                 type="button"
                 disabled={subiendoWord}
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-sm transition-colors disabled:opacity-50"
               >
                 {subiendoWord ? (
                   <>
@@ -341,7 +341,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
                   value={precioStr}
                   onChange={(e) => setPrecioStr(e.target.value)}
                   placeholder="5.00"
-                  className="flex-1 outline-none text-sm text-zinc-800 placeholder:text-zinc-300 bg-transparent"
+                  className="flex-1 outline-hidden text-sm text-zinc-800 placeholder:text-zinc-300 bg-transparent"
                 />
                 <span className="text-zinc-400 text-xs ml-1">USD</span>
               </div>
@@ -394,7 +394,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
       )}
 
       {errorMsg && (
-        <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
+        <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded-sm">
           {errorMsg}
         </div>
       )}

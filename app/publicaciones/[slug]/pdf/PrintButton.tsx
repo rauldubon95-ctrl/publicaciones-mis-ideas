@@ -26,7 +26,7 @@ export default function PrintButton({ publicacionId }: { publicacionId: string }
   return (
     <button
       onClick={handlePrint}
-      className="bg-white text-brand-800 font-medium px-4 py-1.5 rounded text-sm hover:bg-brand-50 transition-colors"
+      className="bg-white text-brand-800 font-medium px-4 py-1.5 rounded-sm text-sm hover:bg-brand-50 transition-colors"
     >
       Descargar PDF
     </button>

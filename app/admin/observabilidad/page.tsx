@@ -36,7 +36,7 @@ const COLORES_RETRIEVAL = { fts: "#6366f1", like: "#8b5cf6", vector: "#3b82f6", 
 
 function Tarjeta({ titulo, valor, sub, color }: { titulo: string; valor: string | number; sub?: string; color?: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs">
       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{titulo}</p>
       <p className={`text-3xl font-bold ${color ?? "text-gray-900"}`}>{valor}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
@@ -76,8 +76,8 @@ export default function ObservabilidadPage() {
           <p className="font-medium">No se pudo cargar la telemetría</p>
           <p className="text-sm mt-1">{error ?? "Sin datos disponibles"}</p>
           <div className="text-xs mt-3 text-red-500 space-y-1">
-            <p>Si el error dice "401": el secreto <code className="bg-red-100 px-1 rounded">D1_SYNC_SECRET</code> en Vercel no coincide con el del Worker.</p>
-            <p>Solución: en Cloudflare → Workers → <em>sociologia</em> → Settings → Variables → agrega <code className="bg-red-100 px-1 rounded">D1_SYNC_SECRET</code> como secret con el mismo valor que tienes en Vercel.</p>
+            <p>Si el error dice "401": el secreto <code className="bg-red-100 px-1 rounded-sm">D1_SYNC_SECRET</code> en Vercel no coincide con el del Worker.</p>
+            <p>Solución: en Cloudflare → Workers → <em>sociologia</em> → Settings → Variables → agrega <code className="bg-red-100 px-1 rounded-sm">D1_SYNC_SECRET</code> como secret con el mismo valor que tienes en Vercel.</p>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function ObservabilidadPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Consultas por día */}
           {dataDias.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">Consultas por día</h2>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={dataDias} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -168,7 +168,7 @@ export default function ObservabilidadPage() {
 
           {/* Distribución de confianza */}
           {dataConfianza.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">Distribución de confianza</h2>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={dataConfianza} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -192,7 +192,7 @@ export default function ObservabilidadPage() {
 
         {/* Método de retrieval + skills */}
         {dataRetrieval.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs mb-8">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">Método de recuperación de documentos</h2>
             <div className="flex flex-wrap gap-4">
               {dataRetrieval.map(({ method, count }) => (
@@ -217,7 +217,7 @@ export default function ObservabilidadPage() {
 
         {/* Eventos recientes */}
         {recientes.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">Eventos recientes (últimos 30)</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left text-gray-600">

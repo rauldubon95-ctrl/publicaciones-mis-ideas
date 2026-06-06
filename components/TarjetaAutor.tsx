@@ -73,7 +73,7 @@ export default function TarjetaAutor() {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] border border-zinc-300 text-zinc-500 hover:border-brand-400 hover:text-brand-700 px-2.5 py-1 rounded transition-colors"
+              className="text-[11px] border border-zinc-300 text-zinc-500 hover:border-brand-400 hover:text-brand-700 px-2.5 py-1 rounded-sm transition-colors"
             >
               {iconoEnlace[key] ?? key}
             </a>

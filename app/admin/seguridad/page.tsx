@@ -73,14 +73,14 @@ export default function SeguridadPage() {
         </h1>
         <button
           onClick={() => { setCargando(true); setError(""); fetch("/api/admin/seguridad").then(r=>r.json()).then(setDatos).catch(e=>setError(e.message)).finally(()=>setCargando(false)); }}
-          className="text-xs text-zinc-400 hover:text-zinc-700 border border-zinc-200 px-3 py-1.5 rounded"
+          className="text-xs text-zinc-400 hover:text-zinc-700 border border-zinc-200 px-3 py-1.5 rounded-sm"
         >
           Actualizar
         </button>
       </div>
 
       {error && (
-        <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
+        <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded-sm">
           {error}
         </div>
       )}
@@ -244,7 +244,7 @@ function Tarjeta({
   };
   const cls = colores[color] ?? colores.zinc;
   return (
-    <div className={`border p-4 rounded ${cls}`}>
+    <div className={`border p-4 rounded-sm ${cls}`}>
       <p className="text-xs uppercase tracking-wider opacity-70 mb-1">{titulo}</p>
       <p className="text-3xl font-mono font-semibold">
         {valor}

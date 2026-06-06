@@ -105,7 +105,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
       </div>
 
       {publicaciones.length === 0 ? (
-        <div className="text-center py-16 text-zinc-400 border border-dashed border-zinc-200 rounded">
+        <div className="text-center py-16 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
           <p className="text-sm">No hay publicaciones en esta categoría.</p>
         </div>
       ) : (

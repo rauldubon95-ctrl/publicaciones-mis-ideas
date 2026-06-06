@@ -35,13 +35,13 @@ export default function Paginacion({ paginaActual, totalPaginas, baseUrl }: Prop
       {paginaActual > 1 ? (
         <Link
           href={urlPagina(paginaActual - 1)}
-          className="px-3 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded hover:border-zinc-400 transition-colors"
+          className="px-3 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-sm hover:border-zinc-400 transition-colors"
           aria-label="Página anterior"
         >
           ← Anterior
         </Link>
       ) : (
-        <span className="px-3 py-1.5 text-sm text-zinc-300 border border-zinc-100 rounded" aria-disabled>
+        <span className="px-3 py-1.5 text-sm text-zinc-300 border border-zinc-100 rounded-sm" aria-disabled>
           ← Anterior
         </span>
       )}
@@ -70,13 +70,13 @@ export default function Paginacion({ paginaActual, totalPaginas, baseUrl }: Prop
       {paginaActual < totalPaginas ? (
         <Link
           href={urlPagina(paginaActual + 1)}
-          className="px-3 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded hover:border-zinc-400 transition-colors"
+          className="px-3 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-sm hover:border-zinc-400 transition-colors"
           aria-label="Página siguiente"
         >
           Siguiente →
         </Link>
       ) : (
-        <span className="px-3 py-1.5 text-sm text-zinc-300 border border-zinc-100 rounded" aria-disabled>
+        <span className="px-3 py-1.5 text-sm text-zinc-300 border border-zinc-100 rounded-sm" aria-disabled>
           Siguiente →
         </span>
       )}

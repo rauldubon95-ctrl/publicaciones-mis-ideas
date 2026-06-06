@@ -49,7 +49,7 @@ export default function MuroDashboard({ tableroId, titulo, precioCentavos }: Pro
   }
 
   return (
-    <div className="mt-6 border border-amber-200 bg-gradient-to-br from-amber-50 to-white rounded-2xl p-8 shadow-sm">
+    <div className="mt-6 border border-amber-200 bg-linear-to-br from-amber-50 to-white rounded-2xl p-8 shadow-xs">
       <div className="flex items-center justify-center w-14 h-14 mx-auto mb-5 rounded-full bg-amber-100">
         <svg
           className="w-7 h-7 text-amber-700"
@@ -96,7 +96,7 @@ export default function MuroDashboard({ tableroId, titulo, precioCentavos }: Pro
             placeholder="tu@correo.com"
             required
             maxLength={200}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
           />
         </div>
 
@@ -110,7 +110,7 @@ export default function MuroDashboard({ tableroId, titulo, precioCentavos }: Pro
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Tu nombre"
             maxLength={100}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
           />
         </div>
 

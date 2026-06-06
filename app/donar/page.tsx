@@ -39,7 +39,7 @@ export default function DonarPage() {
       </div>
 
       {/* Formulario de donación */}
-      <div className="border border-zinc-200 rounded-2xl p-7 bg-white shadow-sm">
+      <div className="border border-zinc-200 rounded-2xl p-7 bg-white shadow-xs">
         <FormularioDonacion />
       </div>
 

@@ -392,7 +392,7 @@ export default function AdminServiciosPage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded px-4 py-2">
+                <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-sm px-4 py-2">
                   {error}
                 </div>
               )}

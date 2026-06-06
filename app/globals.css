@@ -1,10 +1,67 @@
 /* Los @import deben preceder a cualquier otra regla (lo exige el parser CSS
    estricto de Turbopack en Next 16 y también Tailwind 4). Fuentes primero. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* En v4 los plugins se cargan desde el CSS. El migrador eliminó
+   tailwind.config.ts (donde estaba), así que se reinstaura aquí para que
+   las clases `prose` (artículos, recursos, dashboard, privacidad, PDF)
+   conserven su formato tipográfico. */
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-brand-50: #f0f2f7;
+  --color-brand-100: #dde2ee;
+  --color-brand-200: #bcc5de;
+  --color-brand-500: #4a5f8a;
+  --color-brand-600: #2d4270;
+  --color-brand-700: #1e2f52;
+  --color-brand-800: #152240;
+  --color-brand-900: #0d1628;
+
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, serif;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility btn-primary {
+  @apply inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-medium px-4 py-2 rounded-sm transition-colors duration-150 text-sm;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center gap-2 bg-white hover:bg-zinc-50 text-zinc-700 font-medium px-4 py-2 rounded-sm border border-zinc-200 transition-colors duration-150 text-sm;
+}
+
+@utility card {
+  @apply bg-white border border-zinc-200 hover:border-zinc-300 transition-colors duration-200;
+}
+
+@utility badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium tracking-wide;
+}
+
+@utility input {
+  @apply w-full border border-zinc-300 rounded-sm px-3 py-2 text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-600 focus:border-transparent transition;
+}
 
 @layer base {
   html {
@@ -15,23 +72,5 @@
   }
   h1, h2, h3, h4 {
     @apply font-serif;
-  }
-}
-
-@layer components {
-  .btn-primary {
-    @apply inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-medium px-4 py-2 rounded transition-colors duration-150 text-sm;
-  }
-  .btn-secondary {
-    @apply inline-flex items-center gap-2 bg-white hover:bg-zinc-50 text-zinc-700 font-medium px-4 py-2 rounded border border-zinc-200 transition-colors duration-150 text-sm;
-  }
-  .card {
-    @apply bg-white border border-zinc-200 hover:border-zinc-300 transition-colors duration-200;
-  }
-  .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium tracking-wide;
-  }
-  .input {
-    @apply w-full border border-zinc-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition;
   }
 }

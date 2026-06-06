@@ -146,7 +146,7 @@ export default function AdminTablerosPage() {
 
         <div>
           <label className="text-xs text-zinc-500 block mb-1">Archivo Excel (.xlsx / .xls) *</label>
-          <input name="archivo" type="file" accept=".xlsx,.xls" required className="w-full text-sm text-zinc-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-zinc-100 file:text-zinc-700 file:text-xs file:cursor-pointer" />
+          <input name="archivo" type="file" accept=".xlsx,.xls" required className="w-full text-sm text-zinc-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:bg-zinc-100 file:text-zinc-700 file:text-xs file:cursor-pointer" />
           <p className="text-xs text-zinc-400 mt-1">Máx. 10 MB. Se mostrará como tabla de solo lectura al público.</p>
         </div>
 
@@ -159,7 +159,7 @@ export default function AdminTablerosPage() {
               value="true"
               checked={esPremiumNuevo}
               onChange={(e) => setEsPremiumNuevo(e.target.checked)}
-              className="rounded border-zinc-300"
+              className="rounded-sm border-zinc-300"
             />
             <span className="text-sm text-zinc-700 font-medium">
               {esPremiumNuevo ? "Tablero de pago" : "Tablero gratuito"}
@@ -195,7 +195,7 @@ export default function AdminTablerosPage() {
         </div>
 
         {mensaje && (
-          <p className={`text-sm px-3 py-2 rounded ${mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          <p className={`text-sm px-3 py-2 rounded-sm ${mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
             {mensaje.texto}
           </p>
         )}
@@ -221,9 +221,9 @@ export default function AdminTablerosPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${t.publicado ? "bg-emerald-500" : "bg-zinc-300"}`} />
                 <span className="text-sm font-medium text-zinc-900 truncate">{t.titulo}</span>
-                {t.categoria && <span className="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded shrink-0">{t.categoria}</span>}
+                {t.categoria && <span className="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-sm shrink-0">{t.categoria}</span>}
                 {t.esPremium && t.precioCentavos != null && (
-                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-sm shrink-0">
                     Premium · ${(t.precioCentavos / 100).toFixed(2)}
                   </span>
                 )}
@@ -231,19 +231,19 @@ export default function AdminTablerosPage() {
               <p className="text-xs text-zinc-400 mt-1 ml-4">{t.archivoNombre}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <a href={`/dashboard/${t.slug}`} target="_blank" className="text-xs text-zinc-400 hover:text-zinc-700 px-2 py-1 rounded border border-zinc-200">
+              <a href={`/dashboard/${t.slug}`} target="_blank" className="text-xs text-zinc-400 hover:text-zinc-700 px-2 py-1 rounded-sm border border-zinc-200">
                 Ver
               </a>
               <button
                 onClick={() => togglePublicado(t)}
-                className={`text-xs px-2 py-1 rounded border transition-colors ${t.publicado ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}
+                className={`text-xs px-2 py-1 rounded-sm border transition-colors ${t.publicado ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}
               >
                 {t.publicado ? "Publicado" : "Publicar"}
               </button>
               {t.esPremium ? (
                 <button
                   onClick={() => quitarPremium(t)}
-                  className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1 rounded border border-zinc-200 hover:bg-zinc-50"
+                  className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1 rounded-sm border border-zinc-200 hover:bg-zinc-50"
                   title="Quitar precio y dejar gratis"
                 >
                   Hacer gratis
@@ -251,13 +251,13 @@ export default function AdminTablerosPage() {
               ) : null}
               <button
                 onClick={() => editandoPremium === t.id ? setEditandoPremium(null) : abrirEdicionPremium(t)}
-                className="text-xs text-amber-700 hover:bg-amber-50 px-2 py-1 rounded border border-amber-200"
+                className="text-xs text-amber-700 hover:bg-amber-50 px-2 py-1 rounded-sm border border-amber-200"
               >
                 {editandoPremium === t.id ? "Cerrar" : (t.esPremium ? "Editar precio" : "Hacer premium")}
               </button>
               <button
                 onClick={() => eliminar(t)}
-                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-transparent hover:border-red-200"
+                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-sm border border-transparent hover:border-red-200"
               >
                 Eliminar
               </button>
@@ -297,13 +297,13 @@ export default function AdminTablerosPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => guardarPremium(t, true)}
-                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded"
+                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-sm"
                   >
                     Guardar como premium
                   </button>
                   <button
                     onClick={() => setEditandoPremium(null)}
-                    className="text-xs text-zinc-500 hover:text-zinc-700 px-3 py-1.5 rounded border border-zinc-200"
+                    className="text-xs text-zinc-500 hover:text-zinc-700 px-3 py-1.5 rounded-sm border border-zinc-200"
                   >
                     Cancelar
                   </button>

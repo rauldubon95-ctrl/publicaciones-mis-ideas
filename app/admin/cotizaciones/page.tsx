@@ -201,7 +201,7 @@ export default function AdminCotizacionesPage() {
       </div>
 
       {solicitudes.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded">
+        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
           <p className="text-sm">No hay solicitudes{filtroEstado ? ` con estado ${filtroEstado}` : ""}.</p>
         </div>
       ) : (
@@ -243,7 +243,7 @@ export default function AdminCotizacionesPage() {
 
                   {/* Descripción expandible */}
                   {expandida === s.id ? (
-                    <div className="mt-3 p-3 bg-zinc-50 rounded border border-zinc-100 text-sm text-zinc-700 whitespace-pre-wrap">
+                    <div className="mt-3 p-3 bg-zinc-50 rounded-sm border border-zinc-100 text-sm text-zinc-700 whitespace-pre-wrap">
                       {s.descripcion}
                     </div>
                   ) : (
@@ -309,7 +309,7 @@ export default function AdminCotizacionesPage() {
                           value={asuntoResp}
                           onChange={(e) => setAsuntoResp(e.target.value)}
                           maxLength={200}
-                          className="w-full border border-zinc-200 rounded px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-none bg-white"
+                          className="w-full border border-zinc-200 rounded-sm px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-hidden bg-white"
                         />
                       </div>
                       <div>
@@ -322,14 +322,14 @@ export default function AdminCotizacionesPage() {
                           maxLength={8000}
                           rows={8}
                           placeholder={`Hola ${s.nombre},\n\nGracias por tu interés. …`}
-                          className="w-full border border-zinc-200 rounded px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-none bg-white font-sans"
+                          className="w-full border border-zinc-200 rounded-sm px-3 py-2 text-sm focus:border-brand-400 focus:ring-1 focus:ring-brand-200 outline-hidden bg-white font-sans"
                         />
                         <p className="text-[10px] text-zinc-400 mt-1">
                           {cuerpoResp.length}/8000 caracteres
                         </p>
                       </div>
                       {errorResp && (
-                        <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded px-3 py-2">
+                        <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-sm px-3 py-2">
                           {errorResp}
                         </p>
                       )}

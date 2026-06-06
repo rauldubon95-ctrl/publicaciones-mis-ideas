@@ -48,7 +48,7 @@ export default function LoginPage() {
             />
           </div>
           {error && (
-            <p className="text-red-600 text-sm border border-red-100 bg-red-50 px-3 py-2 rounded">
+            <p className="text-red-600 text-sm border border-red-100 bg-red-50 px-3 py-2 rounded-sm">
               Clave incorrecta. Verifica e intenta de nuevo.
             </p>
           )}

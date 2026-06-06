@@ -72,7 +72,7 @@ export default function SubscriptionForm() {
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
         maxLength={100}
-        className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+        className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
       />
 
       <div className="flex gap-2">
@@ -83,7 +83,7 @@ export default function SubscriptionForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           maxLength={200}
-          className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+          className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
         />
         <button
           type="submit"

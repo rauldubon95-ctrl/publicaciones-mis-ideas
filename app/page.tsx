@@ -114,7 +114,7 @@ export default async function HomePage({
         </div>
 
         {publicaciones.length === 0 ? (
-          <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded">
+          <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
             <p className="text-sm">Aún no hay publicaciones.</p>
             <p className="text-xs mt-1 text-zinc-300">
               Crea la primera desde el panel de administración.

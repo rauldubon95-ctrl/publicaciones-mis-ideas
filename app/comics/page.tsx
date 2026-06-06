@@ -49,7 +49,7 @@ export default async function ComicsPage() {
             >
               {/* Miniatura */}
               {c.paginas[0] ? (
-                <div className="aspect-[4/3] overflow-hidden bg-zinc-100">
+                <div className="aspect-4/3 overflow-hidden bg-zinc-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={c.paginas[0].imageUrl}
@@ -58,7 +58,7 @@ export default async function ComicsPage() {
                   />
                 </div>
               ) : (
-                <div className="aspect-[4/3] bg-zinc-100 flex items-center justify-center">
+                <div className="aspect-4/3 bg-zinc-100 flex items-center justify-center">
                   <span className="text-zinc-300 text-sm">Sin portada</span>
                 </div>
               )}

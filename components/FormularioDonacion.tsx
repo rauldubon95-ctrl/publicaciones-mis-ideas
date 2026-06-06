@@ -137,7 +137,7 @@ export default function FormularioDonacion() {
                     setError("");
                   }}
                   placeholder="0.00"
-                  className="flex-1 bg-transparent text-zinc-800 font-semibold outline-none placeholder:text-zinc-300"
+                  className="flex-1 bg-transparent text-zinc-800 font-semibold outline-hidden placeholder:text-zinc-300"
                   autoFocus
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -162,7 +162,7 @@ export default function FormularioDonacion() {
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Tu nombre"
             maxLength={100}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
           />
         </div>
         <div>
@@ -175,7 +175,7 @@ export default function FormularioDonacion() {
             onChange={(e) => setCorreo(e.target.value)}
             placeholder="tu@correo.com"
             maxLength={200}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
           />
           <p className="text-xs text-zinc-400 mt-1">
             Para recibir confirmación de tu donación.

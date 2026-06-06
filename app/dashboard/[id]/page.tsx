@@ -97,7 +97,7 @@ export default function TableroPage() {
       </nav>
 
       {puedeVer && !tablero.esAdmin && (acceso === "caducado" || acceso === "limite") && (
-        <div className="mb-6 border border-amber-200 bg-amber-50 rounded px-4 py-2.5">
+        <div className="mb-6 border border-amber-200 bg-amber-50 rounded-sm px-4 py-2.5">
           <p className="text-sm text-amber-800">
             {acceso === "caducado"
               ? "El enlace para descargar el Excel de este tablero ha caducado."
@@ -108,7 +108,7 @@ export default function TableroPage() {
       )}
 
       {esPremium && tablero.esAdmin && (
-        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded px-4 py-2.5">
+        <div className="mb-6 flex items-center justify-between gap-4 border border-blue-200 bg-blue-50 rounded-sm px-4 py-2.5">
           <p className="text-sm text-blue-800 font-medium">
             Tablero de pago — estás viendo el contenido completo porque eres admin. Los visitantes deben comprarlo para acceder.
           </p>
@@ -121,7 +121,7 @@ export default function TableroPage() {
       {/* Encabezado */}
       <header className="mb-8 border-b border-zinc-200 pb-6">
         {tablero.categoria && (
-          <span className="inline-block text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded mb-3">
+          <span className="inline-block text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-sm mb-3">
             {tablero.categoria}
           </span>
         )}
@@ -180,13 +180,13 @@ export default function TableroPage() {
           <div className="flex items-center gap-1 mb-5 bg-zinc-100 rounded-lg p-1 w-fit">
             <button
               onClick={() => setVista("tabla")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "tabla" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "tabla" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-500 hover:text-zinc-700"}`}
             >
               Tabla de datos
             </button>
             <button
               onClick={() => setVista("dashboard")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "dashboard" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === "dashboard" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-500 hover:text-zinc-700"}`}
             >
               Dashboard (gráficas)
             </button>

@@ -235,7 +235,7 @@ export default function AsistenteChat() {
                 rows={1}
                 maxLength={LIMITE_CHARS}
                 disabled={cargando}
-                className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
+                className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-hidden focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
                 style={{ minHeight: "38px" }}
               />
               <button

@@ -240,7 +240,7 @@ export default function LibroForm({ libro }: Props) {
               value={precioStr}
               onChange={(e) => setPrecioStr(e.target.value)}
               placeholder="0.00 = gratis"
-              className="flex-1 outline-none text-sm text-zinc-800 placeholder:text-zinc-300 bg-transparent"
+              className="flex-1 outline-hidden text-sm text-zinc-800 placeholder:text-zinc-300 bg-transparent"
             />
             <span className="text-zinc-400 text-xs ml-1">USD</span>
           </div>
@@ -253,7 +253,7 @@ export default function LibroForm({ libro }: Props) {
               onClick={() => setPublicado(!publicado)}
               className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${publicado ? "bg-brand-700" : "bg-zinc-300"}`}
             >
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
+              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
             </div>
             <span className="text-sm text-zinc-700 font-medium">
               {publicado ? "Visible al público" : "Guardar como borrador"}

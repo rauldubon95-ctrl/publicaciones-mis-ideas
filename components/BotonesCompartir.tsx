@@ -73,7 +73,7 @@ export default function BotonesCompartir({ titulo, path }: Props) {
   }
 
   const claseBoton =
-    "inline-flex items-center justify-center w-8 h-8 rounded border border-zinc-200 text-zinc-500 transition-colors";
+    "inline-flex items-center justify-center w-8 h-8 rounded-sm border border-zinc-200 text-zinc-500 transition-colors";
 
   return (
     <div className="flex items-center gap-2 my-6">

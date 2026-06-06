@@ -259,7 +259,7 @@ export default function AdminPage() {
             className={`group flex flex-col gap-3 rounded-xl border p-4 transition-all ${
               primary
                 ? "border-brand-300 bg-brand-50 hover:border-brand-500 hover:bg-brand-100"
-                : "border-zinc-200 bg-white hover:border-brand-300 hover:shadow-sm"
+                : "border-zinc-200 bg-white hover:border-brand-300 hover:shadow-xs"
             }`}
           >
             <span className={`w-9 h-9 flex items-center justify-center rounded-lg ${

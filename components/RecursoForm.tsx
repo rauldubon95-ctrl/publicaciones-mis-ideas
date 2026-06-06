@@ -125,7 +125,7 @@ export default function RecursoForm({ recurso }: Props) {
             <div>
               <input ref={fileRef} type="file" accept=".html,.htm,image/*" multiple className="hidden" onChange={handleFileHtml} />
               <button type="button" disabled={cargandoHtml} onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded transition-colors disabled:opacity-50">
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-sm transition-colors disabled:opacity-50">
                 {cargandoHtml ? "Procesando…" : "Importar .html + imágenes"}
               </button>
             </div>
@@ -140,7 +140,7 @@ export default function RecursoForm({ recurso }: Props) {
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <div onClick={() => setPublicado(!publicado)}
               className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${publicado ? "bg-brand-700" : "bg-zinc-300"}`}>
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
+              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
             </div>
             <span className="text-sm text-zinc-700 font-medium">{publicado ? "Visible al público" : "Guardar como borrador"}</span>
           </label>
@@ -152,7 +152,7 @@ export default function RecursoForm({ recurso }: Props) {
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <div onClick={() => setEsPremium(!esPremium)}
                 className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${esPremium ? "bg-amber-600" : "bg-zinc-300"}`}>
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${esPremium ? "translate-x-5" : "translate-x-0.5"}`} />
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${esPremium ? "translate-x-5" : "translate-x-0.5"}`} />
               </div>
               <span className="text-sm text-zinc-700 font-medium">
                 {esPremium ? "Recurso de pago" : "Recurso gratuito"}
@@ -195,7 +195,7 @@ export default function RecursoForm({ recurso }: Props) {
         </div>
       </div>
 
-      {error && <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">{error}</div>}
+      {error && <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded-sm">{error}</div>}
 
       <div className="flex items-center gap-3 pt-4 border-t border-zinc-100">
         <button type="submit" disabled={estado === "guardando"} className="btn-primary px-6">

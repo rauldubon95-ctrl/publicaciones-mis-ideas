@@ -127,7 +127,7 @@ export default function ServiciosConFormulario({ servicios }: Props) {
                 .map((servicio) => (
                   <article
                     key={servicio.id}
-                    className="card rounded-xl p-5 flex flex-col gap-3 hover:shadow-sm transition-shadow"
+                    className="card rounded-xl p-5 flex flex-col gap-3 hover:shadow-xs transition-shadow"
                   >
                     <div className="flex items-start gap-3">
                       {servicio.icono && (
@@ -165,7 +165,7 @@ export default function ServiciosConFormulario({ servicios }: Props) {
         </p>
         <button
           onClick={() => abrirFormulario()}
-          className="inline-flex items-center gap-2 bg-white text-brand-800 font-medium px-5 py-2.5 rounded text-sm hover:bg-brand-50 transition-colors"
+          className="inline-flex items-center gap-2 bg-white text-brand-800 font-medium px-5 py-2.5 rounded-sm text-sm hover:bg-brand-50 transition-colors"
         >
           Contactar directamente
         </button>
@@ -181,7 +181,7 @@ export default function ServiciosConFormulario({ servicios }: Props) {
         >
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
             onClick={cerrarModal}
             aria-hidden
           />

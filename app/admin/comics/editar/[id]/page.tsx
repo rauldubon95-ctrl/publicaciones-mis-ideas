@@ -147,7 +147,7 @@ export default function EditarComicPage() {
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <div onClick={() => setPublicado(!publicado)}
                 className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${publicado ? "bg-brand-700" : "bg-zinc-300"}`}>
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
               </div>
               <span className="text-sm text-zinc-700">{publicado ? "Visible al público" : "Borrador"}</span>
             </label>
@@ -164,12 +164,12 @@ export default function EditarComicPage() {
 
         {/* Estado del Storage */}
         {storageOk === false && (
-          <div className="mb-4 border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">
+          <div className="mb-4 border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded-sm">
             <strong>Problema con el almacenamiento de imágenes.</strong> Asegúrate de que el bucket &quot;comics&quot; esté creado en Supabase y sea público.
           </div>
         )}
         {storageOk === true && (
-          <div className="mb-4 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-2 text-xs rounded">
+          <div className="mb-4 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-2 text-xs rounded-sm">
             Almacenamiento listo
           </div>
         )}
@@ -188,7 +188,7 @@ export default function EditarComicPage() {
                 <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />Subiendo imagen…</>
               ) : "Seleccionar y subir imagen"}
             </button>
-            {errorUpload && <p className="text-red-600 text-sm mt-2 border border-red-100 bg-red-50 px-3 py-2 rounded">{errorUpload}</p>}
+            {errorUpload && <p className="text-red-600 text-sm mt-2 border border-red-100 bg-red-50 px-3 py-2 rounded-sm">{errorUpload}</p>}
             <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · sin límite de tamaño</p>
           </div>
         </div>
@@ -207,12 +207,12 @@ export default function EditarComicPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {paginas.map((p) => (
               <div key={p.id} className="border border-zinc-200 bg-white overflow-hidden group">
-                <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100">
+                <div className="relative aspect-3/4 overflow-hidden bg-zinc-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.imageUrl} alt={p.caption ?? `Página ${p.orden}`} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                     <button onClick={() => handleEliminarPagina(p.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white text-xs px-3 py-1.5 rounded font-medium">
+                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white text-xs px-3 py-1.5 rounded-sm font-medium">
                       Eliminar
                     </button>
                   </div>

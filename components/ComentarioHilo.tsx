@@ -62,7 +62,7 @@ function FormRespuesta({
         onChange={(e) => setNombre(e.target.value)}
         maxLength={80}
         required
-        className="w-full border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-400 rounded"
+        className="w-full border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-400 rounded-sm"
       />
       <textarea
         placeholder="Escribe tu respuesta…"
@@ -71,7 +71,7 @@ function FormRespuesta({
         maxLength={1000}
         required
         rows={3}
-        className="w-full border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-400 rounded resize-none"
+        className="w-full border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-400 rounded-sm resize-none"
       />
       {estado === "error" && (
         <p className="text-xs text-red-600">{errorMsg}</p>
@@ -80,7 +80,7 @@ function FormRespuesta({
         <button
           type="submit"
           disabled={estado === "enviando"}
-          className="text-xs bg-brand-700 text-white px-3 py-1.5 rounded hover:bg-brand-800 transition-colors disabled:opacity-50"
+          className="text-xs bg-brand-700 text-white px-3 py-1.5 rounded-sm hover:bg-brand-800 transition-colors disabled:opacity-50"
         >
           {estado === "enviando" ? "Enviando…" : "Responder"}
         </button>
@@ -236,7 +236,7 @@ function NodoComentario({
               {puedeResponder && (
                 <button
                   onClick={() => { setRespondiendoAdmin(!respondiendoAdmin); setRespondiendo(false); }}
-                  className="text-[11px] bg-brand-700 text-white px-2 py-0.5 rounded hover:bg-brand-800 transition-colors"
+                  className="text-[11px] bg-brand-700 text-white px-2 py-0.5 rounded-sm hover:bg-brand-800 transition-colors"
                 >
                   Responder como autor
                 </button>
@@ -277,13 +277,13 @@ function NodoComentario({
               maxLength={2000}
               required
               rows={3}
-              className="w-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-400 rounded resize-none"
+              className="w-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-400 rounded-sm resize-none"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={enviandoAdmin}
-                className="text-xs bg-brand-700 text-white px-3 py-1.5 rounded hover:bg-brand-800 transition-colors disabled:opacity-50"
+                className="text-xs bg-brand-700 text-white px-3 py-1.5 rounded-sm hover:bg-brand-800 transition-colors disabled:opacity-50"
               >
                 {enviandoAdmin ? "Enviando…" : "Publicar respuesta"}
               </button>
@@ -341,7 +341,7 @@ export default function ComentarioHilo({
 
   if (comentarios.length === 0) {
     return (
-      <p className="text-zinc-400 text-sm text-center py-6 border border-dashed border-zinc-100 rounded">
+      <p className="text-zinc-400 text-sm text-center py-6 border border-dashed border-zinc-100 rounded-sm">
         Sé el primero en comentar.
       </p>
     );

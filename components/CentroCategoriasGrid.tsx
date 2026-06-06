@@ -36,7 +36,7 @@ export default function CentroCategoriasGrid({ categorias }: Props) {
             key={cat.slug}
             href={`/categorias/${cat.slug}`}
             className="group flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4
-                       hover:border-brand-300 hover:shadow-sm transition-all duration-150"
+                       hover:border-brand-300 hover:shadow-xs transition-all duration-150"
           >
             {/* Ícono o emoji */}
             <span className="w-9 h-9 flex items-center justify-center rounded-lg bg-zinc-100

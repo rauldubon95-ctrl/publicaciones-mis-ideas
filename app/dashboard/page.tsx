@@ -53,12 +53,12 @@ export default async function DashboardPage() {
             <Link
               key={t.id}
               href={`/dashboard/${t.slug}`}
-              className="group block border border-zinc-200 bg-white rounded-xl p-5 hover:border-brand-300 hover:shadow-sm transition-all"
+              className="group block border border-zinc-200 bg-white rounded-xl p-5 hover:border-brand-300 hover:shadow-xs transition-all"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {t.categoria && (
-                    <span className="inline-block text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded mb-2">
+                    <span className="inline-block text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-sm mb-2">
                       {t.categoria}
                     </span>
                   )}

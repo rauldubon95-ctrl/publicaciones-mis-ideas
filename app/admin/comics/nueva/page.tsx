@@ -51,13 +51,13 @@ export default function NuevoComicPage() {
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <div onClick={() => setPublicado(!publicado)}
               className={`w-10 h-5 rounded-full transition-colors duration-200 relative cursor-pointer ${publicado ? "bg-brand-700" : "bg-zinc-300"}`}>
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
+              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${publicado ? "translate-x-5" : "translate-x-0.5"}`} />
             </div>
             <span className="text-sm text-zinc-700 font-medium">{publicado ? "Visible al público" : "Guardar como borrador"}</span>
           </label>
         </div>
 
-        {error && <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded">{error}</div>}
+        {error && <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm rounded-sm">{error}</div>}
 
         <div className="flex gap-3 pt-4 border-t border-zinc-100">
           <button type="submit" disabled={estado === "guardando"} className="btn-primary px-6">

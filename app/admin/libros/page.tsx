@@ -60,7 +60,7 @@ export default function AdminLibrosPage() {
           {libros.map((l) => (
             <div key={l.id} className="border border-zinc-100 rounded-xl p-4 flex gap-4 items-start group hover:border-zinc-200 transition-colors bg-white">
               {/* Portada miniatura */}
-              <div className="shrink-0 w-14 h-20 bg-zinc-100 rounded overflow-hidden flex items-center justify-center">
+              <div className="shrink-0 w-14 h-20 bg-zinc-100 rounded-sm overflow-hidden flex items-center justify-center">
                 {l.imagenPortada ? (
                   <Image src={l.imagenPortada} alt="" width={56} height={80} className="object-cover w-full h-full" />
                 ) : (
