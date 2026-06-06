@@ -181,22 +181,23 @@ dimensiones → CLS). → Usar `next/image` con `width`/`height` o `fill`+`sizes
 **Veredicto: hoy aguanta tu tráfico con holgura. A 100× usuarios aparecen 4
 cuellos reales** (de mayor a menor gravedad):
 
-**🔴 1. Descargas cargan el archivo entero en memoria.**
-`app/api/libros/[slug]/descargar/route.ts:61` hace `Buffer.from(await blob.arrayBuffer())`
-— un PDF de 50 MB × N descargas concurrentes = **OOM en la función serverless**.
-Igual en dashboard y recursos. → Hacer *stream* real (pasar el `ReadableStream`
-del blob a la respuesta sin bufferizar) **o** servir con signed URL temporal de
-Supabase. Es el riesgo #1 a escala.
+**🔴 1. Descargas cargan el archivo entero en memoria.** ✅ **RESUELTO (sesión 26)**
+Hacían `Buffer.from(await blob.arrayBuffer())` (2ª copia en RAM). Cambiado a
+`blob.stream()` en libros y dashboard. **Corrección:** `recursos/[slug]/descargar`
+NO usa bucket (sirve HTML desde la DB) → eran **2 rutas, no 3**. Residual: el blob
+de Supabase se materializa una vez; para archivos muy grandes (>~20 MB) convendría
+streaming desde origen con signed URL — diferido (hoy los archivos son ≤2.5 MB).
 
-**🟠 2. `/api/admin/metricas` sin caché.** 18 queries + recorrido recursivo de
-Storage en cada visita (3-8 s). Solo lo ve el admin, pero si hay varios
-concurrentes, timeouts. → `unstable_cache` 5 min.
+**🟠 2. `/api/admin/metricas` sin caché.** ✅ **RESUELTO (sesión 26)** — envuelto en
+`unstable_cache` (revalida 120 s, tag `metricas`), con la auth fuera del caché.
 
-**🟠 3. `/api/admin/publicaciones` sin paginación** — carga *todas* las
-publicaciones. Con 1000+ artículos, memoria alta. → `take/skip`.
+**🟠 3. `/api/admin/publicaciones` sin paginación.** 🟡 **MITIGADO (sesión 26)** —
+pasó de `include` (traía el `contenido` completo de cada artículo) a `select` de
+solo los campos que usa el panel. La paginación real requiere cambio de UI (diferido).
 
-**🟡 4. Rate-limit del Worker es fail-close ante caída de KV.** Si KV hipa, se
-rechazan queries. → Cache en memoria con TTL + KV como fallback.
+**🟡 4. Rate-limit del Worker es fail-close ante caída de KV.** ⏸️ **NO se cambia
+(decisión sesión 26)** — la "caché en memoria + fallback" no encaja en Workers
+(memoria por-isolate → subcontaría el límite); el fail-close es lo seguro.
 
 **Lo que SÍ escala bien:** singleton de Prisma con pooling (no agota conexiones),
 índices compuestos, `unstable_cache` en home/listados, timeouts en todas las
@@ -312,24 +313,25 @@ ingresos sin reescribir nada:
 
 ## 10. Plan priorizado (qué hacer y en qué orden)
 
-### 🟢 Quick wins (alto impacto, bajo esfuerzo — 1 sesión)
-1. **`next/font`** en vez de `@import` → −300-500 ms TTFB + mejor CLS/ranking.
-2. **Quitar `force-dynamic`** de libros/recursos/comics/sitemap → `revalidate: 300`.
-3. **Índices FK** en Supabase (3 índices) → JOINs rápidos a futuro.
-4. **og:image fallback** en páginas dinámicas → previews sociales.
-5. **`lib/paypal.ts`**: no loguear body de errores (M1).
+### 🟢 Quick wins (alto impacto, bajo esfuerzo — 1 sesión) — ✅ HECHO (sesión 25)
+1. ✅ **`next/font`** en vez de `@import` → −300-500 ms TTFB + mejor CLS/ranking.
+2. ⏸️ **Quitar `force-dynamic`** → NO se hizo: rompería el build de Preview (§18, sin `DATABASE_URL`). Prerrequisito: configurar `DATABASE_URL` en Preview.
+3. ✅ **Índices FK** en Supabase (3 índices) → aplicados a prod.
+4. ✅ **og:image fallback** en páginas dinámicas → previews sociales.
+5. ✅ **`lib/paypal.ts`**: no loguear body de errores (M1) — hecho sesión 26.
 
-### 🟠 Blindaje de cadena de suministro (tu prioridad — PR dedicada)
-6. `.npmrc` con `npm ci` en Vercel + (evaluar) `ignore-scripts`.
-7. Cooldown de versiones en Dependabot (`minimumReleaseAge`).
-8. CI gate: `npm audit --audit-level=high` + `npm audit signatures` que **falle** el merge.
-9. Rotar `PAYPAL_CLIENT_SECRET` y `SESSION_SIGNING_SECRET` (higiene periódica).
+### 🟠 Blindaje de cadena de suministro — ✅ HECHO (sesión 25)
+6. ✅ `.npmrc` + `npm ci` en Vercel (sin `ignore-scripts` global — rompería esbuild/prisma).
+7. ✅ Cooldown de 7 días en Dependabot.
+8. ✅ CI gate `supply-chain.yml`: `npm audit --audit-level=high` bloqueante + signatures.
+9. ⏳ Rotar `PAYPAL_CLIENT_SECRET` y `SESSION_SIGNING_SECRET` (acción del usuario — reportado hecho).
 
-### 🟠 Resiliencia ante estrés (antes de campañas/picos)
-10. **Stream o signed URL** en las 3 rutas de descarga (riesgo OOM #1).
-11. Cache de `/api/admin/metricas` + paginar `/api/admin/publicaciones`.
+### 🟠 Resiliencia ante estrés — ✅ HECHO (sesión 26)
+10. ✅ Anti-OOM: `blob.stream()` en las 2 rutas que bufferizaban (libros, dashboard).
+11. ✅ Cache de `/api/admin/metricas` (`unstable_cache` 120 s) + `select` en `/api/admin/publicaciones` (paginación UI diferida).
++   ⏸️ Rate-limit Worker: NO se cambia (per-isolate memory no aplica; fail-close es lo seguro).
 
-### 🔵 Deuda técnica / calidad (cuando haya holgura)
+### 🔵 Deuda técnica / calidad (cuando haya holgura) — pendiente
 12. Factorizar los 4 Muros en `MuroCompra` (PR aislada).
 13. Genérico de helpers `acceso*`.
 14. BreadcrumbList JSON-LD.
