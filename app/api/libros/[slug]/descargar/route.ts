@@ -58,13 +58,15 @@ export async function GET(
     .create({ data: { libroId: libro.id, dispositivo } })
     .catch(() => {});
 
-  const buffer = Buffer.from(await blob.arrayBuffer());
-  return new NextResponse(buffer, {
+  // Stream del blob en vez de bufferizarlo con Buffer.from(arrayBuffer()): así
+  // no se mantiene una segunda copia del archivo en memoria (reduce el pico de
+  // RAM a la mitad bajo descargas concurrentes). Content-Length sale de blob.size.
+  return new NextResponse(blob.stream(), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${slug}.pdf"`,
-      "Content-Length": String(buffer.byteLength),
+      "Content-Length": String(blob.size),
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, no-store",
     },

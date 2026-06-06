@@ -52,13 +52,14 @@ export async function GET(req: NextRequest, { params }: Params) {
   if (!blob) return new NextResponse("Archivo no disponible", { status: 404 });
 
   const nombre = (tablero.archivoNombre || "dashboard.xlsx").replace(/[^a-zA-Z0-9.\-_]/g, "_");
-  const buffer = Buffer.from(await blob.arrayBuffer());
-  return new NextResponse(buffer, {
+  // Stream del blob en vez de bufferizarlo con Buffer.from(arrayBuffer()): evita
+  // una segunda copia del archivo en memoria (menor pico de RAM bajo concurrencia).
+  return new NextResponse(blob.stream(), {
     status: 200,
     headers: {
       "Content-Type": XLSX_MIME,
       "Content-Disposition": `attachment; filename="${nombre}"`,
-      "Content-Length": String(buffer.byteLength),
+      "Content-Length": String(blob.size),
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, no-store",
     },

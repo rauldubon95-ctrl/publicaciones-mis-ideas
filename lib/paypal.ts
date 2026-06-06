@@ -23,9 +23,10 @@ if (!id || !secret) throw new Error("Credenciales PayPal no configuradas");
     cache: "no-store",
   });
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[paypal] auth fallida status=${res.status} body=${body}`);
-    throw new Error(`PayPal auth fallida (${res.status}): ${body}`);
+    // No se loguea el body de la respuesta de PayPal: puede contener datos
+    // sensibles. El status basta para diagnosticar (+ el panel de PayPal).
+    console.error(`[paypal] auth fallida status=${res.status}`);
+    throw new Error(`PayPal auth fallida (${res.status})`);
   }
   const data = (await res.json()) as { access_token: string };
   return data.access_token;
@@ -71,9 +72,8 @@ export async function crearOrdenPayPal(
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[paypal] orden fallida status=${res.status} body=${body}`);
-    throw new Error(`PayPal orden error: ${body}`);
+    console.error(`[paypal] orden fallida status=${res.status}`);
+    throw new Error(`PayPal orden error (${res.status})`);
   }
 
   const order = (await res.json()) as {
@@ -140,7 +140,7 @@ export async function verificarFirmaWebhookPayPal(
   });
 
   if (!res.ok) {
-    console.error("[paypal-webhook] verify falló:", res.status, await res.text());
+    console.error("[paypal-webhook] verify falló:", res.status);
     return false;
   }
 

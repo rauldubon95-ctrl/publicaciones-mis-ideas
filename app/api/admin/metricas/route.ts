@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -38,9 +39,11 @@ async function sumarBucketStorage(
   return { archivos, bytes };
 }
 
-export async function GET(_req: NextRequest) {
-  if (!(await isAdminAuthorized())) return unauthorizedResponse();
-
+// Cómputo pesado (18 queries + recorrido recursivo de Storage) cacheado 2 min.
+// Antes corría en CADA visita al panel (3-8 s). La autenticación se hace fuera
+// del caché (lee cookies); aquí solo van datos agregados, ligeramente diferidos.
+const getMetricas = unstable_cache(
+  async () => {
   const ahora = new Date();
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
   const hace30 = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -138,7 +141,7 @@ export async function GET(_req: NextRequest) {
     })(),
   ]);
 
-  return NextResponse.json({
+  return {
     resumen: {
       totalVistas, vistasEstesMes,
       totalDescargas, descargasEsteMes,
@@ -160,5 +163,13 @@ export async function GET(_req: NextRequest) {
         bandwidthBytes: 5 * 1024 * 1024 * 1024, // 5 GB/mes
       },
     },
-  });
+  };
+  },
+  ["admin-metricas"],
+  { revalidate: 120, tags: ["metricas"] }
+);
+
+export async function GET(_req: NextRequest) {
+  if (!(await isAdminAuthorized())) return unauthorizedResponse();
+  return NextResponse.json(await getMetricas());
 }
