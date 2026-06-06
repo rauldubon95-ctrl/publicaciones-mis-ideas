@@ -33,9 +33,14 @@ export async function POST() {
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
     "base64"
   );
+  // El nombre se calcula una sola vez y se reutiliza al limpiar: si se llamara
+  // a Date.now() de nuevo en el remove, se intentaría borrar un archivo con otro
+  // timestamp y el de prueba quedaría huérfano en el bucket (causa histórica de
+  // los _test_*.png acumulados).
+  const nombrePrueba = `_test_${Date.now()}.png`;
   const { error: errTest } = await sb.storage
     .from("comics")
-    .upload(`_test_${Date.now()}.png`, pixelPng, { contentType: "image/png", upsert: true });
+    .upload(nombrePrueba, pixelPng, { contentType: "image/png", upsert: true });
 
   if (errTest) {
     resultados.uploadTest = `Fallo: ${errTest.message}`;
@@ -46,8 +51,8 @@ export async function POST() {
     });
   }
 
-  // Limpiar imagen de prueba
-  await sb.storage.from("comics").remove([`_test_${Date.now()}.png`]).catch(() => {});
+  // Limpiar imagen de prueba (mismo nombre que se subió)
+  await sb.storage.from("comics").remove([nombrePrueba]).catch(() => {});
   resultados.uploadTest = "OK — permisos correctos";
 
   return NextResponse.json({ ok: true, resultados });
