@@ -35,6 +35,8 @@ model Publicacion {
   descargas     DescargaPdf[]
   enviosEmail   EmailEnvio[]
   pedidos       PedidoContenido[]
+
+  @@index([categoriaId])
 }
 
 model Categoria {
@@ -61,6 +63,7 @@ model PublicacionEtiqueta {
   etiqueta      Etiqueta    @relation(fields: [etiquetaId], references: [id], onDelete: Cascade)
 
   @@id([publicacionId, etiquetaId])
+  @@index([etiquetaId])
 }
 
 model Comentario {

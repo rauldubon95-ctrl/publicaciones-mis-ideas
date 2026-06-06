@@ -15,7 +15,7 @@ import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
 import BotonesCompartir from "@/components/BotonesCompartir";
 import JsonLd from "@/components/JsonLd";
-import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -44,11 +44,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: p.publicadoAt?.toISOString(),
       modifiedTime: p.actualizadoAt?.toISOString(),
       authors: [SITE_NAME],
+      images: ogImagenes(),
     },
     twitter: {
       card: "summary_large_image",
       title: p.titulo,
       description: descripcion,
+      images: ogImagenes().map((i) => i.url),
     },
   };
 }

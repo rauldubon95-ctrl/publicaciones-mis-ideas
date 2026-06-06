@@ -5,7 +5,7 @@ import Link from "next/link";
 import ComicReader from "@/components/ComicReader";
 import TrackView from "@/components/TrackView";
 import type { Metadata } from "next";
-import { canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +28,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       siteName: SITE_NAME,
       locale: "es_ES",
+      images: ogImagenes(),
     },
-    twitter: { card: "summary", title: c.titulo, description: descripcion },
+    twitter: {
+      card: "summary_large_image",
+      title: c.titulo,
+      description: descripcion,
+      images: ogImagenes().map((i) => i.url),
+    },
   };
 }
 

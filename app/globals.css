@@ -1,8 +1,6 @@
-/* Los @import deben preceder a cualquier otra regla (lo exige el parser CSS
-   estricto de Turbopack en Next 16 y también Tailwind 4). Fuentes primero. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap')
-layer(base);
-
+/* Las fuentes ahora las auto-hospeda next/font (ver app/layout.tsx): expone
+   --font-inter y --font-lora como variables CSS sobre <html>. Antes se cargaban
+   por @import desde fonts.googleapis.com, lo que penalizaba el TTFB. */
 @import 'tailwindcss';
 
 /* En v4 los plugins se cargan desde el CSS. El migrador eliminó
@@ -21,8 +19,8 @@ layer(base);
   --color-brand-800: #152240;
   --color-brand-900: #0d1628;
 
-  --font-sans: Inter, system-ui, sans-serif;
-  --font-serif: Lora, Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
 }
 
 /*

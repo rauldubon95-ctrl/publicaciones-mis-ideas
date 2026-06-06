@@ -8,7 +8,7 @@ import MuroLibro from "@/components/MuroLibro";
 import BotonesCompartir from "@/components/BotonesCompartir";
 import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
-import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +34,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       siteName: SITE_NAME,
       locale: "es_ES",
-      images: l.imagenPortada ? [l.imagenPortada] : undefined,
+      images: ogImagenes(l.imagenPortada),
     },
     twitter: {
-      card: l.imagenPortada ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: l.titulo,
       description: descripcion,
-      images: l.imagenPortada ? [l.imagenPortada] : undefined,
+      images: ogImagenes(l.imagenPortada).map((i) => i.url),
     },
   };
 }

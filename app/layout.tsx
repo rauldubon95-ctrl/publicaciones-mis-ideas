@@ -1,6 +1,24 @@
 import type { Metadata } from "next";
+import { Inter, Lora } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+
+// Fuentes auto-hospedadas por Next (antes venían por @import desde Google CDN,
+// lo que añadía ~300-500 ms de TTFB + riesgo de FOUT). next/font las sirve desde
+// el propio dominio, con preload y `display: swap` para Core Web Vitals óptimos.
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-inter",
+});
+const lora = Lora({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-lora",
+});
 import Footer from "@/components/Footer";
 import AsistenteChat from "@/components/AsistenteChat";
 import JsonLd from "@/components/JsonLd";
@@ -60,7 +78,7 @@ const sitioJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${inter.variable} ${lora.variable}`}>
       <body className="min-h-screen flex flex-col">
         <JsonLd data={[personaJsonLd, sitioJsonLd]} />
         <Header />

@@ -6,6 +6,19 @@ export const SITE_NAME = "Raúl Dubón";
 export const DEFAULT_DESCRIPTION =
   "Espacio de divulgación académica, proyectos e ideas de Raúl Dubón";
 
+export const OG_IMAGE_FALLBACK = "/og-image-rauldubon.png";
+
+/**
+ * Devuelve el arreglo `images` para openGraph/twitter. Si la entidad tiene su
+ * propia portada la usa; si no, cae al og:image del sitio. Garantiza que TODA
+ * página dinámica emita una imagen de preview en redes sociales (antes los
+ * artículos/recursos/cómics sin portada no generaban ninguna).
+ */
+export function ogImagenes(portadaUrl?: string | null) {
+  const url = portadaUrl || OG_IMAGE_FALLBACK;
+  return [{ url, width: 1200, height: 630, alt: SITE_NAME }];
+}
+
 export function canonicalUrl(path: string): string {
   const clean = path.startsWith("/") ? path : `/${path}`;
   return `${BASE_URL}${clean}`;

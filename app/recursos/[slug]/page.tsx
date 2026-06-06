@@ -8,7 +8,7 @@ import JsonLd from "@/components/JsonLd";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoRecurso } from "@/lib/accesoRecurso";
 import type { Metadata } from "next";
-import { BASE_URL, canonicalUrl, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +34,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       siteName: SITE_NAME,
       locale: "es_ES",
+      images: ogImagenes(),
     },
     twitter: {
       card: "summary_large_image",
       title: r.titulo,
       description: descripcion,
+      images: ogImagenes().map((i) => i.url),
     },
   };
 }
