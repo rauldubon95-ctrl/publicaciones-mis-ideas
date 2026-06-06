@@ -178,23 +178,35 @@ const SECCIONES = [
   },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function AdminPage() {
   const router = useRouter();
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [cargando, setCargando] = useState(true);
   const [sincronizando, setSincronizando] = useState(false);
   const [resultadoSync, setResultadoSync] = useState<string | null>(null);
   const [totalDonado, setTotalDonado] = useState<number>(0);
 
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   useEffect(() => {
-    fetch("/api/admin/publicaciones")
+    setCargando(true);
+    fetch(`/api/admin/publicaciones?page=${page}&pageSize=${PAGE_SIZE}`)
       .then((r) => {
         if (r.status === 401) { router.replace("/admin/login"); return null; }
         return r.json();
       })
-      .then((data) => { if (data) setPublicaciones(data); })
+      .then((data) => {
+        if (data) {
+          setPublicaciones(data.items ?? []);
+          setTotal(data.total ?? 0);
+        }
+      })
       .finally(() => setCargando(false));
-  }, [router]);
+  }, [router, page]);
 
   useEffect(() => {
     fetch("/api/admin/donaciones")
@@ -240,9 +252,9 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-serif font-semibold text-zinc-900">Administración</h1>
           <p className="text-zinc-400 text-sm mt-1">
-            {publicaciones.length === 0
+            {total === 0
               ? "Sin publicaciones"
-              : `${publicaciones.length} publicación${publicaciones.length !== 1 ? "es" : ""}`}
+              : `${total} publicación${total !== 1 ? "es" : ""}`}
           </p>
         </div>
         <button onClick={handleLogout} className="btn-secondary text-sm">
@@ -315,7 +327,7 @@ export default function AdminPage() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
           Publicaciones recientes
         </h2>
-        {publicaciones.length === 0 ? (
+        {total === 0 ? (
           <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
             <p className="text-sm">No hay publicaciones aún.</p>
             <Link href="/admin/nueva" className="btn-primary mt-5 inline-flex">
@@ -323,6 +335,7 @@ export default function AdminPage() {
             </Link>
           </div>
         ) : (
+          <>
           <div className="divide-y divide-zinc-100">
             {publicaciones.map((p) => (
               <div key={p.id} className="py-4 flex items-center gap-4 group">
@@ -367,6 +380,28 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-100">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="btn-secondary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs text-zinc-400">
+                Página {page} de {totalPaginas}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+                disabled={page >= totalPaginas}
+                className="btn-secondary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
