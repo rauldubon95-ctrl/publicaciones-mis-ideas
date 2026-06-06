@@ -1,0 +1,76 @@
+# Gate de cadena de suministro (supply chain).
+#
+# Corre en cada Pull Request y en cambios a main que toquen dependencias.
+# Falla el merge si hay vulnerabilidades de severidad alta/crítica conocidas, y
+# reporta (sin bloquear) la verificación de firmas del registro npm.
+#
+# Esto cierra el hueco de que hoy nada impide mergear una dependencia con un
+# CVE conocido. Complementa a Dependabot (que abre PRs) con un control que
+# *rechaza* lo inseguro.
+name: supply-chain
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "workers/sociologia/package.json"
+      - "workers/sociologia/package-lock.json"
+      - ".github/workflows/supply-chain.yml"
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "workers/sociologia/package.json"
+      - "workers/sociologia/package-lock.json"
+  # Permite ejecutarlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-web:
+    name: Auditar dependencias (web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20.x"
+          cache: "npm"
+      # Instalación reproducible: exactamente lo del lockfile, sin traer
+      # versiones nuevas. Si el lockfile no cuadra con package.json, falla.
+      - name: npm ci
+        run: npm ci --ignore-scripts
+      # Bloquea el merge si hay vulnerabilidades altas o críticas conocidas.
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+      # Verifica las firmas del registro npm de los paquetes instalados.
+      # Informativo (no bloquea) porque algún paquete legítimo puede carecer
+      # de firma; el valor es detectar manipulación del registro.
+      - name: npm audit signatures
+        run: npm audit signatures
+        continue-on-error: true
+
+  audit-worker:
+    name: Auditar dependencias (worker IA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: workers/sociologia/package-lock.json
+      - name: npm ci
+        working-directory: workers/sociologia
+        run: npm ci --ignore-scripts
+      - name: npm audit (high+)
+        working-directory: workers/sociologia
+        run: npm audit --audit-level=high
+      - name: npm audit signatures
+        working-directory: workers/sociologia
+        run: npm audit signatures
+        continue-on-error: true

@@ -18,6 +18,12 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    # Cooldown anti-supply-chain: espera 7 días desde que se publica una versión
+    # antes de proponerla. El malware npm suele detectarse y retirarse en
+    # horas/días; esto evita ser el conejillo de indias de una versión recién
+    # secuestrada.
+    cooldown:
+      default-days: 7
     groups:
       menores-y-parches:
         update-types: ["minor", "patch"]
@@ -33,6 +39,8 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps(worker)"
+    cooldown:
+      default-days: 7
     groups:
       menores-y-parches:
         update-types: ["minor", "patch"]
