@@ -52,22 +52,21 @@ const getHomeData = unstable_cache(
   { revalidate: 300, tags: ["publicaciones", "categorias"] }
 );
 
-// Novedades activas y no caducadas para el panel lateral (máx 5). Cacheado e
-// invalidado vía revalidateTag("novedades") al crear/editar/borrar desde admin.
-const getNovedades = unstable_cache(
-  async () =>
-    prisma.novedad.findMany({
-      where: {
-        activo: true,
-        OR: [{ expiraAt: null }, { expiraAt: { gt: new Date() } }],
-      },
-      orderBy: [{ orden: "asc" }, { creadoAt: "desc" }],
-      take: 5,
-      select: { id: true, titulo: true, textoCorto: true, url: true, tipo: true },
-    }),
-  ["home-novedades"],
-  { revalidate: 300, tags: ["novedades"] }
-);
+// Novedades activas y no caducadas para el panel lateral (máx 5). SIN caché:
+// es una consulta diminuta (≤5 filas, indexada) y la home ya es dinámica, así
+// que un aviso recién creado en /admin aparece de inmediato (antes la caché de
+// 5 min lo retrasaba). El filtro de caducidad usa `now()` en cada render.
+async function getNovedades() {
+  return prisma.novedad.findMany({
+    where: {
+      activo: true,
+      OR: [{ expiraAt: null }, { expiraAt: { gt: new Date() } }],
+    },
+    orderBy: [{ orden: "asc" }, { creadoAt: "desc" }],
+    take: 5,
+    select: { id: true, titulo: true, textoCorto: true, url: true, tipo: true },
+  });
+}
 
 export default async function HomePage({
   searchParams,
@@ -194,10 +193,17 @@ export default async function HomePage({
   if (conSidebar) {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-12">
+        {/* Escritorio: panel lateral slim a la izquierda */}
         <aside className="hidden lg:block">
           <NovedadesSidebar novedades={novedades} />
         </aside>
-        <div className="min-w-0">{contenido}</div>
+        <div className="min-w-0">
+          {/* Móvil/tablet: bloque compacto arriba (no cabe una columna lateral) */}
+          <div className="lg:hidden mb-10 border border-zinc-100 rounded-xl p-4 bg-zinc-50/50">
+            <NovedadesSidebar novedades={novedades} />
+          </div>
+          {contenido}
+        </div>
       </div>
     );
   }
