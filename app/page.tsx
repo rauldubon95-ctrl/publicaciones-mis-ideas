@@ -4,6 +4,7 @@ import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import CentroCategoriasGrid from "@/components/CentroCategoriasGrid";
 import SubscriptionForm from "@/components/SubscriptionForm";
+import NovedadesSidebar from "@/components/NovedadesSidebar";
 import type { Metadata } from "next";
 import { canonicalWithPage } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
@@ -51,6 +52,23 @@ const getHomeData = unstable_cache(
   { revalidate: 300, tags: ["publicaciones", "categorias"] }
 );
 
+// Novedades activas y no caducadas para el panel lateral (máx 5). Cacheado e
+// invalidado vía revalidateTag("novedades") al crear/editar/borrar desde admin.
+const getNovedades = unstable_cache(
+  async () =>
+    prisma.novedad.findMany({
+      where: {
+        activo: true,
+        OR: [{ expiraAt: null }, { expiraAt: { gt: new Date() } }],
+      },
+      orderBy: [{ orden: "asc" }, { creadoAt: "desc" }],
+      take: 5,
+      select: { id: true, titulo: true, textoCorto: true, url: true, tipo: true },
+    }),
+  ["home-novedades"],
+  { revalidate: 300, tags: ["novedades"] }
+);
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -64,8 +82,14 @@ export default async function HomePage({
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
+  // Novedades solo en la página 1. Si no hay, la home se renderiza idéntica a
+  // antes (una sola columna); el panel lateral aparece únicamente cuando hay
+  // anuncios activos, y solo en pantallas grandes (no satura el móvil).
+  const novedades = paginaSegura === 1 ? await getNovedades() : [];
+  const conSidebar = novedades.length > 0;
+
+  const contenido = (
+    <>
       {/* Hero — solo en la primera página */}
       {paginaSegura === 1 && (
         <section className="mb-16 border-b border-zinc-200 pb-12">
@@ -161,6 +185,24 @@ export default async function HomePage({
           </div>
         </section>
       )}
-    </div>
+    </>
+  );
+
+  // Con novedades: layout de 2 columnas (panel lateral slim a la izquierda en
+  // escritorio; en móvil/tablet se oculta para no saturar). Sin novedades: la
+  // home queda exactamente como antes.
+  if (conSidebar) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-12">
+        <aside className="hidden lg:block">
+          <NovedadesSidebar novedades={novedades} />
+        </aside>
+        <div className="min-w-0">{contenido}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">{contenido}</div>
   );
 }

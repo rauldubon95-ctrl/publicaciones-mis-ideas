@@ -507,3 +507,23 @@ model PedidoLibro {
   @@index([libroId, estado])
   @@index([creadoAt])
 }
+
+// Novedades del panel lateral de la home (sesión 27): anuncios curados que
+// redirigen a artículos académicos externos, avisos de conferencias, etc.
+// Auto-caducan por `expiraAt` para no saturar la home. Se administran desde
+// /admin/novedades. RLS habilitado sin políticas (deny-by-default): la app
+// las lee/escribe vía Prisma, nunca con la anon key.
+model Novedad {
+  id         String    @id @default(cuid())
+  titulo     String
+  textoCorto String?   // descripción breve opcional
+  url        String    // destino externo (redirección)
+  tipo       String    @default("articulo") // articulo | conferencia | aviso
+  activo     Boolean   @default(true)
+  orden      Int       @default(0)
+  expiraAt   DateTime? // null = no caduca; si pasa, deja de mostrarse
+  creadoAt   DateTime  @default(now())
+
+  @@index([activo, expiraAt])
+  @@index([orden])
+}
