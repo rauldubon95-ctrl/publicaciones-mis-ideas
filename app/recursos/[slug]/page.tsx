@@ -8,7 +8,7 @@ import JsonLd from "@/components/JsonLd";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { tieneAccesoRecurso } from "@/lib/accesoRecurso";
 import type { Metadata } from "next";
-import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, breadcrumbJsonLd, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -85,9 +85,15 @@ export default async function RecursoPage({ params, searchParams }: Props) {
       }),
   };
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Recursos", path: "/recursos" },
+    { name: recurso.titulo, path: `/recursos/${recurso.slug}` },
+  ]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-      <JsonLd data={recursoJsonLd} />
+      <JsonLd data={[recursoJsonLd, breadcrumb]} />
       <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
       <nav className="text-xs text-zinc-400 mb-3 flex items-center gap-1.5 uppercase tracking-wider">

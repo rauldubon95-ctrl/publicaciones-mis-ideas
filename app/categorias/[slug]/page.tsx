@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
+import JsonLd from "@/components/JsonLd";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { breadcrumbJsonLd } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
 
 const POR_PAGINA = 8;
@@ -78,8 +80,15 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Publicaciones", path: "/publicaciones" },
+    { name: categoria.nombre, path: `/categorias/${slug}` },
+  ]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+      <JsonLd data={breadcrumb} />
       <nav className="text-sm text-zinc-400 mb-6 flex items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>

@@ -4,8 +4,9 @@ import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
 import ComicReader from "@/components/ComicReader";
 import TrackView from "@/components/TrackView";
+import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
-import { canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, breadcrumbJsonLd, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +49,26 @@ export default async function ComicPage({ params }: Props) {
 
   if (!comic) notFound();
 
+  const comicJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: comic.titulo,
+    description: recortarDescripcion(comic.descripcion),
+    url: canonicalUrl(`/comics/${slug}`),
+    inLanguage: "es",
+    author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
+    ...(comic.paginas[0]?.imageUrl && { image: comic.paginas[0].imageUrl }),
+  };
+
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Cómics", path: "/comics" },
+    { name: comic.titulo, path: `/comics/${slug}` },
+  ]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <JsonLd data={[comicJsonLd, breadcrumb]} />
       <TrackView tipo="comic" contenidoId={comic.id} />
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>

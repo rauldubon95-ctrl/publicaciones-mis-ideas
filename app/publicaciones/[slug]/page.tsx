@@ -15,7 +15,7 @@ import { tieneAccesoComprado } from "@/lib/accesoContenido";
 import MuroPago from "@/components/MuroPago";
 import BotonesCompartir from "@/components/BotonesCompartir";
 import JsonLd from "@/components/JsonLd";
-import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, breadcrumbJsonLd, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -162,9 +162,15 @@ export default async function PublicacionPage({ params, searchParams }: Props) {
     ...(publicacion.categoria && { articleSection: publicacion.categoria.nombre }),
   };
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Publicaciones", path: "/publicaciones" },
+    { name: publicacion.titulo, path: `/publicaciones/${slug}` },
+  ]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-      <JsonLd data={articleJsonLd} />
+      <JsonLd data={[articleJsonLd, breadcrumb]} />
       {!publicacion.publicado && adminOk && (
         <div className="mb-6 flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded-sm px-4 py-3">
           <p className="text-sm text-amber-800 font-medium">

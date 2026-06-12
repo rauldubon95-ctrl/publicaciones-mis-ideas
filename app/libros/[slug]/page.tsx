@@ -8,7 +8,7 @@ import MuroLibro from "@/components/MuroLibro";
 import BotonesCompartir from "@/components/BotonesCompartir";
 import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
-import { BASE_URL, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
+import { BASE_URL, breadcrumbJsonLd, canonicalUrl, ogImagenes, recortarDescripcion, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +92,15 @@ export default async function LibroPage({ params, searchParams }: Props) {
       }),
   };
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Libros", path: "/libros" },
+    { name: libro.titulo, path: `/libros/${slug}` },
+  ]);
+
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-      <JsonLd data={bookJsonLd} />
+      <JsonLd data={[bookJsonLd, breadcrumb]} />
       <nav className="text-xs text-zinc-400 mb-10 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>

@@ -76,11 +76,20 @@ const sitioJsonLd = {
   author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
 };
 
+const organizacionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: BASE_URL,
+  logo: `${BASE_URL}/og-image-rauldubon.png`,
+  description: DEFAULT_DESCRIPTION,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
       <body className="min-h-screen flex flex-col">
-        <JsonLd data={[personaJsonLd, sitioJsonLd]} />
+        <JsonLd data={[personaJsonLd, sitioJsonLd, organizacionJsonLd]} />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
