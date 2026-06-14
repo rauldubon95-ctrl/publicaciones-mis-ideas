@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
   const token = req.headers.get("x-health-token");
   const esperado = process.env.HEALTH_TOKEN;
   if (!esperado || !token || !safeCompare(token, esperado)) {
-    // No autorizado: respuesta mínima, sin detalles del estado interno.
+    // No autorizado: respuesta mínima + delay aleatorio para eliminar el
+    // timing side-channel que revela la existencia del endpoint.
+    await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
     return NextResponse.json({ status: "ok" });
   }
 

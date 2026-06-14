@@ -173,8 +173,9 @@ export function htmlAccesoContenido(
     <p style="font-size:12px;color:#a1a1aa;word-break:break-all;font-family:monospace;margin:0 0 32px;">${url}</p>
     <hr style="border:none;border-top:1px solid #e4e4e7;margin:0 0 16px;">
     <p style="font-size:12px;color:#a1a1aa;margin:0;font-family:sans-serif;">
-      Guarda este correo: el enlace funciona indefinidamente desde cualquier
-      dispositivo. Al abrirlo, tu navegador recordará tu acceso a este artículo.
+      Guarda este correo: el enlace es válido por 30 días desde la compra y
+      funciona desde cualquier dispositivo. Al abrirlo, tu navegador recordará
+      tu acceso a este artículo.
     </p>
     <p style="font-size:11px;color:#d4d4d8;margin:8px 0 0;font-family:sans-serif;">
       Artículo: <a href="${BASE_URL}/publicaciones/${encodeURIComponent(slug)}" style="color:#a1a1aa;">${BASE_URL}/publicaciones/${escapeHtml(slug)}</a>

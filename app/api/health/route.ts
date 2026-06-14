@@ -9,6 +9,8 @@ export async function GET(req: NextRequest) {
   const token = req.headers.get("x-health-token");
   const esperado = process.env.HEALTH_TOKEN;
   if (!esperado || !token || !safeCompare(token, esperado)) {
+    // Delay aleatorio para eliminar el timing side-channel que revela el endpoint.
+    await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
     return NextResponse.json({ status: "ok" });
   }
 

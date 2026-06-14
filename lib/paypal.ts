@@ -164,7 +164,11 @@ export async function capturarOrdenPayPal(orderId: string): Promise<{
     },
   });
 
-  if (!res.ok) throw new Error(`PayPal captura error: ${await res.text()}`);
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error(`[paypal] captura fallida status=${res.status}`, errBody.slice(0, 200));
+    throw new Error(`PayPal captura error (${res.status})`);
+  }
 
   const data = (await res.json()) as {
     status: string;
