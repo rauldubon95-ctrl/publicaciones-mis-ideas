@@ -11,7 +11,6 @@ export async function checkRateLimit(
   ip: string,
   env: Env
 ): Promise<RateLimitResult> {
-  // Misma clave que usaba el Worker v1: rl:{ip}:{fecha}
   const fecha = new Date().toISOString().slice(0, 10);
   const clave = `rl:${ip}:${fecha}`;
   const ahora = Date.now();
@@ -40,20 +39,42 @@ export async function checkRateLimit(
   }
 }
 
-// Validar token premium — acepta dos métodos (orden de prioridad):
-// 1. HMAC(ADMIN_SECRET, "premium-bypass-v1") — preferido, sin dependencia de KV
-// 2. KV key "premium_master_token" — fallback para compat con instalaciones previas
 export async function validarTokenPremium(
   token: string | null,
   env: Env
 ): Promise<boolean> {
   if (!token) return false;
 
-  // Método 1: HMAC (requiere SESSION_SIGNING_SECRET o legacy ADMIN_SECRET)
-  const signingSecret = env.SESSION_SIGNING_SECRET ?? env.ADMIN_SECRET;
+  // H2: solo SESSION_SIGNING_SECRET — sin fallback a ADMIN_SECRET
+  const signingSecret = env.SESSION_SIGNING_SECRET;
   if (signingSecret) {
     try {
-      const esperado = await computarHmacPremium(signingSecret);
+      // C1: nuevo formato con expiración "{hmac}.{jti}.{exp}"
+      if (token.includes(".")) {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const [hmac, jti, expStr] = parts;
+          const exp = parseInt(expStr, 10);
+          if (!isNaN(exp) && Date.now() <= exp) {
+            const expected = await computarHmac(signingSecret, `premium-bypass-v1:${jti}:${exp}`);
+            if (hmac.length === expected.length) {
+              let diff = 0;
+              for (let i = 0; i < hmac.length; i++) {
+                diff |= hmac.charCodeAt(i) ^ expected.charCodeAt(i);
+              }
+              if (diff === 0) return true;
+            }
+          }
+        }
+        // Token con puntos pero inválido o expirado
+        return false;
+      }
+
+      // Formato legado: hex estático — backward-compat durante la transición.
+      // AsistenteChat refresca el token en cada cambio de ruta, así que los
+      // tokens viejos desaparecen rápido. Eliminar este bloque tras confirmar
+      // el despliegue completo.
+      const esperado = await computarHmac(signingSecret, "premium-bypass-v1");
       if (token.length === esperado.length) {
         let diff = 0;
         for (let i = 0; i < token.length; i++) {
@@ -66,7 +87,7 @@ export async function validarTokenPremium(
     }
   }
 
-  // Método 2: KV — backward compat con el Worker v1 y PREMIUM_TOKEN
+  // KV backward compat con el Worker v1 y PREMIUM_TOKEN legacy
   try {
     const esperado = await env.RATE_LIMIT.get("premium_master_token");
     if (!esperado) return false;
@@ -81,7 +102,7 @@ export async function validarTokenPremium(
   }
 }
 
-async function computarHmacPremium(secret: string): Promise<string> {
+async function computarHmac(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -90,23 +111,16 @@ async function computarHmacPremium(secret: string): Promise<string> {
     false,
     ["sign"]
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode("premium-bypass-v1")
-  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
   return Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
-// Límite global de solicitudes por minuto en todo el Worker.
-// Protege contra ataques coordinados con muchas IPs distintas.
-// La clave expira a los 70s para evitar contadores huérfanos.
 const LIMITE_GLOBAL_RPM = 200;
 
 export async function checkGlobalRateLimit(env: Env): Promise<boolean> {
-  const minuto = new Date().toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+  const minuto = new Date().toISOString().slice(0, 16);
   const clave = `global:rpm:${minuto}`;
   try {
     const raw = await env.RATE_LIMIT.get(clave);
@@ -119,7 +133,6 @@ export async function checkGlobalRateLimit(env: Env): Promise<boolean> {
   }
 }
 
-// Contar tokens aproximados (~4 chars/token para español)
 export function contarTokens(texto: string): number {
   return Math.ceil(texto.length / 4);
 }
