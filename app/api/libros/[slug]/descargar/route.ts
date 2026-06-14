@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { consumirDescargaLibro } from "@/lib/accesoLibro";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { descargarDesdeBucket, BUCKET_LIBROS } from "@/lib/supabase-admin";
+import { checkRateLimitDb, getIp } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,6 +12,19 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // M1: throttle de velocidad (distinto del tope de 5 descargas por pedido).
+  // Evita que un token válido dispare 1000 peticiones simultáneas a Storage.
+  const ip = getIp(req);
+  const rl = await checkRateLimitDb(ip, "/api/libros/descargar", {
+    maxIntentos: 10,
+    ventanaMs: 60 * 1000,
+    bloqueoMs: 5 * 60 * 1000,
+    failBehavior: "close",
+  });
+  if (!rl.permitido) {
+    return NextResponse.json({ error: "Demasiadas solicitudes." }, { status: 429 });
+  }
+
   const { slug } = await params;
 
   const libro = await prisma.libro.findUnique({

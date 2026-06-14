@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { nombreCookieLibro } from "@/lib/accesoLibro";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -46,7 +47,7 @@ export async function GET(
     .catch(() => {});
 
   const res = NextResponse.redirect(new URL(`/libros/${pedido.libro.slug}`, req.url));
-  res.cookies.set(`lib_${pedido.libroId.slice(0, 16)}`, token, {
+  res.cookies.set(nombreCookieLibro(pedido.libroId), token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

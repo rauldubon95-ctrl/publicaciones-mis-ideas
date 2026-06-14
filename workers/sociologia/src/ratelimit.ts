@@ -129,7 +129,9 @@ export async function checkGlobalRateLimit(env: Env): Promise<boolean> {
     await env.RATE_LIMIT.put(clave, String(contador + 1), { expirationTtl: 70 });
     return true;
   } catch {
-    return true; // fail-open: si KV cae, no bloquear globalmente
+    // fail-close: si KV cae bajo un DDoS es precisamente cuando más
+    // se necesita el límite global. Preferimos rechazar que no proteger.
+    return false;
   }
 }
 

@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import {
@@ -17,15 +18,15 @@ import {
 // Re-export para compatibilidad con imports existentes desde "@/lib/accesoLibro".
 export { VENTANA_ACCESO_DIAS, LIMITE_DESCARGAS, nuevaExpiracionAcceso };
 
-function nombreCookie(libroId: string): string {
-  return `lib_${libroId.slice(0, 16)}`;
+export function nombreCookieLibro(libroId: string): string {
+  return `lib_${createHash("sha256").update(libroId).digest("hex").slice(0, 8)}`;
 }
 
 // Acceso de LECTURA (mostrar el botón de descarga en la página del libro).
 // No consume descargas; solo valida compra COMPLETADA y vigencia.
 export async function tieneAccesoLibro(libroId: string): Promise<boolean> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(nombreCookie(libroId))?.value;
+  const token = cookieStore.get(nombreCookieLibro(libroId))?.value;
   if (!token) return false;
 
   const pedido = await prisma.pedidoLibro.findUnique({
@@ -48,7 +49,7 @@ export async function tieneAccesoLibro(libroId: string): Promise<boolean> {
 // dos peticiones simultáneas no superen el tope.
 export async function consumirDescargaLibro(libroId: string): Promise<ResultadoDescarga> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(nombreCookie(libroId))?.value;
+  const token = cookieStore.get(nombreCookieLibro(libroId))?.value;
   if (!token) return { ok: false, motivo: "sin-acceso" };
 
   const pedido = await prisma.pedidoLibro.findUnique({

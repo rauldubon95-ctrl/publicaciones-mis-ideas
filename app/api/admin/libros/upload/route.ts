@@ -35,10 +35,22 @@ export async function POST(req: NextRequest) {
   }
 
   const buffer  = Buffer.from(await archivo.arrayBuffer());
+
+  // M3: validar magic bytes del PDF — el MIME que declara el navegador es
+  // manipulable por el cliente. Los primeros 4 bytes del PDF deben ser %PDF.
+  if (tipo === "pdf") {
+    if (buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
+      return NextResponse.json({ error: "El archivo no es un PDF válido." }, { status: 422 });
+    }
+  }
+
+  // M3: sanitizar nombre de archivo — eliminamos caracteres fuera del
+  // rango alfanumérico seguro antes de almacenarlo en Supabase Storage.
+  const nombreSeguro = archivo.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const carpeta = tipo === "pdf" ? "pdfs" : "portadas";
 
   try {
-    const url = await subirArchivoLibro(buffer, archivo.name, archivo.type, carpeta);
+    const url = await subirArchivoLibro(buffer, nombreSeguro, archivo.type, carpeta);
     return NextResponse.json({ url });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
