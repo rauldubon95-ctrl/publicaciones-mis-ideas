@@ -22,11 +22,13 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const ip = getIp(req);
 
+  // H4: fail-close + 5 intentos/h — si la DB cae es mejor rechazar que
+  // permitir abuso ilimitado de la API de PayPal.
   const rl = await checkRateLimitDb(ip, "/api/comprar", {
-    maxIntentos: 20,
+    maxIntentos: 5,
     ventanaMs: 60 * 60 * 1000,
     bloqueoMs: 30 * 60 * 1000,
-    failBehavior: "open",
+    failBehavior: "close",
   });
 
   if (!rl.permitido) {
@@ -71,6 +73,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Correo electrónico inválido." },
       { status: 422 }
+    );
+  }
+
+  // H4: rate limit secundario por email (además del IP)
+  const emailRl = await checkRateLimitDb(email, "/api/comprar:email", {
+    maxIntentos: 3,
+    ventanaMs: 60 * 60 * 1000,
+    bloqueoMs: 60 * 60 * 1000,
+    failBehavior: "close",
+  });
+  if (!emailRl.permitido) {
+    await registrarEvento("RATE_LIMIT", ip, "/api/comprar");
+    return NextResponse.json(
+      { error: "Demasiados intentos. Espera un momento." },
+      { status: 429 }
     );
   }
 

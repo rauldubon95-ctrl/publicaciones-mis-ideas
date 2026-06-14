@@ -11,8 +11,9 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const ip = getIp(req);
 
+  // H4: fail-close + 5 intentos/h
   const rl = await checkRateLimitDb(ip, "/api/libros/comprar", {
-    maxIntentos: 20, ventanaMs: 60 * 60 * 1000, bloqueoMs: 30 * 60 * 1000, failBehavior: "open",
+    maxIntentos: 5, ventanaMs: 60 * 60 * 1000, bloqueoMs: 30 * 60 * 1000, failBehavior: "close",
   });
   if (!rl.permitido) {
     await registrarEvento("RATE_LIMIT", ip, "/api/libros/comprar");
@@ -32,6 +33,15 @@ export async function POST(req: NextRequest) {
 
   if (!libroId) return NextResponse.json({ error: "Falta el identificador del libro." }, { status: 400 });
   if (!email || !EMAIL_RE.test(email)) return NextResponse.json({ error: "Correo electrónico inválido." }, { status: 422 });
+
+  // H4: rate limit secundario por email
+  const emailRl = await checkRateLimitDb(email, "/api/libros/comprar:email", {
+    maxIntentos: 3, ventanaMs: 60 * 60 * 1000, bloqueoMs: 60 * 60 * 1000, failBehavior: "close",
+  });
+  if (!emailRl.permitido) {
+    await registrarEvento("RATE_LIMIT", ip, "/api/libros/comprar");
+    return NextResponse.json({ error: "Demasiados intentos. Espera un momento." }, { status: 429 });
+  }
 
   const libro = await prisma.libro.findUnique({
     where: { id: libroId },
