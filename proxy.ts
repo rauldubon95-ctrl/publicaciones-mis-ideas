@@ -36,13 +36,18 @@ function construirCSP(nonce: string): string {
     ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
     : "*.supabase.co";
 
+  // H3: URL del Worker leída de env var (WORKER_URL) para no exponer
+  // el nombre de usuario de Cloudflare en el repositorio público.
+  const workerUrl =
+    process.env.WORKER_URL ?? "https://sociologia.raul-dubon95.workers.dev";
+
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.paypal.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     `img-src 'self' data: blob: https://${supabaseHost} https://www.paypal.com`,
-    `connect-src 'self' https://${supabaseHost} https://sociologia.raul-dubon95.workers.dev https://www.paypal.com https://api.paypal.com`,
+    `connect-src 'self' https://${supabaseHost} ${workerUrl} https://www.paypal.com https://api.paypal.com`,
     "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -113,23 +118,24 @@ export async function proxy(request: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // Defensa en profundidad para /api/admin/*: si no hay cookie admin_auth,
-  // rechazar 401 antes de llegar al handler. La validación real de la cookie
-  // (JTI vs SesionAdmin) sigue en cada endpoint vía isAdminAuthorized() —
-  // esto solo evita que un endpoint admin nuevo que olvide el guard quede
-  // accesible sin estar logueado. Ver §18 P3 en CLAUDE.md.
-  // El endpoint de login en sí debe ser accesible sin cookie, porque es
-  // precisamente cómo se obtiene la cookie inicial.
+  // H1: defensa en profundidad para /api/admin/* — verifica la cookie
+  // admin_auth criptográficamente (no solo su presencia). Esto evita que
+  // un atacante con Cookie: admin_auth=basura acceda a endpoints que
+  // olvidaran llamar a isAdminAuthorized(). La validación detallada
+  // (JTI vs SesionAdmin) sigue en cada handler vía isAdminAuthorized().
   if (
     pathname.startsWith("/api/admin/") &&
-    pathname !== "/api/admin/login" &&
-    !request.cookies.get("admin_auth")?.value
+    pathname !== "/api/admin/login"
   ) {
-    logEvento("ACCESO_DENEGADO", ip, pathname, traceId, { motivo: "sin-cookie-admin" });
-    return new NextResponse(
-      JSON.stringify({ error: "No autorizado" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
+    const adminCookie = request.cookies.get("admin_auth")?.value;
+    const adminSecret = process.env.SESSION_SIGNING_SECRET;
+    if (!adminCookie || !adminSecret || !(await verifySessionToken(adminCookie, adminSecret))) {
+      logEvento("ACCESO_DENEGADO", ip, pathname, traceId, { motivo: "cookie-invalida" });
+      return new NextResponse(
+        JSON.stringify({ error: "No autorizado" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
   }
 
   if (!pathname.startsWith("/admin")) {
@@ -141,10 +147,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const cookie = request.cookies.get("admin_auth")?.value;
-  // Lectura inline del secreto (proxy corre en runtime Node; se mantiene
-  // simple e independiente de lib/secrets.ts).
-  const secret =
-    process.env.SESSION_SIGNING_SECRET ?? process.env.ADMIN_SECRET;
+  // H2: solo SESSION_SIGNING_SECRET, sin fallback a ADMIN_SECRET.
+  const secret = process.env.SESSION_SIGNING_SECRET;
 
   if (!secret) {
     return new NextResponse("Secreto de sesión no configurado", { status: 500 });

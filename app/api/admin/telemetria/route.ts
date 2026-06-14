@@ -4,7 +4,8 @@ import { createHmac } from "crypto";
 import { d1SyncSecret } from "@/lib/secrets";
 import { fetchConTimeout } from "@/lib/timeout";
 
-const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
+// H3: URL del Worker leída de env var para no exponer el usuario de Cloudflare en el código.
+const WORKER_URL = process.env.WORKER_URL ?? "https://sociologia.raul-dubon95.workers.dev";
 
 export async function GET() {
   const authorized = await isAdminAuthorized();
