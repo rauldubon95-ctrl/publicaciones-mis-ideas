@@ -440,7 +440,7 @@ Automático al publicar/despublicar. Para sincronizar todos:
 ## 15. PayPal — configuración actual
 
 - `locale: "es-MX"` → interfaz en español latinoamericano ✅ (formato BCP-47 con guión; `es_MX` con guión bajo es rechazado por PayPal Orders v2)
-- `landing_page: "BILLING"` → formulario de tarjeta directo
+- **`payment_source.paypal.experience_context`** (sesión 29, antes `application_context` — deprecado): `landing_page: "GUEST_CHECKOUT"` pide explícitamente el flujo de invitado con tarjeta (el `"BILLING"` de `application_context` solo elige qué pantalla mostrar *dentro* del flujo que PayPal decida; `GUEST_CHECKOUT` en el objeto moderno es la señal fuerte de "no empujes a loguearse"). `shipping_preference: "NO_SHIPPING"` — todo el contenido es digital, así que PayPal ya no debería pedir dirección de envío. **Esto NO garantiza que desaparezca el empuje a iniciar sesión**: si la cuenta Business de PayPal tiene "Guest Checkout" desactivado a nivel de cuenta (Dashboard → configuración de cuenta/ventas), PayPal fuerza login sin importar qué mandes en la API. Verificar ahí si el problema persiste tras este cambio.
 - Donaciones, artículos, libros, recursos y dashboards usan la misma función `crearOrdenPayPal()` con `custom_id` diferente
 - Webhook discrimina por prefijo en `custom_id`: `"contenido:"` artículo, `"libro:"` libro, `"recurso:"` recurso HTML, `"dashboard:"` tablero Excel, sin prefijo = donación
 - 4 prefijos × 3 estados PayPal (COMPLETED/DENIED/REFUNDED) = 12 ramas en el switch del webhook. Idempotencia con `WebhookEventoProcesado`.

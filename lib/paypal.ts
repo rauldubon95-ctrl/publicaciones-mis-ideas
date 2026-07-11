@@ -60,13 +60,18 @@ export async function crearOrdenPayPal(
     body: JSON.stringify({
       intent: "CAPTURE",
       purchase_units: [purchaseUnit],
-      application_context: {
-        return_url: returnUrl,
-        cancel_url: cancelUrl,
-        brand_name: "Raúl Dubón",
-        user_action: "PAY_NOW",
-        landing_page: "BILLING",
-        locale: "es-MX",
+      payment_source: {
+        paypal: {
+          experience_context: {
+            return_url: returnUrl,
+            cancel_url: cancelUrl,
+            brand_name: "Raúl Dubón",
+            user_action: "PAY_NOW",
+            landing_page: "GUEST_CHECKOUT",
+            shipping_preference: "NO_SHIPPING",
+            locale: "es-MX",
+          },
+        },
       },
     }),
   });
