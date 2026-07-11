@@ -86,7 +86,12 @@ export async function crearOrdenPayPal(
     links: Array<{ rel: string; href: string }>;
   };
 
-  const link = order.links.find((l) => l.rel === "approve");
+  // Con application_context (legacy) PayPal devuelve rel="approve".
+  // Con payment_source.paypal (actual) devuelve rel="payer-action". Aceptamos
+  // ambos por si PayPal cambia de nuevo el nombre según el objeto enviado.
+  const link = order.links.find(
+    (l) => l.rel === "payer-action" || l.rel === "approve"
+  );
   if (!link) throw new Error("No se encontró el enlace de aprobación");
 
   return { id: order.id, approvalUrl: link.href };
