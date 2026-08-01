@@ -236,6 +236,13 @@ export const SCAN_PATHS = [
   "/server-info",
   "/elmah.axd",
   "/trace.axd",
+  // Descubrimiento de agentes IA (MCP/UCP/agent cards) — no exponemos ninguno.
+  "/.well-known/mcp",
+  "/.well-known/agent.json",
+  "/.well-known/agent-card.json",
+  "/.well-known/ucp",
+  "/meta.json",
+  "/agent.json",
 ];
 
 export function esBot(userAgent: string | null): boolean {
@@ -245,6 +252,10 @@ export function esBot(userAgent: string | null): boolean {
 
 export function esScanPath(pathname: string): boolean {
   const lower = pathname.toLowerCase();
+  // Rutas con backslash (crudo o URL-encoded como %5c) — nunca son legítimas
+  // en nuestro App Router y Next.js las convierte en Cannot find module,
+  // gastando una invocación serverless por request.
+  if (lower.includes("\\") || lower.includes("%5c")) return true;
   // Usar coincidencia exacta o prefijo con separador para evitar
   // falsos positivos en rutas legítimas que contienen la cadena
   // (ej: /publicaciones/evaluacion contiene /eval pero NO es un scan path)
