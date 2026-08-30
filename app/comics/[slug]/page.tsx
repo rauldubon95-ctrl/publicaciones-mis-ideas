@@ -103,11 +103,7 @@ export default async function ComicPage({ params }: Props) {
       </header>
 
       {modoPdf && primera ? (
-        <PdfReader
-          pdfUrl={primera.imageUrl}
-          titulo={comic.titulo}
-          totalPaginas={null}
-        />
+        <PdfReader pdfUrl={primera.imageUrl} titulo={comic.titulo} />
       ) : (
         <ComicReader paginas={comic.paginas} />
       )}
