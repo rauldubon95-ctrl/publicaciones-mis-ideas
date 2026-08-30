@@ -46,11 +46,17 @@ function construirCSP(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.paypal.com`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
+    // worker-src: PDF.js crea un Web Worker desde una URL local (bundled por
+    // Next/Turbopack) para renderizar páginas sin bloquear el hilo principal.
+    // Añadimos 'self' (URL local) + blob: (algunos entornos wrappean el worker
+    // en un Blob). NO se permiten workers de terceros — solo self-hosted.
+    "worker-src 'self' blob:",
     `img-src 'self' data: blob: https://${supabaseHost} https://www.paypal.com`,
     `connect-src 'self' https://${supabaseHost} ${workerUrl} https://www.paypal.com https://api.paypal.com`,
-    // frame-src incluye Supabase Storage para poder embeber PDFs (visor PdfReader)
-    // en cómics y otros materiales. El navegador provee su propio visor de PDF.
-    `frame-src 'self' https://${supabaseHost} https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com`,
+    // frame-src: solo lo estrictamente necesario. El visor PDF ya no usa
+    // iframe (renderiza con pdfjs-dist en canvas); no se permite embeber
+    // Supabase para reducir superficie de ataque (least privilege).
+    "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

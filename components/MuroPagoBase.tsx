@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import PagoSeguroInfo from "./PagoSeguroInfo";
 
 // Base compartida de los muros de pago (artículos, libros, recursos, dashboards).
 // Antes eran 4 componentes ~95% idénticos copiados (MuroPago/MuroLibro/
@@ -170,9 +171,13 @@ export default function MuroPagoBase({
         </button>
 
         <p className="text-center text-xs text-zinc-400 pt-2">
-          Pago seguro vía PayPal · Tarjeta o cuenta PayPal
+          Serás redirigido a PayPal para completar el pago
         </p>
       </form>
+
+      <div className="max-w-sm mx-auto mt-6">
+        <PagoSeguroInfo variante="muro" />
+      </div>
     </div>
   );
 

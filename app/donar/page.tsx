@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import FormularioDonacion from "@/components/FormularioDonacion";
+import PagoSeguroInfo from "@/components/PagoSeguroInfo";
 import { canonicalUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -41,6 +42,11 @@ export default function DonarPage() {
       {/* Formulario de donación */}
       <div className="border border-zinc-200 rounded-2xl p-7 bg-white shadow-xs">
         <FormularioDonacion />
+      </div>
+
+      {/* Aclaración de pago seguro */}
+      <div className="mt-5">
+        <PagoSeguroInfo variante="donacion" />
       </div>
 
       {/* Formas de apoyar sin dinero */}
