@@ -8,7 +8,7 @@ import { unstable_cache } from "next/cache";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Cómics",
-  description: "Tiras cómicas y narrativas gráficas de Raúl Dubón.",
+  description: "Cómics, presentaciones y materiales de divulgación visual publicados por Raúl Dubón.",
   alternates: { canonical: canonicalUrl("/comics") },
 };
 
@@ -17,65 +17,101 @@ const getComics = unstable_cache(
     prisma.comic.findMany({
       where: { publicado: true },
       orderBy: { creadoAt: "desc" },
-      include: { _count: { select: { paginas: true } }, paginas: { take: 1, orderBy: { orden: "asc" } } },
+      include: {
+        _count: { select: { paginas: true } },
+        paginas: { take: 1, orderBy: { orden: "asc" }, select: { imageUrl: true, caption: true } },
+      },
     }),
-  ["comics-publicados"],
+  ["comics-publicados-v2"],
   { revalidate: 300, tags: ["comics"] }
 );
+
+function esPdf(url: string, caption: string | null): boolean {
+  const limpio = url.split("?")[0].split("#")[0].toLowerCase();
+  return limpio.endsWith(".pdf") || caption === "__pdf__";
+}
 
 export default async function ComicsPage() {
   const comics = await getComics();
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-      <section className="mb-12 border-b border-zinc-200 pb-10">
-        <h1 className="text-5xl font-serif font-semibold text-zinc-900 mb-4">Cómics</h1>
-        <p className="text-zinc-500 text-base leading-relaxed max-w-xl">
-          Aprendizaje visual en formato secuencial. Historias e ideas que se entienden mejor en imágenes.
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
+      <header className="mb-12 lg:mb-14">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-3">
+          Divulgación visual
         </p>
-      </section>
+        <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 tracking-tight mb-4">
+          Cómics y materiales visuales
+        </h1>
+        <p className="text-zinc-500 text-sm sm:text-base max-w-xl">
+          Cómics, presentaciones y materiales educativos para explicar conceptos, problemas sociales e ideas complejas de forma accesible.
+        </p>
+      </header>
 
       {comics.length === 0 ? (
-        <div className="text-center py-20 text-zinc-300 border border-dashed border-zinc-200">
-          <p className="text-sm">No hay cómics publicados aún.</p>
+        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+          <p className="text-sm">No hay materiales publicados aún.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2">
-          {comics.map((c) => (
-            <Link
-              key={c.id}
-              href={`/comics/${c.slug}`}
-              className="card block overflow-hidden group"
-            >
-              {/* Miniatura */}
-              {c.paginas[0] ? (
-                <div className="aspect-4/3 overflow-hidden bg-zinc-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.paginas[0].imageUrl}
-                    alt={c.titulo}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {comics.map((c) => {
+            const primera = c.paginas[0];
+            const pdf = primera ? esPdf(primera.imageUrl, primera.caption) : false;
+            const tienePortadaImg = primera && !pdf;
+
+            return (
+              <Link
+                key={c.id}
+                href={`/comics/${c.slug}`}
+                className="group flex flex-col bg-white rounded-xl border border-zinc-200 overflow-hidden hover:border-zinc-300 hover:shadow-md hover:shadow-zinc-200/40 transition-all"
+              >
+                {/* Portada */}
+                <div className="aspect-[4/3] bg-zinc-100 overflow-hidden relative">
+                  {tienePortadaImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={primera.imageUrl}
+                      alt={c.titulo}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    // Placeholder editorial para PDFs sin portada generada aún
+                    <div className="w-full h-full bg-linear-to-br from-stone-100 via-amber-50 to-rose-50 flex flex-col items-center justify-center p-8 text-center">
+                      <div className="w-14 h-14 rounded-full bg-white/60 border border-amber-200/60 flex items-center justify-center mb-3 text-amber-800">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-amber-800/80">Documento</p>
+                    </div>
+                  )}
+                  {pdf && (
+                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/95 text-zinc-800 text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded shadow-sm">
+                      PDF
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="aspect-4/3 bg-zinc-100 flex items-center justify-center">
-                  <span className="text-zinc-300 text-sm">Sin portada</span>
+
+                <div className="p-5 flex flex-col gap-2 flex-1">
+                  <h2 className="font-serif font-semibold text-zinc-900 group-hover:text-amber-700 transition-colors text-lg leading-snug">
+                    {c.titulo}
+                  </h2>
+                  <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2 flex-1">
+                    {c.descripcion}
+                  </p>
+                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-100 text-xs text-zinc-400">
+                    <time>{formatFecha(c.creadoAt)}</time>
+                    {!pdf && <span>{c._count.paginas} páginas</span>}
+                    {pdf && (
+                      <span className="inline-flex items-center gap-1 text-amber-700">
+                        Leer <span aria-hidden>→</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-              <div className="p-5">
-                <h2 className="font-serif font-semibold text-zinc-900 group-hover:text-brand-700 transition-colors text-lg mb-1">
-                  {c.titulo}
-                </h2>
-                <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2 mb-3">
-                  {c.descripcion}
-                </p>
-                <div className="flex items-center justify-between">
-                  <time className="text-xs text-zinc-400">{formatFecha(c.creadoAt)}</time>
-                  <span className="text-xs text-zinc-400">{c._count.paginas} páginas</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

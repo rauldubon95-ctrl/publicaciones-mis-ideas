@@ -48,7 +48,9 @@ function construirCSP(nonce: string): string {
     "font-src 'self'",
     `img-src 'self' data: blob: https://${supabaseHost} https://www.paypal.com`,
     `connect-src 'self' https://${supabaseHost} ${workerUrl} https://www.paypal.com https://api.paypal.com`,
-    "frame-src 'self' https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com",
+    // frame-src incluye Supabase Storage para poder embeber PDFs (visor PdfReader)
+    // en cómics y otros materiales. El navegador provee su propio visor de PDF.
+    `frame-src 'self' https://${supabaseHost} https://view.officeapps.live.com https://www.paypal.com https://www.sandbox.paypal.com`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
