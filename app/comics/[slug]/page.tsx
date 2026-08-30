@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import Link from "next/link";
 import ComicReader from "@/components/ComicReader";
+import PdfReader from "@/components/PdfReader";
 import TrackView from "@/components/TrackView";
 import JsonLd from "@/components/JsonLd";
 import type { Metadata } from "next";
@@ -40,6 +41,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+// Detecta si la primera "página" del cómic apunta a un PDF (por extensión de URL
+// o por presencia del marcador "__pdf__" en el caption). En ese caso, todo el
+// cómic se renderiza con el visor PdfReader, no con el ComicReader tradicional.
+function esPdf(url: string, caption: string | null): boolean {
+  const limpio = url.split("?")[0].split("#")[0].toLowerCase();
+  return limpio.endsWith(".pdf") || caption === "__pdf__";
+}
+
 export default async function ComicPage({ params }: Props) {
   const { slug } = await params;
   const comic = await prisma.comic.findUnique({
@@ -49,6 +58,9 @@ export default async function ComicPage({ params }: Props) {
 
   if (!comic) notFound();
 
+  const primera = comic.paginas[0];
+  const modoPdf = primera ? esPdf(primera.imageUrl, primera.caption) : false;
+
   const comicJsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
@@ -57,7 +69,7 @@ export default async function ComicPage({ params }: Props) {
     url: canonicalUrl(`/comics/${slug}`),
     inLanguage: "es",
     author: { "@type": "Person", name: SITE_NAME, url: BASE_URL },
-    ...(comic.paginas[0]?.imageUrl && { image: comic.paginas[0].imageUrl }),
+    ...(comic.paginas[0]?.imageUrl && !modoPdf && { image: comic.paginas[0].imageUrl }),
   };
 
   const breadcrumb = breadcrumbJsonLd([
@@ -67,7 +79,7 @@ export default async function ComicPage({ params }: Props) {
   ]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+    <div className={`${modoPdf ? "max-w-5xl" : "max-w-3xl"} mx-auto px-4 sm:px-6 py-12`}>
       <JsonLd data={[comicJsonLd, breadcrumb]} />
       <TrackView tipo="comic" contenidoId={comic.id} />
       <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
@@ -78,16 +90,27 @@ export default async function ComicPage({ params }: Props) {
         <span className="text-zinc-600 truncate">{comic.titulo}</span>
       </nav>
 
-      <header className="mb-10 border-b border-zinc-200 pb-6">
-        <h1 className="text-3xl font-serif font-semibold text-zinc-900 mb-2">{comic.titulo}</h1>
-        <p className="text-zinc-500 text-sm leading-relaxed mb-3">{comic.descripcion}</p>
+      <header className="mb-8 border-b border-zinc-200 pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-2">
+          {modoPdf ? "Material · PDF" : "Cómic · secuencial"}
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-serif font-semibold text-zinc-900 mb-3 tracking-tight">{comic.titulo}</h1>
+        <p className="text-zinc-500 text-base leading-relaxed mb-4 max-w-2xl">{comic.descripcion}</p>
         <div className="flex items-center gap-4 text-xs text-zinc-400">
           <time>{formatFecha(comic.creadoAt)}</time>
-          <span>{comic.paginas.length} páginas</span>
+          {!modoPdf && <span>{comic.paginas.length} páginas</span>}
         </div>
       </header>
 
-      <ComicReader paginas={comic.paginas} />
+      {modoPdf && primera ? (
+        <PdfReader
+          pdfUrl={primera.imageUrl}
+          titulo={comic.titulo}
+          totalPaginas={null}
+        />
+      ) : (
+        <ComicReader paginas={comic.paginas} />
+      )}
     </div>
   );
 }

@@ -87,9 +87,9 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <JsonLd data={breadcrumb} />
-      <nav className="text-sm text-zinc-400 mb-6 flex items-center gap-1.5">
+      <nav className="text-xs text-zinc-400 mb-6 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/publicaciones" className="hover:text-zinc-600 transition-colors">Publicaciones</Link>
@@ -97,29 +97,36 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
         <span className="text-zinc-600">{categoria.nombre}</span>
       </nav>
 
-      <div className="mb-8 border-b border-zinc-200 pb-6 flex items-start gap-4">
+      <header className="mb-10 lg:mb-12 border-b border-zinc-200 pb-8 flex items-start gap-5">
         {categoria.icono && (
-          <span className="text-3xl leading-none mt-1">{categoria.icono}</span>
+          <span className="text-4xl leading-none mt-1">{categoria.icono}</span>
         )}
-        <div>
-          <h1 className="text-3xl font-serif font-semibold text-zinc-900">{categoria.nombre}</h1>
+        <div className="flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-2">
+            Categoría
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 tracking-tight mb-3">
+            {categoria.nombre}
+          </h1>
           {categoria.descripcion && (
-            <p className="text-zinc-500 text-sm mt-1 leading-relaxed">{categoria.descripcion}</p>
+            <p className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-2xl">
+              {categoria.descripcion}
+            </p>
           )}
-          <p className="text-zinc-400 text-xs mt-2">
+          <p className="text-zinc-400 text-xs mt-4">
             {total} {total === 1 ? "publicación" : "publicaciones"}
             {totalPaginas > 1 && ` · página ${pagina} de ${totalPaginas}`}
           </p>
         </div>
-      </div>
+      </header>
 
       {publicaciones.length === 0 ? (
-        <div className="text-center py-16 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
+        <div className="text-center py-16 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-sm">No hay publicaciones en esta categoría.</p>
         </div>
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {publicaciones.map((p) => (
               <PublicacionCard key={p.id} publicacion={p} />
             ))}

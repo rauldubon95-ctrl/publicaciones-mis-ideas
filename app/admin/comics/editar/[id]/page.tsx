@@ -86,11 +86,17 @@ export default function EditarComicPage() {
       });
       if (!uploadRes.ok) throw new Error("Error al subir la imagen a Supabase");
 
-      // Paso 3: guardar la URL pública en la base de datos
+      // Paso 3: guardar la URL pública en la base de datos.
+      // Si el archivo subido es un PDF, forzamos caption="__pdf__" para que
+      // el frontend detecte el modo visor PDF (ver app/comics/[slug]/page.tsx).
+      // La URL de un PDF también termina en .pdf, así que la detección funciona
+      // en ambos sentidos.
+      const esPdf = file.type === "application/pdf";
+      const captionFinal = esPdf ? "__pdf__" : caption;
       const saveRes = await fetch(`/api/admin/comics/${id}/paginas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: publicUrl, caption }),
+        body: JSON.stringify({ imageUrl: publicUrl, caption: captionFinal }),
       });
       if (!saveRes.ok) {
         const d = await saveRes.json();
@@ -181,15 +187,26 @@ export default function EditarComicPage() {
               className="input" placeholder="Texto educativo o descripción de la imagen" />
           </div>
           <div>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleSubirImagen} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+              className="hidden"
+              onChange={handleSubirImagen}
+            />
             <button type="button" disabled={subiendo} onClick={() => fileRef.current?.click()}
               className="btn-primary w-full justify-center py-3">
               {subiendo ? (
-                <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />Subiendo imagen…</>
-              ) : "Seleccionar y subir imagen"}
+                <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />Subiendo archivo…</>
+              ) : "Seleccionar y subir archivo (imagen o PDF)"}
             </button>
             {errorUpload && <p className="text-red-600 text-sm mt-2 border border-red-100 bg-red-50 px-3 py-2 rounded-sm">{errorUpload}</p>}
-            <p className="text-xs text-zinc-400 mt-1.5">JPEG, PNG, WebP o GIF · sin límite de tamaño</p>
+            <div className="text-xs text-zinc-400 mt-1.5 space-y-1">
+              <p>JPEG, PNG, WebP, GIF o <strong>PDF</strong> · sin límite de tamaño.</p>
+              <p className="text-zinc-500">
+                <strong>Modo PDF:</strong> al subir un PDF, el cómic se mostrará como visor integrado (una sola "página"). Elimina cualquier página de imagen previa para evitar mezclarlos.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -205,24 +222,39 @@ export default function EditarComicPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {paginas.map((p) => (
-              <div key={p.id} className="border border-zinc-200 bg-white overflow-hidden group">
-                <div className="relative aspect-3/4 overflow-hidden bg-zinc-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.imageUrl} alt={p.caption ?? `Página ${p.orden}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                    <button onClick={() => handleEliminarPagina(p.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white text-xs px-3 py-1.5 rounded-sm font-medium">
-                      Eliminar
-                    </button>
+            {paginas.map((p) => {
+              const esPdf = p.imageUrl.toLowerCase().split("?")[0].endsWith(".pdf") || p.caption === "__pdf__";
+              return (
+                <div key={p.id} className="border border-zinc-200 bg-white overflow-hidden group">
+                  <div className="relative aspect-3/4 overflow-hidden bg-zinc-100">
+                    {esPdf ? (
+                      <div className="w-full h-full bg-linear-to-br from-zinc-100 to-amber-50 flex flex-col items-center justify-center gap-2 p-4">
+                        <svg className="w-10 h-10 text-amber-700" fill="none" stroke="currentColor" strokeWidth={1.4} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-800">PDF</span>
+                        <a href={p.imageUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-700 underline mt-1 truncate max-w-full px-2">
+                          Ver PDF
+                        </a>
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt={p.caption ?? `Página ${p.orden}`} className="w-full h-full object-cover" />
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                      <button onClick={() => handleEliminarPagina(p.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white text-xs px-3 py-1.5 rounded-sm font-medium">
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                  <div className="px-3 py-2">
+                    <span className="text-xs font-mono text-zinc-400">#{p.orden}</span>
+                    {p.caption && p.caption !== "__pdf__" && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{p.caption}</p>}
                   </div>
                 </div>
-                <div className="px-3 py-2">
-                  <span className="text-xs font-mono text-zinc-400">#{p.orden}</span>
-                  {p.caption && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{p.caption}</p>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

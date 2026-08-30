@@ -5,7 +5,18 @@ import { getSupabaseAdmin, BUCKET_COMICS } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+// Tipos permitidos para subida de "página" de cómic. Además de imágenes,
+// aceptamos application/pdf: cuando el admin sube un PDF, el frontend detecta
+// la extensión .pdf y renderiza el visor PdfReader integrado en vez de la
+// galería tradicional. Esto permite publicar cómics/presentaciones/materiales
+// completos como un único archivo sin tener que dividirlos en imágenes.
+const TIPOS_PERMITIDOS = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+];
 
 // Genera una URL firmada para que el navegador suba directamente a Supabase.
 // El archivo nunca pasa por Vercel, por eso no hay límite de tamaño.
