@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import PagoSeguroInfo from "./PagoSeguroInfo";
+import PrecioConConversionClient from "./PrecioConConversionClient";
 
 // Base compartida de los muros de pago (artículos, libros, recursos, dashboards).
 // Antes eran 4 componentes ~95% idénticos copiados (MuroPago/MuroLibro/
@@ -26,6 +27,8 @@ export interface MuroPagoBaseProps {
   botonLabel: string;
   /** MuroPago añade un envoltorio con degradado que sugiere contenido oculto encima */
   conDegradado?: boolean;
+  /** Centavos USD para mostrar la conversión referencial bajo el heading. Opcional. */
+  precioCentavos?: number;
 }
 
 const CARD_CLASS =
@@ -41,6 +44,7 @@ export default function MuroPagoBase({
   descripcionDespues,
   botonLabel,
   conDegradado = false,
+  precioCentavos,
 }: MuroPagoBaseProps) {
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
@@ -101,6 +105,17 @@ export default function MuroPagoBase({
       <h2 className="text-center text-xl font-serif font-semibold text-zinc-900 mb-2">
         {heading}
       </h2>
+      {precioCentavos != null && precioCentavos > 0 && (
+        <div className="flex justify-center mb-4">
+          <PrecioConConversionClient
+            centavosUSD={precioCentavos}
+            tamano="sm"
+            mostrarNotaReferencial={true}
+            className="text-center"
+            soloConversion
+          />
+        </div>
+      )}
       <p className="text-center text-sm text-zinc-500 mb-6 max-w-md mx-auto leading-relaxed">
         {descripcionAntes}
         <span className="text-zinc-700 font-medium">«{titulo}»</span>

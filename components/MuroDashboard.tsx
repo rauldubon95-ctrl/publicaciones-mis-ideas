@@ -19,6 +19,7 @@ export default function MuroDashboard({ tableroId, titulo, precioCentavos }: Pro
       descripcionAntes="Acceso permanente al tablero "
       descripcionDespues=". El enlace de acceso te llega por correo para que puedas abrir las tablas y descargar el Excel desde cualquier dispositivo."
       botonLabel={`Comprar por $${precio} USD`}
+      precioCentavos={precioCentavos}
     />
   );
 }

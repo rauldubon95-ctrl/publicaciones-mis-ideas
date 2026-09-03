@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
+import PrecioConConversion from "@/components/PrecioConConversion";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
@@ -89,11 +90,9 @@ export default async function RecursosPage() {
                 </p>
                 <div className="flex items-center justify-between pt-3 mt-2 border-t border-zinc-100">
                   <time className="text-xs text-zinc-400">{formatFecha(r.creadoAt)}</time>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {r.esPremium && r.precioCentavos != null && r.precioCentavos > 0 && (
-                      <span className="text-xs font-semibold text-zinc-700">
-                        ${(r.precioCentavos / 100).toFixed(2)}
-                      </span>
+                      <PrecioConConversion centavosUSD={r.precioCentavos} tamano="sm" mostrarNotaReferencial={false} />
                     )}
                     <Link
                       href={`/recursos/${r.slug}`}

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
+import PrecioConConversion from "@/components/PrecioConConversion";
 import type { Metadata } from "next";
 import { canonicalUrl } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
@@ -87,15 +88,13 @@ export default async function LibrosPage() {
                 <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3">
                   {l.descripcion}
                 </p>
-                <div className="flex items-center gap-3 mt-1 text-xs text-zinc-400">
-                  {l.paginas && <span>{l.paginas} páginas</span>}
-                  {l.paginas != null && l.precioCentavos != null && <span aria-hidden>·</span>}
+                <div className="flex items-start gap-3 mt-1 text-xs text-zinc-400">
+                  {l.paginas && <span className="mt-0.5">{l.paginas} páginas</span>}
+                  {l.paginas != null && l.precioCentavos != null && <span aria-hidden className="mt-0.5">·</span>}
                   {l.precioCentavos != null && l.precioCentavos > 0 ? (
-                    <span className="font-semibold text-zinc-700">
-                      ${(l.precioCentavos / 100).toFixed(2)} USD
-                    </span>
+                    <PrecioConConversion centavosUSD={l.precioCentavos} tamano="sm" mostrarNotaReferencial={false} />
                   ) : l.precioCentavos === 0 ? (
-                    <span className="font-semibold text-emerald-700">Descarga gratis</span>
+                    <span className="font-semibold text-emerald-700 mt-0.5">Descarga gratis</span>
                   ) : null}
                 </div>
               </div>

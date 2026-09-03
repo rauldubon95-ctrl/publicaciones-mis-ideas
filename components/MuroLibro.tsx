@@ -19,6 +19,7 @@ export default function MuroLibro({ libroId, titulo, precioCentavos }: Props) {
       descripcionAntes="Acceso permanente al PDF de "
       descripcionDespues=". El enlace de descarga te llega por correo para que puedas acceder desde cualquier dispositivo."
       botonLabel={`Comprar por $${precio} USD`}
+      precioCentavos={precioCentavos}
     />
   );
 }

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import SelectorMoneda from "./SelectorMoneda";
 
 const nav = [
   { href: "/", label: "Inicio" },
@@ -122,6 +123,11 @@ export default function Header() {
             </button>
           )}
 
+          {/* Selector de moneda (referencial) */}
+          <div className="hidden sm:block">
+            <SelectorMoneda />
+          </div>
+
           {/* Botón Suscribirme */}
           <Link
             href="/#suscribirme"
@@ -170,6 +176,10 @@ export default function Header() {
             );
           })}
           <div className="mt-2 pt-3 border-t border-zinc-100 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-2">
+              <span className="text-xs text-zinc-500">Moneda referencial</span>
+              <SelectorMoneda />
+            </div>
             <form onSubmit={submitBusqueda} className="flex gap-2">
               <input
                 type="search"
