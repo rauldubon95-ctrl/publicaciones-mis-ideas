@@ -20,6 +20,7 @@ export default function MuroPago({ publicacionId, titulo, precioCentavos }: Prop
       descripcionDespues=". El enlace para abrirlo te llega por correo."
       botonLabel={`Comprar acceso por $${precio}`}
       conDegradado
+      precioCentavos={precioCentavos}
     />
   );
 }

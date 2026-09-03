@@ -19,6 +19,7 @@ export default function MuroRecurso({ recursoId, titulo, precioCentavos }: Props
       descripcionAntes="Acceso permanente al recurso "
       descripcionDespues=". El enlace de acceso te llega por correo para que puedas abrirlo y descargarlo desde cualquier dispositivo."
       botonLabel={`Comprar por $${precio} USD`}
+      precioCentavos={precioCentavos}
     />
   );
 }
