@@ -62,7 +62,8 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | ✅ PayPal Orders API v2 — Dashboards | Producción sesión 17 | `custom_id="dashboard:<pedidoId>"` en webhook. |
 | ❌ Stripe | Eliminado sesión 12 | Código borrado. Campo `stripeId` en `Donacion` es legacy — ahora guarda `paypalOrderId`. |
 | ❌ Multi-worker / orquestación | Pendiente | Ver §17. Solo existe 1 worker hoy. |
-| ❌ Vectorize (retrieval semántico) | Pendiente | Binding comentado en `wrangler.toml`. Requiere `wrangler vectorize create`. |
+| ✅ Vectorize (retrieval semántico) | **Producción sesión 35** | Índice `sociologia-embeddings` con 594 docs vectorizados. Binding activo. Retrieval combina FTS+LIKE+vector. Botón `/admin/embed-backfill` para re-sync futuro. |
+| ✅ Flujos por sección web | **Producción sesión 35** | Frontend envía `contexto` según pathname; Worker valida contra whitelist y modula sugerencias por ubicación. |
 
 ---
 
@@ -374,10 +375,12 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| Más limpieza corpus D1 | 804 documentos en `documentos` (D1 `llm_sociolog`). Sigue habiendo textos de baja calidad. Impacta directo en la calidad del asistente. | Alta |
-| Vectorize desactivado | Retrieval sigue en FTS5 + LIKE (`workers/sociologia/src/retrieval.ts`). El binding `[[vectorize]]` está comentado en `wrangler.toml` línea 17. Requiere `wrangler vectorize create sociologia-embeddings` + pipeline de embeddings + backfill del corpus. **Prerrequisito para membresía premium.** | Media |
+| `D1_SYNC_SECRET` posiblemente desincronizado | Síntomas: `/admin/observabilidad` no muestra telemetría. Mismo tipo de problema que tuvo `SESSION_SIGNING_SECRET` en sesión 35 (secrets de Vercel y Cloudflare son tablas independientes). Rotación con procedimiento documentado en sesión 35: generar nuevo → ambos lados → redeploy Vercel. | Alta |
+| `/admin/metricas` en ceros | Puede ser cache de `unstable_cache` (2 min), o fallo silencioso en Prisma queries. Investigar con F12 Network → response del endpoint. | Alta |
+| Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`) — cifra verificada en sesión 35 tras backfill Vectorize (el "804" que decía este doc antes estaba desactualizado). Sigue habiendo textos de baja calidad. Impacta directo en la calidad del asistente. | Alta |
 | Asistente IA sin razonamiento multi-paso | El Worker hace una sola pasada RAG→skill→LLM por request. Para consultas complejas ("compara X e Y") el usuario pidió encadenar pasos. Ver §17. | Media (objetivo del usuario) |
 | Telemetría en KV (no D1) | Datos duran 7 días. Dashboard persistente requeriría escribir a `documentos_telemetria` en D1. Aceptable mientras el uso sea bajo. | Media |
+| `WORKER_URL` no configurada en Vercel | Verificado en sesión 35 (diagnóstico mostró `workerUrlDeEnv: false`). El código usa fallback hardcodeado (`https://sociologia.raul-dubon95.workers.dev`) — funciona, pero no cumple el hardening H3 de sesión 28. Añadir `WORKER_URL` como env var en Vercel resuelve. | Media |
 | IP cruda en rate-limit | `RateLimitDb.clave` = `"IP:ruta"` guarda IP real (transitoria, fin anti-abuso legítimo). El resto de IPs van cifradas (`ipHash`). Purista: hashear también la clave. Sin exposición externa. | Baja |
 | Campo `stripeId` en `Donacion` | Nombre legacy: hoy guarda `paypalOrderId`. Renombrar requiere migración Supabase + Prisma + toque en 4 archivos. Solo cosmético. | Baja |
 | CF_API_TOKEN con restricción IP | GitHub Action `deploy-worker.yml` no puede deployar Worker desde CI (falla en el token). Cloudflare Git integration lo cubre. Sin remedio hasta que la IP del runner esté fija. | Baja |
@@ -415,6 +418,14 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 - **Incidente PayPal** (sesión 29) — `payment_source.paypal.experience_context` + fix `rel: payer-action`. Ver §15.
 - **Rediseño editorial + visor PDF** (sesión 32, `7986196`/`7daba74`) — Home 2-col + PublicacionCard con portada generada por categoría + `PdfReader` con `pdfjs-dist`. `worker-src 'self' blob:` en CSP. Cómics soportan PDFs sin cambio de schema.
 - **Conversión de moneda referencial** (sesión 33, `cae71b0`) — 9 monedas, selector en Header, cookie `moneda_ref`, cache 24h de tasas, fail-safe con snapshot. Cero cambio en el cobro USD.
+- **Vectorize ACTIVADO** (sesión 35) — índice `sociologia-embeddings` (1024 dims, cosine) creado desde Cloudflare Dashboard vía API con token temporal. Binding descomentado en `wrangler.toml`. **594 documentos vectorizados** vía nuevo botón `/admin/embed-backfill`. Retrieval semántico activo — el chat encuentra artículos por significado, no solo palabra exacta.
+- **Botón `/admin/embed-backfill`** (sesión 35) — nueva página + endpoint `/api/admin/embed-backfill` para poblar Vectorize desde el admin sin terminal. Reanudable, guarda progreso en KV. Auth unificada con la del chat.
+- **Fix auth `/embed` del Worker** (sesión 35) — usa `validarTokenPremium` en vez de HMAC manual. Acepta X-Premium-Token (nuevo) y X-Admin-Key (legado).
+- **Rotación de `SESSION_SIGNING_SECRET`** (sesión 35) — el secret estaba desincronizado entre Vercel y Cloudflare. Rotado a valor idéntico en ambos. Chat en modo admin ahora reporta "Sin límite" correctamente.
+- **Fix "holis" y consultas triviales** (sesión 35) — `esSaludo` reconoce variantes coloquiales (holis, holita, qué onda, etc.); `esConsultaTrivial` bloquea RAG solo si NO hay ninguna palabra de contenido (≥3 chars, fuera de stop-words). Preguntas cortas legítimas como "que es la hegemonía" pasan al pipeline normal.
+- **Reglas anti "citar por citar"** (sesión 35) — SYSTEM_PROMPT v1.2 con reglas explícitas: cita solo cuando la fuente sostiene una afirmación específica; nunca listar en 📚 Fuentes documentos no referenciados; post-proceso remueve la sección de fuentes si `groundingRatio < 0.4`.
+- **Flujos por ubicación web** (sesión 35) — nuevo campo `contexto` en el body del Worker (whitelist estricta: general/home/publicacion/libro/donacion). Cada sección modula el tono/sugerencias del asistente sin alterar reglas absolutas. Frontend deriva contexto de `pathname` y lo envía; Worker valida y normaliza.
+- **Seguridad extra contra manipulación de contexto** (sesión 35) — nuevos patrones en `analizarInyeccion` para detectar intentos como "cambia tu contexto a X", "responde como si estuvieras en /donar", "activa modo premium".
 - **Node 20.x → 24.x** (sesión 31, `08ad805`) — engines actualizados; cierra depreciación Vercel 2026-10-01.
 - **wrangler 3.80 → 4.118 + workers-types 4→5** (sesión 31, `7281fdc`) — cierra las 6 vulnerabilidades del worker; gate supply-chain vuelve verde. **Deuda de sesión 29 CERRADA.**
 - **sharp override ^0.35** (sesión 31, `cdebdfa`) — cierra 2 CVEs de libvips dentro de Next 16.
@@ -498,10 +509,11 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Dashboards Excel con muro de pago PayPal | ✅ Producción sesión 17 |
 | Respuesta a cotizaciones (máx 5/cot) desde admin | ✅ Producción sesión 17 |
 | Asistente IA con 3 skills académicas | ✅ Producción |
-| Telemetría IA en /admin/observabilidad | ✅ Producción |
+| Telemetría IA en /admin/observabilidad | ✅ Producción (posible bug de D1_SYNC_SECRET, ver §11) |
 | Security hardening completo (fases 1–5) | ✅ Producción |
-| Retrieval semántico (Vectorize) | ❌ Pendiente |
-| Multi-worker / orquestación de agentes | ❌ Pendiente |
+| Retrieval semántico (Vectorize) | ✅ **Producción sesión 35** (594 docs vectorizados) |
+| Flujos del agente por sección web | ✅ **Producción sesión 35** (5 contextos con whitelist) |
+| Multi-worker / orquestación de agentes | ❌ Pendiente (ver §17) |
 | Botones compartir en redes sociales | ✅ Producción sesión 15 (extendido a libros/recursos sesión 17) |
 | SEO/GEO (canonical, JSON-LD, robots.txt, sitemap) | ✅ Producción sesión 16 |
 
@@ -557,39 +569,73 @@ por falta de pasos intermedios.
 
 ---
 
-## 18. PENDIENTES ACCIONABLES — actualizado sesión 34 (2026-09-05)
+## 18. PENDIENTES ACCIONABLES — actualizado sesión 35 (2026-09-05)
 
-> **Inicio de sesión: lee este bloque primero.** El sitio y el Worker están
-> estables. Todo lo crítico/alto de seguridad y resiliencia está cerrado
-> (ver §11 "Cerrado" para el histórico). El objetivo declarado del usuario es
-> **mejorar el asistente de IA** — ese es el próximo bloque de trabajo.
+> **Inicio de sesión: lee este bloque primero.** Vectorize + flujos por
+> sección + fix de "holis" quedaron en producción en sesión 35. Chat en
+> modo admin ya reporta "Sin límite" (secret sincronizado). El foco sigue
+> siendo **mejorar el asistente de IA** — ahora con más palancas
+> desbloqueadas.
 
-### 🎯 Prioridad 1 — Mejorar el asistente de IA (objetivo del usuario)
+### 🔴 Prioridad inmediata (bugs pequeños detectados sesión 35)
 
-El Worker `workers/sociologia/` funciona bien pero tiene margen:
-- **Retrieval**: sigue en FTS5 + LIKE (`retrieval.ts`). Vectorize está
-  comentado en `wrangler.toml`. Habilitar retrieval semántico mejora
-  las consultas donde la palabra exacta no aparece en el texto.
-- **Multi-paso**: hoy es una sola pasada RAG→skill→LLM. El usuario pidió
-  encadenar pasos para consultas complejas (ver §17).
-- **Corpus**: 804 docs en D1 `documentos`, aún con textos de baja calidad.
-  Impacta directo en la calidad de las respuestas.
+1. **Rotar `D1_SYNC_SECRET`** — mismo procedimiento que se usó para
+   `SESSION_SIGNING_SECRET` en sesión 35. Síntoma: `/admin/observabilidad`
+   sin datos. Pasos:
+   - Generar 64 chars random URL-safe
+   - Ponerlo idéntico en Vercel Settings → Environment Variables Y en
+     Cloudflare Worker → Settings → Variables and Secrets
+   - Redeploy Vercel
+   - Reintentar `/admin/observabilidad`
 
-**Siguiente sesión** debería empezar por **preguntar al usuario 2-3
-ejemplos concretos** de consultas que hoy el asistente responde mal, para
-elegir bien entre:
-1. Limpiar corpus (barato, alto retorno inmediato).
-2. Activar Vectorize (medio, requiere pipeline de embeddings + backfill).
-3. Multi-paso (más caro, solo vale la pena si hay consultas reales que lo pidan).
+2. **Configurar `WORKER_URL` en Vercel** — env var faltante.
+   Value: `https://sociologia.raul-dubon95.workers.dev`. Redeploy.
 
-Ver §17 para la visión de multi-worker (aplazada hasta que el multi-paso
-en un solo worker ya no alcance).
+3. **Investigar `/admin/metricas` en ceros** — puede ser cache de
+   `unstable_cache` o fallo silencioso. Ver F12 Network → response del
+   endpoint. Si el JSON viene con datos pero la UI muestra 0, es bug de
+   UI; si el JSON viene con 0, revalidar tag "metricas".
 
-### 🎯 Prioridad 2 — Membresía recurrente (roadmap sesión 26)
+### 🎯 Prioridad 1 — Enriquecer el modelo de IA (objetivo del usuario)
+
+Con Vectorize activo y flujos por sección funcionando, hay que
+**perfeccionar** con datos reales:
+
+1. **Limpiar corpus D1** (594 docs, calidad heterogénea). Sin esto,
+   Vectorize amplifica el ruido. Pasos sugeridos:
+   - Listar docs por tipo (`SELECT tipo, COUNT(*) FROM documentos GROUP BY tipo`)
+   - Identificar patrones de baja calidad (textos truncados, HTMLs mal
+     parseados, docs de temas fuera del interés académico de Raúl)
+   - Borrar en batches con confirmación
+   - **Re-correr backfill** desde `/admin/embed-backfill` tras limpiar
+     (Vectorize NO borra sola los vectores de docs eliminados de D1 —
+     hay que hacer `deleteByIds` desde el Worker, o borrar el índice
+     completo y re-crearlo)
+
+2. **Refinar los flujos por sección con feedback real**. Los prompts
+   contextuales en `instruccionesContexto()` (`prompts.ts`) son primera
+   versión. Después de recolectar telemetría real (queries por
+   contexto), ajustar:
+   - ¿En `libro`, cuánto empuja al comprador? ¿Es sutil o insistente?
+   - ¿En `donacion`, invita a apoyar cuando corresponde o siempre?
+   - ¿En `publicacion`, cita el artículo actual correctamente?
+
+3. **Razonamiento multi-paso** (§17) — el Worker sigue haciendo una
+   sola pasada RAG→skill→LLM. Para "compara X e Y" o "resume la
+   evolución del pensamiento sobre Z" el multi-paso mejora mucho.
+   Requiere diseño explícito (encadenar recuperar → analizar → citar)
+   antes de escribir código.
+
+4. **Memoria conversacional corta** (opcional) — hoy cada mensaje al
+   chat es independiente. Añadir contexto de los últimos 2-3 turnos
+   permite consultas de seguimiento ("y qué dice sobre X" refiriéndose
+   al artículo mencionado antes). Riesgo: aumenta tokens de entrada.
+
+### 🎯 Prioridad 2 — Membresía recurrente
 
 Suscripción de pago vía PayPal Subscriptions (MRR) para desbloquear
-biblioteca members-only + asistente con Vectorge. **Depende de que
-Vectorize esté activo primero** (el gran gancho premium).
+biblioteca members-only + chat sin límite. **Vectorize ya está activo**
+como gancho premium — falta la plomería de suscripciones.
 
 ### ⚙️ Verificación operativa recurrente
 
@@ -624,25 +670,32 @@ verificar páginas server-side con DB. Verificar con:
 ### 📝 PROMPT sugerido para la próxima sesión IA
 
 ```
-Objetivo: mejorar el asistente de IA (workers/sociologia/).
+Objetivo: enriquecer el asistente de IA de rauldubon.org (workers/sociologia/).
 
-Lee §11 (deuda pendiente), §17 (visión multi-paso/multi-worker) y §18
-(este bloque) de CLAUDE.md. El estado del código está verificado a
-sesión 34.
+Estado inicial (sesión 35): Vectorize activo con 594 docs, flujos por
+sección funcionando, chat en modo admin operativo, fix "holis" desplegado.
+Lee §11 (pendiente), §17 (multi-paso), §18 (este bloque).
 
-Empieza por preguntarme 2-3 consultas concretas donde el asistente
-responde mal hoy. Con esas, decidimos entre:
-- Limpiar corpus D1 (rápido).
-- Activar Vectorize (medio).
-- Añadir razonamiento multi-paso al Worker (más caro).
+Antes de tocar código, resolver los 3 bugs pequeños de la sección 🔴 de §18:
+1. Rotar D1_SYNC_SECRET si /admin/observabilidad sigue vacío
+2. Configurar WORKER_URL en Vercel
+3. Verificar /admin/metricas vs cache
 
-Reglas: rama nueva, NO mergear a main sin mi OK explícito. Al terminar,
-actualizar CLAUDE.md.
+Después, elegir CON EL USUARIO entre:
+- Limpiar corpus D1 (barato, alto impacto en calidad de respuestas)
+- Refinar prompts de flujos por sección con casos reales
+- Diseñar razonamiento multi-paso (para consultas complejas tipo "compara X e Y")
+- Añadir memoria conversacional corta (últimos 2-3 turnos)
+
+NO empezar código sin acordar prioridad con el usuario primero.
+Reglas: rama nueva, NO mergear a main sin OK explícito. Actualizar CLAUDE.md al terminar.
 ```
 
 ---
 
-*Última actualización: **2026-09-05 (sesión 34)** — rama `claude/claude-md-review-tech-debt-1tcujm`. Auditoría exhaustiva del CLAUDE.md contra el código real. Cambios en el documento: §1 stack actualizado (Next 16.2.9, React 19.2.8, Node 24.x, Tailwind 4.3.1, wrangler 4.118); §11 completamente reescrita — separada en "Pendiente" (11 items reales) + "Cerrado" (histórico condensado en una lista); §18 reenfocado en el objetivo del usuario (mejorar el asistente IA); pie de página consolidado (antes: ~20 resúmenes exhaustivos de 500+ palabras cada uno; ahora: 1 línea por sesión). Cambios en código: `app/api/admin/cotizaciones/[id]/responder/route.ts` — `cuerpoHtml` ahora se llena con el HTML real que se envía (`htmlRespuestaCotizacion`), cerrando la deuda menor documentada desde la sesión 17. Se verificó contra el código que ya están cerradas y no documentadas: wrangler 3.x → 4.118 (sesión 31), sharp override, Node 24, npm audit fix, security scan paths con backslash, compartir social en `/dashboard/[id]`. Deuda pendiente relevante: limpieza de corpus D1 (alta), Vectorize (media, prerrequisito de membresía premium), razonamiento multi-paso del asistente (media, objetivo del usuario). Todo en rama, sin merge a main hasta OK explícito del usuario.*
+*Última actualización: **2026-09-05 (sesión 35)** — Vectorize en producción + flujos por sección + fix "holis". Ver resumen abajo y §18 para roadmap. Sesión anterior (34) — rama `claude/claude-md-review-tech-debt-1tcujm`. Auditoría exhaustiva del CLAUDE.md contra el código real. Cambios en el documento: §1 stack actualizado (Next 16.2.9, React 19.2.8, Node 24.x, Tailwind 4.3.1, wrangler 4.118); §11 completamente reescrita — separada en "Pendiente" (11 items reales) + "Cerrado" (histórico condensado en una lista); §18 reenfocado en el objetivo del usuario (mejorar el asistente IA); pie de página consolidado (antes: ~20 resúmenes exhaustivos de 500+ palabras cada uno; ahora: 1 línea por sesión). Cambios en código: `app/api/admin/cotizaciones/[id]/responder/route.ts` — `cuerpoHtml` ahora se llena con el HTML real que se envía (`htmlRespuestaCotizacion`), cerrando la deuda menor documentada desde la sesión 17. Se verificó contra el código que ya están cerradas y no documentadas: wrangler 3.x → 4.118 (sesión 31), sharp override, Node 24, npm audit fix, security scan paths con backslash, compartir social en `/dashboard/[id]`. Deuda pendiente relevante: limpieza de corpus D1 (alta), Vectorize (media, prerrequisito de membresía premium), razonamiento multi-paso del asistente (media, objetivo del usuario). Todo en rama, sin merge a main hasta OK explícito del usuario.*
+
+*Sesión 35 (2026-09-05) — **Vectorize + flujos por sección + fix "holis" + botón backfill admin**. Sesión larga con múltiples merges directos a `main`. **Vectorize activado**: índice `sociologia-embeddings` (1024 dims, cosine) creado desde Cloudflare Dashboard vía API con token temporal (después revocado); binding descomentado en `wrangler.toml`; **594 documentos vectorizados** (no 804 como decía este doc antes) vía nuevo botón `/admin/embed-backfill` que orquesta un loop client-side llamando al endpoint `/embed` del Worker (reanudable, guarda progreso en KV). **Fix auth /embed**: usa `validarTokenPremium` (misma auth que el chat) en vez de HMAC manual. Diagnóstico ampliado en el endpoint Next para futuros troubleshoots. **Rotación `SESSION_SIGNING_SECRET`**: estaba desincronizado entre Vercel y Cloudflare Worker (chat sí lo notaba, no reportaba "Sin límite" en modo admin); rotado a valor idéntico en ambos. **Fix "holis"**: `esSaludo` reconoce variantes coloquiales (holis/holita/qué onda/etc.); `esConsultaTrivial` bloquea RAG solo si NO hay ninguna palabra de contenido (≥3 chars, fuera de stop-words) — preguntas cortas legítimas como "que es la hegemonía" pasan al pipeline normal. **Reglas anti "citar por citar"** (SYSTEM_PROMPT v1.2): solo cita cuando la fuente sostiene una afirmación específica; nunca listar en 📚 Fuentes documentos no referenciados; post-proceso remueve la sección si `groundingRatio < 0.4`. **Flujos por sección web**: campo `contexto` en el body del Worker con whitelist estricta (general/home/publicacion/libro/donacion); frontend deriva del pathname; Worker valida; cada contexto modula tono/sugerencias sin alterar reglas absolutas. **Seguridad extra**: nuevos patrones en `analizarInyeccion` para detectar intentos de manipular el contexto ("cambia tu contexto a X", etc.). PENDIENTES detectados: `D1_SYNC_SECRET` posiblemente también desincronizado (síntoma: `/admin/observabilidad` vacío); `WORKER_URL` no configurada en env vars de Vercel (usa fallback hardcoded); `/admin/metricas` en ceros (¿cache? investigar). Ver §18 para roadmap detallado.*
 
 *Sesión 33 (2026-09-03, `cae71b0`) — **Conversión de moneda referencial** (visual, sin tocar el cobro USD). 9 monedas (USD/MXN/EUR/COP/GTQ/ARS/CLP/PEN/BRL), selector en Header, cookie `moneda_ref`, tasas cacheadas 24h de open.er-api.com con fail-safe hardcoded. Todo server-side; cero cambios de esquema, pagos o auth. Ver §11.*
 
