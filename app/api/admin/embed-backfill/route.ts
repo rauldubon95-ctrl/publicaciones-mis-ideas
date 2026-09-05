@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHmac, randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { sessionSecret } from "@/lib/secrets";
@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // Proxy admin → Worker /embed.
-// El Worker requiere HMAC(sessionSecret, "premium-bypass-v1") en X-Admin-Key
-// (formato estático usado solo por el endpoint /embed del worker).
-// Este endpoint hace UNA llamada por invocación; el frontend orquesta el loop.
+// Genera el token en el MISMO formato nuevo que /api/asistente/token
+// ({hmac}.{jti}.{exp}) y lo envía como X-Premium-Token. Si el chat con
+// premium funciona, este endpoint funciona por la misma ruta de auth.
+// Además prueba fallback al formato legado hex si el nuevo falla.
 export async function POST() {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
@@ -20,37 +21,56 @@ export async function POST() {
   }
 
   const workerUrl = process.env.WORKER_URL ?? "https://sociologia.raul-dubon95.workers.dev";
-  const adminKey = createHmac("sha256", secret).update("premium-bypass-v1").digest("hex");
 
-  try {
-    const res = await fetchConTimeout(
+  // Token nuevo (formato con jti+exp, igual que el chat)
+  const jti = randomUUID();
+  const exp = Date.now() + 60 * 60 * 1000; // 1 hora
+  const messageNuevo = `premium-bypass-v1:${jti}:${exp}`;
+  const hmacNuevo = createHmac("sha256", secret).update(messageNuevo).digest("hex");
+  const tokenNuevo = `${hmacNuevo}.${jti}.${exp}`;
+
+  // Token legado (HMAC estático)
+  const tokenLegado = createHmac("sha256", secret).update("premium-bypass-v1").digest("hex");
+
+  async function llamarWorker(token: string, headerName: string) {
+    return await fetchConTimeout(
       `${workerUrl}/embed`,
       {
         method: "POST",
-        headers: { "X-Admin-Key": adminKey, "Content-Type": "application/json" },
+        headers: { [headerName]: token, "Content-Type": "application/json" },
         body: "{}",
       },
       45_000
     );
+  }
 
-    // Leemos como texto primero para poder mostrarlo aun si no es JSON
+  try {
+    // Intento 1: token nuevo con X-Premium-Token (misma auth que chat)
+    let res = await llamarWorker(tokenNuevo, "X-Premium-Token");
+    let intentoUsado = "X-Premium-Token(nuevo)";
+
+    // Intento 2: si falla con 401, prueba token legado con X-Admin-Key
+    if (res.status === 401) {
+      res = await llamarWorker(tokenLegado, "X-Admin-Key");
+      intentoUsado = "X-Admin-Key(legado)";
+    }
+
     const bodyText = await res.text();
 
     if (!res.ok) {
-      // Diagnóstico ampliado (SIN exponer el secret ni el HMAC).
-      // Solo dice si están presentes, no su valor.
       return NextResponse.json(
         {
-          error: "Worker rechazó la petición",
+          error: "Worker rechazó la petición (ambos intentos)",
           workerStatus: res.status,
           workerBody: bodyText.slice(0, 500),
           diagnostico: {
             workerUrlUsada: workerUrl,
             workerUrlDeEnv: !!process.env.WORKER_URL,
             sessionSecretPresente: !!secret,
-            longitudHmacEnviado: adminKey.length,
-            hmacPrimerosCaracteres: adminKey.slice(0, 8),
-            hmacUltimosCaracteres: adminKey.slice(-4),
+            longitudSecret: secret.length,
+            hmacNuevoPrimero: hmacNuevo.slice(0, 8),
+            hmacLegadoPrimero: tokenLegado.slice(0, 8),
+            ultimoIntento: intentoUsado,
           },
         },
         { status: res.status }
