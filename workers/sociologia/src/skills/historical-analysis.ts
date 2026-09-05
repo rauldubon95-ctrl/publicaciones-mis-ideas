@@ -3,6 +3,7 @@ import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
+import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL } from "../config";
 
 const SYSTEM_SKILL = `Eres el asistente académico de Raúl Dubón especializado en historia latinoamericana y procesos histórico-sociales.
@@ -82,8 +83,9 @@ function construirPrompt(input: SkillInput, docs: DocumentoRecuperado[]) {
   const contexto = docs
     .map((d) => `[DOC ${d.id}: ${d.titulo}]\n${d.texto.slice(0, 1800)}`)
     .join("\n\n---\n\n");
+  const systemFinal = SYSTEM_SKILL + instruccionesContexto(input.contextoSitio ?? "general");
   return [
-    { role: "system" as const, content: SYSTEM_SKILL },
+    { role: "system" as const, content: systemFinal },
     { role: "user" as const, content: `CORPUS:\n${contexto}\n\n---\nCONSULTA HISTÓRICA: ${input.query}` },
   ];
 }

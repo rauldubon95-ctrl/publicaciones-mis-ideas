@@ -3,10 +3,11 @@
 // D1: llm_sociolog | KV: RATE_LIMIT | AI: Workers AI
 // API 100% compatible con v1 (AsistenteChat.tsx no cambia)
 // ─────────────────────────────────────────────────────────────
-import type { Env, WorkerResponse } from "./types";
+import type { ContextoSitio, Env, WorkerResponse } from "./types";
+import { CONTEXTOS_VALIDOS } from "./types";
 import { analizarInyeccion } from "./security";
 import { recuperarDocumentos } from "./retrieval";
-import { extraerFuentesTitulos, esSaludo } from "./prompts";
+import { extraerFuentesTitulos, esSaludo, esConsultaTrivial } from "./prompts";
 import { checkRateLimit, validarTokenPremium, contarTokens, checkGlobalRateLimit } from "./ratelimit";
 import { emitirEvento, handleTelemetriaRequest } from "./telemetry";
 import { handleEmbedRequest } from "./embed-worker";
@@ -120,9 +121,18 @@ export default {
 
     // ── 4. Parsear body ──────────────────────────────────────
     let pregunta: string;
+    let contextoSitio: ContextoSitio = "general";
     try {
-      const body = await request.json() as { pregunta?: string };
+      const body = await request.json() as { pregunta?: string; contexto?: unknown };
       pregunta = (body.pregunta ?? "").trim();
+      // Validación estricta del contexto contra whitelist.
+      // Cualquier valor inesperado o manipulado cae a "general" — nunca
+      // se acepta un contexto arbitrario del cliente, y nunca se inserta
+      // como texto crudo en el prompt.
+      if (typeof body.contexto === "string" &&
+          (CONTEXTOS_VALIDOS as readonly string[]).includes(body.contexto)) {
+        contextoSitio = body.contexto as ContextoSitio;
+      }
     } catch {
       return resp({ error: "Solicitud inválida" }, 400, CORS, traceId);
     }
@@ -148,11 +158,21 @@ export default {
       );
     }
 
-    // ── 6. Saludo rápido sin LLM ─────────────────────────────
-    if (esSaludo(pregunta)) {
+    // ── 6. Saludo o consulta trivial: respuesta rápida sin LLM ──
+    // Cubre "holis", "hola", "buenas!" y cualquier query sin al menos
+    // 2 palabras significativas. Antes disparaba el pipeline RAG+LLM
+    // y citaba documentos irrelevantes ("citar por citar").
+    if (esSaludo(pregunta) || esConsultaTrivial(pregunta)) {
+      const mensajeSegunContexto: Record<ContextoSitio, string> = {
+        general: "¡Hola! Soy el asistente académico de Raúl Dubón. Puedo ayudarte a explorar sus publicaciones sobre ciencias sociales, sociología y análisis político latinoamericano. ¿Sobre qué tema querés consultar?",
+        home: "¡Hola! Soy el asistente académico de Raúl Dubón. Puedo ayudarte a explorar sus artículos, libros y análisis sobre ciencias sociales latinoamericanas. Contame qué tema te interesa (sociología, política, historia, educación, etc.) y te oriento.",
+        publicacion: "¡Hola! Estás leyendo un artículo de Raúl Dubón. Puedo ayudarte a profundizar en su contenido, contextualizarlo con otros artículos del sitio o explicar conceptos que aparezcan. ¿Qué te gustaría entender mejor?",
+        libro: "¡Hola! Estás explorando los libros de Raúl. Puedo ayudarte a conocer los temas que abordan o sugerirte cuál se relaciona con lo que te interesa. Contame qué tema estás explorando.",
+        donacion: "¡Hola! Puedo ayudarte con dudas sobre el trabajo de Raúl, sus publicaciones o cómo apoyarlo. ¿Qué te gustaría saber?",
+      };
       return resp(
         {
-          respuesta: "¡Hola! Soy el asistente académico de Raúl Dubón. Puedo ayudarte a explorar sus publicaciones sobre ciencias sociales, sociología y análisis político latinoamericano. ¿Sobre qué tema querés consultar?",
+          respuesta: mensajeSegunContexto[contextoSitio],
           fuentes: [],
           esPremium,
         },
@@ -195,7 +215,12 @@ export default {
       const skillElegida = detectarSkill(pregunta);
       const skillResult = await skillRegistry.execute(
         skillElegida,
-        { query: pregunta, context: docs, depth: esPremium ? "deep" : "standard" },
+        {
+          query: pregunta,
+          context: docs,
+          depth: esPremium ? "deep" : "standard",
+          contextoSitio, // validado en el paso 4 contra whitelist
+        },
         env
       );
 
@@ -210,6 +235,16 @@ export default {
         : skillResult.confidence >= 0.4 ? "media"
         : "baja";
       advertencia = skillResult.uncertainty_flags[0] ?? undefined;
+
+      // Post-proceso: si el grounding es débil, remover la sección de
+      // fuentes del texto para no citar por citar (regla del prompt v1.2).
+      // El campo fuentes[] del JSON de respuesta sigue lleno como
+      // "referencia complementaria" para el UI, pero la respuesta
+      // textual queda limpia.
+      if (groundingRatio < 0.4) {
+        respuestaLLM = removerSeccionFuentes(respuestaLLM);
+      }
+
       tokensSalida = contarTokens(respuestaLLM);
     } catch (err) {
       emitirEvento(
@@ -245,9 +280,12 @@ export default {
     );
 
     // ── 14. Respuesta ─────────────────────────────────────────
+    // Si el grounding es débil, ya removimos las citas del texto —
+    // el array fuentes[] también queda vacío para no confundir al
+    // frontend con una lista que el asistente no usó realmente.
     const respuesta: WorkerResponse = {
       respuesta: respuestaLLM,
-      fuentes: extraerFuentesTitulos(docs),
+      fuentes: groundingRatio < 0.4 ? [] : extraerFuentesTitulos(docs),
       esPremium,
       confianza,
       traceId,
@@ -372,4 +410,14 @@ function resp(
   const h = { ...headers };
   if (traceId) h["X-Trace-Id"] = traceId;
   return new Response(JSON.stringify(data), { status, headers: h });
+}
+
+// Remueve secciones tipo "📚 Fuentes:" o "**CITAS:**" del final del
+// texto cuando el LLM no ancló bien la respuesta al corpus. Evita
+// "citar por citar" (regla 10 del prompt v1.2). Preserva el resto.
+function removerSeccionFuentes(texto: string): string {
+  // Corta desde el primer encabezado tipo "📚 Fuentes:", "Fuentes:",
+  // "**CITAS:**" o "**Fuentes:**" hasta el final del texto.
+  const re = /(\n+\s*(?:📚\s*)?\*{0,2}(?:CITAS|Fuentes)\s*:?\*{0,2}[\s\S]*)$/i;
+  return texto.replace(re, "").trimEnd();
 }

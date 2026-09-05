@@ -3,6 +3,7 @@ import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
+import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL } from "../config";
 
 const FRAMEWORK_KEYWORDS: Record<string, string[]> = {
@@ -97,8 +98,10 @@ function construirPrompt(
     ? `\nAplica especialmente: ${input.frameworks.join(", ")}.`
     : "";
 
+  const systemFinal = SYSTEM_SKILL + instruccionesContexto(input.contextoSitio ?? "general");
+
   return [
-    { role: "system", content: SYSTEM_SKILL },
+    { role: "system", content: systemFinal },
     {
       role: "user",
       content: `CORPUS:\n${contexto}\n\n---\nCONSULTA: ${input.query}${frameworksInstr}`,

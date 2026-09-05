@@ -5,6 +5,18 @@ import { usePathname } from "next/navigation";
 
 const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
 
+// Mapea la ruta actual del sitio al contexto que se envía al Worker.
+// El Worker valida el valor contra su propia whitelist server-side, así
+// que enviar un valor no listado es inofensivo (se normaliza a "general").
+type ContextoAgente = "general" | "home" | "publicacion" | "libro" | "donacion";
+function contextoDesdeRuta(pathname: string | null): ContextoAgente {
+  if (!pathname || pathname === "/") return "home";
+  if (pathname.startsWith("/publicaciones")) return "publicacion";
+  if (pathname.startsWith("/libros")) return "libro";
+  if (pathname.startsWith("/donar")) return "donacion";
+  return "general";
+}
+
 interface Mensaje {
   rol: "usuario" | "asistente";
   texto: string;
@@ -57,7 +69,10 @@ export default function AsistenteChat() {
       const res = await fetch(WORKER_URL, {
         method: "POST",
         headers,
-        body: JSON.stringify({ pregunta: texto }),
+        body: JSON.stringify({
+          pregunta: texto,
+          contexto: contextoDesdeRuta(pathname),
+        }),
       });
 
       const data = await res.json() as {
