@@ -1,5 +1,4 @@
-import type { Env } from "../types";
-import type { DocumentoRecuperado } from "../types";
+import type { ContextoSitio, DocumentoRecuperado, Env } from "../types";
 
 export interface SkillInput {
   query: string;
@@ -7,6 +6,7 @@ export interface SkillInput {
   depth?: "shallow" | "standard" | "deep";
   outputFormat?: "prose" | "structured";
   frameworks?: string[];
+  contextoSitio?: ContextoSitio; // ubicación web (validado en index.ts)
 }
 
 export interface SkillEntities {

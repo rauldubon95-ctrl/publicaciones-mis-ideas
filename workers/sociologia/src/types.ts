@@ -17,8 +17,22 @@ export interface Env {
 
 // ── Request / Response (backward-compatible con v1) ───────────
 
+// Contextos válidos del sitio (whitelist estricta — cualquier otro valor
+// se normaliza a "general"). NUNCA aceptar contexto arbitrario del cliente.
+export type ContextoSitio =
+  | "general"      // default, cualquier página sin contexto específico
+  | "home"         // portada
+  | "publicacion"  // /publicaciones/[slug] — referenciar artículos
+  | "libro"        // /libros[/slug] — sugerir libros premium relacionados
+  | "donacion";    // /donar — invitar a apoyar cuando aplique
+
+export const CONTEXTOS_VALIDOS: readonly ContextoSitio[] = [
+  "general", "home", "publicacion", "libro", "donacion",
+] as const;
+
 export interface WorkerRequest {
   pregunta: string;
+  contexto?: ContextoSitio; // opcional; default "general"
 }
 
 export interface WorkerResponse {

@@ -70,6 +70,16 @@ const INJECTION_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /revela[r]?\s+(tu|el)\s+(prompt|instrucciones?|sistema)/gi, label: "es_extract_reveal" },
   { re: /dime\s+(tus?|cuáles?\s+son\s+tus?)\s+(instrucciones?|reglas?)/gi, label: "es_extract_tell_me" },
   { re: /copia\s+(tu|el)\s+(prompt|instrucciones?)/gi, label: "es_extract_copy" },
+
+  // Español — Manipulación de contexto/flujo del sitio (sesión 35)
+  { re: /cambia\s+(tu\s+)?(contexto|modo|flujo|sección)/gi, label: "es_context_switch" },
+  { re: /responde\s+como\s+si\s+(estuvieras?|estuvi[eé]semos?)\s+en/gi, label: "es_context_pretend_url" },
+  { re: /finge\s+que\s+(estás|estoy)\s+en\s+(la\s+)?(página|sección|url)/gi, label: "es_context_pretend_section" },
+  { re: /(activa|activar|habilita|habilitar)\s+(el\s+)?modo\s+(libro|donaci|premium|admin)/gi, label: "es_mode_activate" },
+
+  // Inglés — Manipulación de contexto
+  { re: /switch\s+(to\s+)?(context|mode|flow)/gi, label: "en_context_switch" },
+  { re: /respond\s+as\s+if\s+(i\s+were|we\s+were|you\s+were)\s+(on|in)/gi, label: "en_context_pretend_url" },
 ];
 
 // Sanitizar el contenido de un documento (documento envuelto)

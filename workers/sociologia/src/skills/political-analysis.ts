@@ -3,6 +3,7 @@ import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
+import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL } from "../config";
 
 const SYSTEM_SKILL = `Eres el asistente académico de Raúl Dubón especializado en ciencia política comparada y análisis del poder en América Latina.
@@ -85,8 +86,9 @@ function construirPrompt(input: SkillInput, docs: DocumentoRecuperado[]) {
   const frameworksInstr = input.frameworks?.length
     ? `\nAplica especialmente estos marcos: ${input.frameworks.join(", ")}.`
     : "";
+  const systemFinal = SYSTEM_SKILL + instruccionesContexto(input.contextoSitio ?? "general");
   return [
-    { role: "system" as const, content: SYSTEM_SKILL },
+    { role: "system" as const, content: systemFinal },
     { role: "user" as const, content: `CORPUS:\n${contexto}\n\n---\nCONSULTA POLÍTICA: ${input.query}${frameworksInstr}` },
   ];
 }
