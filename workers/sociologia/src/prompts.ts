@@ -133,26 +133,25 @@ export function esSaludo(texto: string): boolean {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Filtro anti-consultas-triviales (sesión 35)
+// Filtro anti-consultas-triviales (sesión 35, ajustado)
 // ─────────────────────────────────────────────────────────────
 // Detecta queries que NO son preguntas reales (frases sueltas, palabras
-// aisladas, ruido). Evita que el pipeline RAG+LLM se dispare y cite
+// aisladas, ruido puro). Evita que el pipeline RAG+LLM se dispare y cite
 // documentos irrelevantes ante ruido.
 //
-// Criterios (todos negativos — devolver `true` = ES trivial, no procesar):
-//  - Menos de 3 palabras significativas (>=4 chars, no stop-words)
-//  - Solo palabras muy cortas (todas <4 chars, aunque suman muchas)
-//  - Sin ningún token que parezca sustantivo/verbo académico
+// Umbral CONSERVADOR: solo bloquea si NO hay NINGUNA palabra de contenido
+// (>= 3 chars, fuera de stop-words). Preguntas cortas legítimas como
+// "que es la hegemonía" o "IA en salud" pasan (tienen "hegemonía"/"salud").
 export function esConsultaTrivial(texto: string): boolean {
   const STOP = new Set([
-    "hola","holi","holis","holita","hey","hello","hi","saludos","buenas",
+    "hola","holi","holis","holita","hey","hello","saludos","buenas",
     "que","como","donde","cuando","para","por","con","del","sin","sus",
     "los","las","una","uno","unos","unas","este","esta","esto","estos",
-    "estas","aquel","aquella","aquello","muy","poco","mas","menos","algo",
-    "nada","todo","todos","cada","otro","otra","otros","otras","the","and",
-    "for","with","from","this","that","are","was","has","have","not","only",
-    "yes","si","no","ok","tal","vez","aun","aunque","pero","sino","por",
-    "asi","aqui","alli","ahi","hoy","ayer","manana","siempre","nunca",
+    "estas","muy","poco","mas","menos","algo","nada","todo","todos",
+    "cada","otro","otra","otros","otras","the","and","for","with","from",
+    "this","that","are","was","has","have","not","only","yes","si","tal",
+    "vez","aun","aunque","pero","sino","asi","aqui","alli","ahi","hoy",
+    "ayer","manana","siempre","nunca","dime","dame","cuentame","sabes",
   ]);
   const palabras = texto
     .toLowerCase()
@@ -160,6 +159,6 @@ export function esConsultaTrivial(texto: string): boolean {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 4 && !STOP.has(w));
-  return palabras.length < 2;
+    .filter((w) => w.length >= 3 && !STOP.has(w));
+  return palabras.length < 1;
 }
