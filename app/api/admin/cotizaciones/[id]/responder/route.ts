@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
-import { enviarRespuestaCotizacion } from "@/lib/resend";
+import { enviarRespuestaCotizacion, htmlRespuestaCotizacion } from "@/lib/resend";
 import { checkRateLimitDb, getIp, registrarEvento } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -67,13 +67,13 @@ export async function POST(
     );
   }
 
-  // Creamos la respuesta en estado PENDIENTE para tener trazabilidad incluso
-  // si Resend falla. Luego actualizamos según el resultado del envío.
+  const cuerpoHtml = htmlRespuestaCotizacion(cuerpo, cotizacion.nombre);
+
   const respuesta = await prisma.respuestaCotizacion.create({
     data: {
       cotizacionId: cotizacion.id,
       asunto,
-      cuerpoHtml: "",  // se llena tras envío exitoso para ahorrar I/O
+      cuerpoHtml,
       cuerpoTexto: cuerpo,
       enviadoPor: "admin",
       estadoEnvio: "PENDIENTE",
@@ -101,8 +101,6 @@ export async function POST(
     );
   }
 
-  // Importamos la plantilla solo aquí para guardar el HTML real que se envió.
-  // Lo dejamos como deuda menor: por simplicidad guardamos un placeholder.
   await Promise.all([
     prisma.respuestaCotizacion.update({
       where: { id: respuesta.id },
