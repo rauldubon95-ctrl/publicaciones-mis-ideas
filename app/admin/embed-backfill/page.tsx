@@ -46,6 +46,20 @@ export default function EmbedBackfillPage() {
         if (!res.ok) {
           agregarLog(`❌ Error HTTP ${res.status}: ${data.error ?? "sin detalle"}`);
           if (data.detalle) agregarLog(`   Detalle: ${data.detalle}`);
+          const anyData = data as unknown as {
+            workerStatus?: number;
+            workerBody?: string;
+            diagnostico?: Record<string, unknown>;
+          };
+          if (anyData.workerStatus !== undefined) {
+            agregarLog(`   Worker status: ${anyData.workerStatus}`);
+          }
+          if (anyData.workerBody) {
+            agregarLog(`   Worker body: ${anyData.workerBody}`);
+          }
+          if (anyData.diagnostico) {
+            agregarLog(`   Diagnóstico: ${JSON.stringify(anyData.diagnostico)}`);
+          }
           setEstado(data);
           break;
         }

@@ -32,8 +32,36 @@ export async function POST() {
       },
       45_000
     );
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+
+    // Leemos como texto primero para poder mostrarlo aun si no es JSON
+    const bodyText = await res.text();
+
+    if (!res.ok) {
+      // Diagnóstico ampliado (SIN exponer el secret ni el HMAC).
+      // Solo dice si están presentes, no su valor.
+      return NextResponse.json(
+        {
+          error: "Worker rechazó la petición",
+          workerStatus: res.status,
+          workerBody: bodyText.slice(0, 500),
+          diagnostico: {
+            workerUrlUsada: workerUrl,
+            workerUrlDeEnv: !!process.env.WORKER_URL,
+            sessionSecretPresente: !!secret,
+            longitudHmacEnviado: adminKey.length,
+            hmacPrimerosCaracteres: adminKey.slice(0, 8),
+            hmacUltimosCaracteres: adminKey.slice(-4),
+          },
+        },
+        { status: res.status }
+      );
+    }
+
+    try {
+      return NextResponse.json(JSON.parse(bodyText), { status: 200 });
+    } catch {
+      return NextResponse.json({ error: "Worker respondió con body no-JSON", workerBody: bodyText.slice(0, 500) }, { status: 502 });
+    }
   } catch (err) {
     return NextResponse.json(
       { error: "Fallo al contactar Worker", detalle: err instanceof Error ? err.message : String(err) },
