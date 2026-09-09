@@ -377,8 +377,9 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 |---|---|---|
 | `D1_SYNC_SECRET` posiblemente desincronizado | Síntomas: `/admin/observabilidad` no muestra telemetría. Mismo tipo de problema que tuvo `SESSION_SIGNING_SECRET` en sesión 35 (secrets de Vercel y Cloudflare son tablas independientes). Rotación con procedimiento documentado en sesión 35: generar nuevo → ambos lados → redeploy Vercel. | Alta |
 | `/admin/metricas` en ceros | Puede ser cache de `unstable_cache` (2 min), o fallo silencioso en Prisma queries. Investigar con F12 Network → response del endpoint. | Alta |
-| Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`) — cifra verificada en sesión 35 tras backfill Vectorize (el "804" que decía este doc antes estaba desactualizado). Sigue habiendo textos de baja calidad. Impacta directo en la calidad del asistente. | Alta |
-| Asistente IA sin razonamiento multi-paso | El Worker hace una sola pasada RAG→skill→LLM por request. Para consultas complejas ("compara X e Y") el usuario pidió encadenar pasos. Ver §17. | Media (objetivo del usuario) |
+| Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`). Sigue habiendo textos de baja calidad; el bug del agente de sesión 36 (improvisar panorama general) es SÍNTOMA de corpus ruidoso. Impacta directo en la calidad del asistente. | Alta |
+| Multi-paso + memoria conversacional | Diseño listo en `docs/agente-multi-paso-memoria-diseno.md` (sesión 36). Implementación aplazada — requiere telemetría real que muestre ≥3 consultas compuestas/mes que fallen. | Media (objetivo del usuario) |
+| Job CI "Auditar dependencias (web)" en rojo | Preexistente. Todos los PRs Dependabot llegan con este check fallando. Investigar en próxima sesión: probablemente `npm audit` reporta vulnerabilidades altas en transitivas de Next 16 (postcss/sharp otros). Verificar y actualizar overrides o esperar release upstream. | Media |
 | Telemetría en KV (no D1) | Datos duran 7 días. Dashboard persistente requeriría escribir a `documentos_telemetria` en D1. Aceptable mientras el uso sea bajo. | Media |
 | `WORKER_URL` no configurada en Vercel | Verificado en sesión 35 (diagnóstico mostró `workerUrlDeEnv: false`). El código usa fallback hardcodeado (`https://sociologia.raul-dubon95.workers.dev`) — funciona, pero no cumple el hardening H3 de sesión 28. Añadir `WORKER_URL` como env var en Vercel resuelve. | Media |
 | IP cruda en rate-limit | `RateLimitDb.clave` = `"IP:ruta"` guarda IP real (transitoria, fin anti-abuso legítimo). El resto de IPs van cifradas (`ipHash`). Purista: hashear también la clave. Sin exposición externa. | Baja |
@@ -426,6 +427,9 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 - **Reglas anti "citar por citar"** (sesión 35) — SYSTEM_PROMPT v1.2 con reglas explícitas: cita solo cuando la fuente sostiene una afirmación específica; nunca listar en 📚 Fuentes documentos no referenciados; post-proceso remueve la sección de fuentes si `groundingRatio < 0.4`.
 - **Flujos por ubicación web** (sesión 35) — nuevo campo `contexto` en el body del Worker (whitelist estricta: general/home/publicacion/libro/donacion). Cada sección modula el tono/sugerencias del asistente sin alterar reglas absolutas. Frontend deriva contexto de `pathname` y lo envía; Worker valida y normaliza.
 - **Seguridad extra contra manipulación de contexto** (sesión 35) — nuevos patrones en `analizarInyeccion` para detectar intentos como "cambia tu contexto a X", "responde como si estuvieras en /donar", "activa modo premium".
+- **Fix "improvisación general" del agente** (sesión 36, rama `claude/agente-sesion36`) — bug real: preguntar "que sabe raul de sentido común" devolvía panorama general con 6 fuentes irrelevantes. 4 cambios coordinados: (1) REGLA CRÍTICA en los 3 SYSTEM_SKILL: si el corpus no trata directamente la consulta, responder "no tengo información suficiente" en formato mínimo; prohibición explícita de improvisar; (2) post-proceso en `index.ts`: si el análisis dice "no tengo información" O `groundingRatio < 0.25`, colapsa toda la respuesta a un mensaje único con `confianza=baja` y `fuentes=[]`; (3) retrieval: Vectorize corre EN PARALELO con FTS siempre que esté disponible (antes solo si FTS < 3 docs); mezcla priorizando docs que aparecen en ambas vías; (4) `instruccionesContexto` refinado — sugerencias de tono no aplican cuando la respuesta es "no tengo información".
+- **Diseño multi-paso + memoria conversacional** (sesión 36) — documento en `docs/agente-multi-paso-memoria-diseno.md`. Arquitectura, cambios en código, riesgos, orden de implementación. NO implementado hasta tener telemetría real que lo justifique.
+- **2 PRs Dependabot mergeados** (sesión 36) — PR #44 (worker: `@cloudflare/workers-types` + `wrangler` a parches menores) + PR #41 (`actions/setup-node` v6→v7 en 4 workflows).
 - **Node 20.x → 24.x** (sesión 31, `08ad805`) — engines actualizados; cierra depreciación Vercel 2026-10-01.
 - **wrangler 3.80 → 4.118 + workers-types 4→5** (sesión 31, `7281fdc`) — cierra las 6 vulnerabilidades del worker; gate supply-chain vuelve verde. **Deuda de sesión 29 CERRADA.**
 - **sharp override ^0.35** (sesión 31, `cdebdfa`) — cierra 2 CVEs de libvips dentro de Next 16.
@@ -598,11 +602,11 @@ por falta de pasos intermedios.
 
 ### 🎯 Prioridad 1 — Enriquecer el modelo de IA (objetivo del usuario)
 
-Con Vectorize activo y flujos por sección funcionando, hay que
-**perfeccionar** con datos reales:
+Sesión 36 hizo el fix del "panorama general improvisado" + refinó prompts
+por sección + diseñó multi-paso/memoria. Próximo bloque:
 
-1. **Limpiar corpus D1** (594 docs, calidad heterogénea). Sin esto,
-   Vectorize amplifica el ruido. Pasos sugeridos:
+1. **Limpiar corpus D1** (594 docs, calidad heterogénea). El bug del
+   panorama general es SÍNTOMA de corpus ruidoso. Pasos sugeridos:
    - Listar docs por tipo (`SELECT tipo, COUNT(*) FROM documentos GROUP BY tipo`)
    - Identificar patrones de baja calidad (textos truncados, HTMLs mal
      parseados, docs de temas fuera del interés académico de Raúl)
@@ -612,24 +616,16 @@ Con Vectorize activo y flujos por sección funcionando, hay que
      hay que hacer `deleteByIds` desde el Worker, o borrar el índice
      completo y re-crearlo)
 
-2. **Refinar los flujos por sección con feedback real**. Los prompts
-   contextuales en `instruccionesContexto()` (`prompts.ts`) son primera
-   versión. Después de recolectar telemetría real (queries por
-   contexto), ajustar:
-   - ¿En `libro`, cuánto empuja al comprador? ¿Es sutil o insistente?
-   - ¿En `donacion`, invita a apoyar cuando corresponde o siempre?
-   - ¿En `publicacion`, cita el artículo actual correctamente?
+2. **Habilitar telemetría** (requiere rotar `D1_SYNC_SECRET`, ver
+   sección 🔴). Sin telemetría no podemos medir si el fix de sesión 36
+   realmente mejoró las respuestas, ni identificar qué consultas siguen
+   fallando.
 
-3. **Razonamiento multi-paso** (§17) — el Worker sigue haciendo una
-   sola pasada RAG→skill→LLM. Para "compara X e Y" o "resume la
-   evolución del pensamiento sobre Z" el multi-paso mejora mucho.
-   Requiere diseño explícito (encadenar recuperar → analizar → citar)
-   antes de escribir código.
-
-4. **Memoria conversacional corta** (opcional) — hoy cada mensaje al
-   chat es independiente. Añadir contexto de los últimos 2-3 turnos
-   permite consultas de seguimiento ("y qué dice sobre X" refiriéndose
-   al artículo mencionado antes). Riesgo: aumenta tokens de entrada.
+3. **Implementar multi-paso + memoria** — diseño listo en
+   `docs/agente-multi-paso-memoria-diseno.md`. Empezar por memoria
+   conversacional (más simple, impacto UX inmediato). Multi-paso solo
+   si la telemetría del punto 2 muestra ≥3 consultas compuestas/mes
+   que fallen hoy.
 
 ### 🎯 Prioridad 2 — Membresía recurrente
 
@@ -693,7 +689,9 @@ Reglas: rama nueva, NO mergear a main sin OK explícito. Actualizar CLAUDE.md al
 
 ---
 
-*Última actualización: **2026-09-05 (sesión 35)** — Vectorize en producción + flujos por sección + fix "holis". Ver resumen abajo y §18 para roadmap. Sesión anterior (34) — rama `claude/claude-md-review-tech-debt-1tcujm`. Auditoría exhaustiva del CLAUDE.md contra el código real. Cambios en el documento: §1 stack actualizado (Next 16.2.9, React 19.2.8, Node 24.x, Tailwind 4.3.1, wrangler 4.118); §11 completamente reescrita — separada en "Pendiente" (11 items reales) + "Cerrado" (histórico condensado en una lista); §18 reenfocado en el objetivo del usuario (mejorar el asistente IA); pie de página consolidado (antes: ~20 resúmenes exhaustivos de 500+ palabras cada uno; ahora: 1 línea por sesión). Cambios en código: `app/api/admin/cotizaciones/[id]/responder/route.ts` — `cuerpoHtml` ahora se llena con el HTML real que se envía (`htmlRespuestaCotizacion`), cerrando la deuda menor documentada desde la sesión 17. Se verificó contra el código que ya están cerradas y no documentadas: wrangler 3.x → 4.118 (sesión 31), sharp override, Node 24, npm audit fix, security scan paths con backslash, compartir social en `/dashboard/[id]`. Deuda pendiente relevante: limpieza de corpus D1 (alta), Vectorize (media, prerrequisito de membresía premium), razonamiento multi-paso del asistente (media, objetivo del usuario). Todo en rama, sin merge a main hasta OK explícito del usuario.*
+*Última actualización: **2026-09-09 (sesión 36)** — fix "improvisación general" del agente + refinamiento de prompts por sección + diseño multi-paso/memoria + 2 PRs Dependabot mergeados. Ver §18 para roadmap y `docs/agente-multi-paso-memoria-diseno.md` para el diseño técnico. Sesión anterior (35) — Vectorize en producción + flujos por sección + fix "holis". Cambios en el documento: §1 stack actualizado (Next 16.2.9, React 19.2.8, Node 24.x, Tailwind 4.3.1, wrangler 4.118); §11 completamente reescrita — separada en "Pendiente" (11 items reales) + "Cerrado" (histórico condensado en una lista); §18 reenfocado en el objetivo del usuario (mejorar el asistente IA); pie de página consolidado (antes: ~20 resúmenes exhaustivos de 500+ palabras cada uno; ahora: 1 línea por sesión). Cambios en código: `app/api/admin/cotizaciones/[id]/responder/route.ts` — `cuerpoHtml` ahora se llena con el HTML real que se envía (`htmlRespuestaCotizacion`), cerrando la deuda menor documentada desde la sesión 17. Se verificó contra el código que ya están cerradas y no documentadas: wrangler 3.x → 4.118 (sesión 31), sharp override, Node 24, npm audit fix, security scan paths con backslash, compartir social en `/dashboard/[id]`. Deuda pendiente relevante: limpieza de corpus D1 (alta), Vectorize (media, prerrequisito de membresía premium), razonamiento multi-paso del asistente (media, objetivo del usuario). Todo en rama, sin merge a main hasta OK explícito del usuario.*
+
+*Sesión 36 (2026-09-09) — **Fix "improvisación general" + refinamiento prompts + diseño multi-paso + 2 PRs Dependabot** [rama `claude/agente-sesion36`, esperando OK del usuario para merge a main]. **Bug real detectado en producción**: preguntar "que sabe raul de sentido común" devolvía panorama general del corpus con 6 fuentes irrelevantes (colonialidad, ecologías de saberes, etc., nada de "sentido común"). El LLM improvisaba un resumen general aunque los docs recuperados no tratasen el tema. **4 fixes coordinados**: (1) REGLA CRÍTICA nueva al inicio de los 3 SYSTEM_SKILL (sociológica/histórica/política) — antes de analizar, el LLM debe evaluar si el corpus trata directamente la consulta; si no, responder "no tengo información suficiente" en formato mínimo; prohibición explícita de improvisar. (2) Post-proceso en `index.ts`: si la respuesta contiene "no tengo información suficiente" O `groundingRatio < 0.25`, colapsa todo a mensaje único con `confianza=baja` y `fuentes=[]`. (3) Retrieval: Vectorize corre EN PARALELO con FTS siempre que esté disponible (antes solo si FTS < 3); mezcla priorizando docs que aparecen en ambas vías (máxima señal), luego semántico, luego léxico. (4) `instruccionesContexto` refinado — sugerencias de tono explícitamente NO aplican cuando la respuesta es "no tengo información"; no mencionar libros si el corpus no incluye libros reales; no meter pitch de donaciones en respuestas académicas. **Diseño multi-paso + memoria**: `docs/agente-multi-paso-memoria-diseno.md` — arquitectura, cambios, seguridad, orden de implementación. NO implementado (esperar telemetría real que lo justifique). **Dependabot**: 2 PRs mergeados vía squash — PR #44 (worker `@cloudflare/workers-types` + `wrangler` a parches menores) y PR #41 (`actions/setup-node` v6→v7 en 4 workflows). Detectado en checks: job "Auditar dependencias (web)" en rojo desde hace semanas (preexistente, no bloquea merges pero hay que investigar). Gates: `tsc` + `wrangler deploy --dry-run` limpios. PENDIENTE: OK del usuario para mergear `claude/agente-sesion36` a main.*
 
 *Sesión 35 (2026-09-05) — **Vectorize + flujos por sección + fix "holis" + botón backfill admin**. Sesión larga con múltiples merges directos a `main`. **Vectorize activado**: índice `sociologia-embeddings` (1024 dims, cosine) creado desde Cloudflare Dashboard vía API con token temporal (después revocado); binding descomentado en `wrangler.toml`; **594 documentos vectorizados** (no 804 como decía este doc antes) vía nuevo botón `/admin/embed-backfill` que orquesta un loop client-side llamando al endpoint `/embed` del Worker (reanudable, guarda progreso en KV). **Fix auth /embed**: usa `validarTokenPremium` (misma auth que el chat) en vez de HMAC manual. Diagnóstico ampliado en el endpoint Next para futuros troubleshoots. **Rotación `SESSION_SIGNING_SECRET`**: estaba desincronizado entre Vercel y Cloudflare Worker (chat sí lo notaba, no reportaba "Sin límite" en modo admin); rotado a valor idéntico en ambos. **Fix "holis"**: `esSaludo` reconoce variantes coloquiales (holis/holita/qué onda/etc.); `esConsultaTrivial` bloquea RAG solo si NO hay ninguna palabra de contenido (≥3 chars, fuera de stop-words) — preguntas cortas legítimas como "que es la hegemonía" pasan al pipeline normal. **Reglas anti "citar por citar"** (SYSTEM_PROMPT v1.2): solo cita cuando la fuente sostiene una afirmación específica; nunca listar en 📚 Fuentes documentos no referenciados; post-proceso remueve la sección si `groundingRatio < 0.4`. **Flujos por sección web**: campo `contexto` en el body del Worker con whitelist estricta (general/home/publicacion/libro/donacion); frontend deriva del pathname; Worker valida; cada contexto modula tono/sugerencias sin alterar reglas absolutas. **Seguridad extra**: nuevos patrones en `analizarInyeccion` para detectar intentos de manipular el contexto ("cambia tu contexto a X", etc.). PENDIENTES detectados: `D1_SYNC_SECRET` posiblemente también desincronizado (síntoma: `/admin/observabilidad` vacío); `WORKER_URL` no configurada en env vars de Vercel (usa fallback hardcoded); `/admin/metricas` en ceros (¿cache? investigar). Ver §18 para roadmap detallado.*
 

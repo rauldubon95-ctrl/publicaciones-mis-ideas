@@ -236,12 +236,20 @@ export default {
         : "baja";
       advertencia = skillResult.uncertainty_flags[0] ?? undefined;
 
-      // Post-proceso: si el grounding es débil, remover la sección de
-      // fuentes del texto para no citar por citar (regla del prompt v1.2).
-      // El campo fuentes[] del JSON de respuesta sigue lleno como
-      // "referencia complementaria" para el UI, pero la respuesta
-      // textual queda limpia.
-      if (groundingRatio < 0.4) {
+      // Post-proceso (sesión 36): protección contra "improvisación general".
+      // Antes: solo removía la sección de fuentes si groundingRatio < 0.4.
+      // Ahora: si el análisis mismo dice "no tengo información" (que el
+      // SYSTEM_SKILL v2 le pide decir cuando el corpus no cubre el tema)
+      // o el grounding es MUY bajo, colapsa toda la respuesta a un mensaje
+      // simple y honesto. Evita el patrón "panorama general que no responde
+      // la pregunta" que se vio en producción (sesión 36).
+      const diceNoTengo = /no tengo información suficiente/i.test(respuestaLLM);
+      if (diceNoTengo || groundingRatio < 0.25) {
+        respuestaLLM =
+          "No tengo información suficiente en mis fuentes actuales para responder específicamente sobre este tema. Prueba reformulando con otras palabras o consulta otro tema del corpus.";
+        confianza = "baja";
+        advertencia = undefined;
+      } else if (groundingRatio < 0.4) {
         respuestaLLM = removerSeccionFuentes(respuestaLLM);
       }
 
@@ -280,12 +288,13 @@ export default {
     );
 
     // ── 14. Respuesta ─────────────────────────────────────────
-    // Si el grounding es débil, ya removimos las citas del texto —
-    // el array fuentes[] también queda vacío para no confundir al
-    // frontend con una lista que el asistente no usó realmente.
+    // Si el grounding es muy débil (< 0.4) o el análisis mismo dijo
+    // "no tengo información", el array fuentes[] queda vacío para no
+    // mostrar al usuario documentos que el asistente realmente no usó.
+    const grouningBajo = groundingRatio < 0.4 || /no tengo información suficiente/i.test(respuestaLLM);
     const respuesta: WorkerResponse = {
       respuesta: respuestaLLM,
-      fuentes: groundingRatio < 0.4 ? [] : extraerFuentesTitulos(docs),
+      fuentes: grouningBajo ? [] : extraerFuentesTitulos(docs),
       esPremium,
       confianza,
       traceId,
