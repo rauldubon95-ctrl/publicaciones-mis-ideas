@@ -25,27 +25,35 @@ export async function recuperarDocumentos(
   query: string,
   env: Env
 ): Promise<DocumentoRecuperado[]> {
-  // 1. Intentar FTS5 (BM25 real)
-  const fts = await buscarConFTS(query, env);
-  if (fts.length >= 2) return fts;
+  // Estrategia (sesión 36): correr Vectorize (semántico) EN PARALELO con
+  // FTS (palabra exacta) siempre que Vectorize esté disponible. Antes
+  // Vectorize solo entraba si FTS traía <3 docs, perdiendo la ventaja
+  // semántica cuando FTS traía basura por palabra suelta (ej. "sentido"
+  // en cualquier contexto). Mezclamos por score normalizado.
+  const [fts, vectores] = await Promise.all([
+    buscarConFTS(query, env),
+    env.VECTORIZE ? buscarConVector(query, env).catch(() => []) : Promise.resolve([]),
+  ]);
 
-  // 2. Si FTS devuelve poco, complementar con LIKE en palabras
-  const like = await buscarConLIKE(query, env, MAX_DOCS - fts.length);
-  const idsFts = new Set(fts.map((d) => d.id));
-  const extra = like.filter((d) => !idsFts.has(d.id));
+  // Mezcla: prioriza docs que aparecen en AMBAS vías (más señal), luego
+  // los top de vector (semántico), luego top de FTS (léxico).
+  const idsVector = new Set(vectores.map((d) => d.id));
+  const enAmbas = fts.filter((d) => idsVector.has(d.id));
+  const soloFts = fts.filter((d) => !idsVector.has(d.id));
+  const idsFtsSet = new Set(fts.map((d) => d.id));
+  const soloVector = vectores.filter((d) => !idsFtsSet.has(d.id));
 
-  const combinados = [...fts, ...extra].slice(0, MAX_DOCS);
+  const combinados = [
+    ...enAmbas,       // máxima señal: FTS y vector coinciden
+    ...soloVector,    // señal semántica
+    ...soloFts,       // señal léxica
+  ].slice(0, MAX_DOCS);
 
-  // 3. Si hay Vectorize disponible (Phase 3), enriquecer con vector
-  if (env.VECTORIZE && combinados.length < 3) {
-    try {
-      const vectores = await buscarConVector(query, env);
-      const idsExist = new Set(combinados.map((d) => d.id));
-      const nuevos = vectores.filter((d) => !idsExist.has(d.id));
-      combinados.push(...nuevos);
-    } catch {
-      // Vectorize no disponible aún, no es error
-    }
+  // Fallback LIKE solo si combinados es débil
+  if (combinados.length < 2) {
+    const like = await buscarConLIKE(query, env, MAX_DOCS - combinados.length);
+    const idsExist = new Set(combinados.map((d) => d.id));
+    combinados.push(...like.filter((d) => !idsExist.has(d.id)));
   }
 
   return combinados.slice(0, MAX_DOCS);

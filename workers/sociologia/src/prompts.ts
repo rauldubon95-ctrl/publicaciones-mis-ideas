@@ -42,15 +42,20 @@ export function construirContexto(docs: DocumentoRecuperado[]): string {
 // algo fuera de la whitelist, se normaliza a "general" ANTES de llegar
 // aquí. Nunca insertar `contexto` como texto crudo del usuario.
 export function instruccionesContexto(contexto: ContextoSitio): string {
+  // NOTA sesión 36: los mensajes son opt-in. El asistente los aplica SOLO
+  // cuando efectivamente hay material relevante que responder — la regla
+  // crítica del SYSTEM_SKILL de "no improvisar si el corpus no cubre" tiene
+  // prioridad absoluta. Estos son sugerencias de tono/cierre, no permisos
+  // para inventar.
   switch (contexto) {
     case "publicacion":
-      return `\n\nCONTEXTO DE SESIÓN: el visitante está leyendo un artículo del sitio. Si tu respuesta se apoya en otros artículos del corpus (tipo='publicacion'), prioriza mencionarlos como lectura complementaria al final, con su título entre comillas. No inventes URLs.`;
+      return `\n\nCONTEXTO DE SESIÓN: el visitante está leyendo un artículo del sitio. Si tu respuesta REAL cita artículos del corpus (tipo='publicacion') que sean relevantes, puedes cerrar sugiriéndolos como lectura complementaria con su título entre comillas. No inventes URLs. No añadas sugerencias si la respuesta principal es "no tengo información suficiente".`;
     case "libro":
-      return `\n\nCONTEXTO DE SESIÓN: el visitante está explorando los libros de Raúl. Si el tema de su consulta coincide con algún libro cuya referencia aparezca en el CONTEXTO (revisa fuente y tipo), menciona el título del libro como recurso relacionado al final de tu respuesta, con una frase natural (ej: "Este tema se profundiza en el libro X"). NO inventes libros que no aparezcan en las fuentes.`;
+      return `\n\nCONTEXTO DE SESIÓN: el visitante está en la sección de libros. SOLO si tu análisis se apoya en material que provenga de un documento cuya "fuente" indica que es un libro de Raúl (revisa el campo fuente en el CONTEXTO), puedes cerrar mencionando ese libro con una frase natural (ej: "Este tema se profundiza en el libro X"). NO inventes libros. NO menciones libros si el corpus recuperado no incluye ningún libro real, ni si tu respuesta es "no tengo información suficiente".`;
     case "donacion":
-      return `\n\nCONTEXTO DE SESIÓN: el visitante está en la página de donaciones. Si tu respuesta trata sobre el trabajo del autor, o si el usuario pregunta cómo apoyar, puedes cerrar mencionando que el trabajo de Raúl se sostiene con lectores que aportan. NO insistas si la consulta no lo pide, ni conviertas cada respuesta en un pedido.`;
+      return `\n\nCONTEXTO DE SESIÓN: el visitante está en la página de donaciones. SOLO si el usuario pregunta explícitamente cómo apoyar el trabajo del autor, o si la respuesta REAL trata directamente del proyecto/trabajo de Raúl, puedes cerrar con una frase discreta invitando a apoyar. NUNCA conviertas una respuesta académica en un pitch. NUNCA menciones donaciones si la respuesta es "no tengo información suficiente" o si el tema es puramente teórico.`;
     case "home":
-      return `\n\nCONTEXTO DE SESIÓN: el visitante está en la portada. Puede ser primera visita. Sé especialmente claro y accesible; si detectas que la consulta pide orientación general, sugiere brevemente por dónde empezar (temas, secciones), citando artículos concretos solo si hay match real en el corpus.`;
+      return `\n\nCONTEXTO DE SESIÓN: el visitante está en la portada. Puede ser primera visita. Sé claro y accesible. Si la consulta pide orientación general (ej: "de qué habla el sitio", "qué temas hay") puedes sugerir 2-3 secciones o temas concretos que sí existen en el corpus. NO improvises un mapa del sitio si el corpus recuperado no lo respalda.`;
     case "general":
     default:
       return "";
