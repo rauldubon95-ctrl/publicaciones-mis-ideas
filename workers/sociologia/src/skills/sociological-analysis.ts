@@ -5,6 +5,7 @@ import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
 import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL, extraerRespuestaIA } from "../config";
+import { etiquetaFuente, quitarEtiquetasInternas } from "../fuentes";
 
 const FRAMEWORK_KEYWORDS: Record<string, string[]> = {
   "conflict-theory": ["marx", "clase", "lucha", "weber", "dominacion", "poder", "conflicto", "capitalismo", "burgues", "proletariado", "explotacion"],
@@ -53,7 +54,7 @@ FORMATO REQUERIDO cuando SÍ hay material relevante (usa exactamente estos encab
 [concepto1, concepto2, concepto3, ...]
 
 **CITAS:**
-- [cita textual o paráfrasis con fuente entre corchetes — SOLO de docs que realmente traten el tema]
+- [cita textual o paráfrasis citando el TÍTULO de la fuente entre corchetes, p. ej. [Fuente: Título del documento] — SOLO de docs que realmente traten el tema. NUNCA uses identificadores internos tipo "DOC 12".]
 
 **INCERTIDUMBRE:**
 [Qué aspectos no cubre el corpus disponible, o "Cobertura suficiente"]
@@ -106,7 +107,7 @@ function construirPrompt(
   docs: DocumentoRecuperado[]
 ): Array<{ role: "system" | "user"; content: string }> {
   const contexto = docs
-    .map((d) => `[DOC ${d.id}: ${d.titulo}]\n${d.texto.slice(0, 1800)}`)
+    .map((d) => `${etiquetaFuente(d.titulo)}\n${d.texto.slice(0, 1800)}`)
     .join("\n\n---\n\n");
 
   const frameworksInstr = input.frameworks?.length
@@ -132,7 +133,7 @@ function parsearOutput(
   const groundingRatio = calcularGrounding(raw, docs);
   const corpusCompleto = raw + " " + docs.map((d) => d.texto + " " + d.palabras).join(" ");
 
-  const analysis = extraerSeccion(raw, "ANÁLISIS") || raw;
+  const analysis = quitarEtiquetasInternas(extraerSeccion(raw, "ANÁLISIS") || raw);
   const conceptosRaw = extraerSeccion(raw, "CONCEPTOS CLAVE") || "";
   const citasRaw = extraerSeccion(raw, "CITAS") || "";
   const incertidumbreRaw = extraerSeccion(raw, "INCERTIDUMBRE") || "";
@@ -145,7 +146,7 @@ function parsearOutput(
 
   const citations = citasRaw
     .split("\n")
-    .map((s) => s.replace(/^[\-•*]\s*/, "").trim())
+    .map((s) => quitarEtiquetasInternas(s.replace(/^[\-•*]\s*/, "")).trim())
     .filter((s) => s.length > 5)
     .slice(0, 6);
 

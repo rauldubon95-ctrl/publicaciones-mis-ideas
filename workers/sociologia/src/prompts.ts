@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 import type { ContextoSitio, DocumentoRecuperado } from "./types";
 import { envolverDocumento } from "./security";
+import { limpiarTitulo } from "./fuentes";
 
 export const SYSTEM_PROMPT = `Eres el asistente académico de Raúl Dubón, especialista en ciencias sociales, sociología, pensamiento crítico y análisis político latinoamericano.
 
@@ -101,9 +102,10 @@ function extraerCita(titulo: string): string {
   return titulo.length > 60 ? titulo.slice(0, 57) + "…" : titulo;
 }
 
-// Fuentes para el frontend (títulos únicos, compat v1)
+// Fuentes para el frontend (títulos únicos, compat v1). Se limpian los
+// títulos crudos (nombres de archivo de PDFs) antes de mostrarlos al usuario.
 export function extraerFuentesTitulos(docs: DocumentoRecuperado[]): string[] {
-  return [...new Set(docs.map((d) => d.titulo))];
+  return [...new Set(docs.map((d) => limpiarTitulo(d.titulo)).filter(Boolean))];
 }
 
 // Advertencia si el grounding es bajo

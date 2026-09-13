@@ -5,6 +5,7 @@ import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
 import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL, extraerRespuestaIA } from "../config";
+import { etiquetaFuente, quitarEtiquetasInternas } from "../fuentes";
 
 const SYSTEM_SKILL = `Eres el asistente académico de Raúl Dubón especializado en ciencia política comparada y análisis del poder en América Latina.
 
@@ -33,7 +34,7 @@ FORMATO REQUERIDO cuando SÍ hay material relevante (usa exactamente estos encab
 [Interpretación académica anclada en el corpus, responde la pregunta específica]
 
 **CITAS:**
-- [cita o paráfrasis con fuente entre corchetes — SOLO de docs realmente relevantes]
+- [cita o paráfrasis citando el TÍTULO de la fuente entre corchetes, p. ej. [Fuente: Título del documento] — SOLO de docs realmente relevantes. NUNCA uses identificadores internos tipo "DOC 12".]
 
 **INCERTIDUMBRE:**
 [Qué no cubre el corpus, o "Cobertura suficiente"]
@@ -95,7 +96,7 @@ export class PoliticalAnalysisSkill implements Skill {
 
 function construirPrompt(input: SkillInput, docs: DocumentoRecuperado[]) {
   const contexto = docs
-    .map((d) => `[DOC ${d.id}: ${d.titulo}]\n${d.texto.slice(0, 1800)}`)
+    .map((d) => `${etiquetaFuente(d.titulo)}\n${d.texto.slice(0, 1800)}`)
     .join("\n\n---\n\n");
   const frameworksInstr = input.frameworks?.length
     ? `\nAplica especialmente estos marcos: ${input.frameworks.join(", ")}.`
@@ -112,7 +113,7 @@ function parsearOutput(raw: string, docs: DocumentoRecuperado[]): SkillOutput {
   const corpusCompleto = raw + " " + docs.map((d) => d.texto + " " + d.palabras).join(" ");
   const lower = corpusCompleto.toLowerCase();
 
-  const analysis = extraerSeccion(raw, "ANÁLISIS") || raw;
+  const analysis = quitarEtiquetasInternas(extraerSeccion(raw, "ANÁLISIS") || raw);
   const actoresRaw = extraerSeccion(raw, "ACTORES Y FUERZAS") || "";
   const citasRaw = extraerSeccion(raw, "CITAS") || "";
   const incertidumbreRaw = extraerSeccion(raw, "INCERTIDUMBRE") || "";
@@ -121,7 +122,7 @@ function parsearOutput(raw: string, docs: DocumentoRecuperado[]): SkillOutput {
     .split(/[,\n•\-]/).map((s) => s.trim()).filter((s) => s.length > 2 && s.length < 80).slice(0, 10);
 
   const citations = citasRaw
-    .split("\n").map((s) => s.replace(/^[\-•*]\s*/, "").trim()).filter((s) => s.length > 5).slice(0, 6);
+    .split("\n").map((s) => quitarEtiquetasInternas(s.replace(/^[\-•*]\s*/, "")).trim()).filter((s) => s.length > 5).slice(0, 6);
 
   const uncertainty_flags: string[] = [];
   if (incertidumbreRaw && !/cobertura suficiente/i.test(incertidumbreRaw)) {

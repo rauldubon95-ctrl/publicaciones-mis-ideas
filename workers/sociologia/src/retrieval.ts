@@ -3,6 +3,7 @@
 // Trabaja sobre la tabla real: documentos (D1: llm_sociolog)
 // ─────────────────────────────────────────────────────────────
 import type { DocumentoRecuperado, Env } from "./types";
+import { EMBEDDING_MODEL } from "./config";
 
 const MAX_DOCS = 6;
 const MAX_TEXTO = 2200; // chars por documento al LLM (~550 tokens)
@@ -35,19 +36,19 @@ export async function recuperarDocumentos(
     env.VECTORIZE ? buscarConVector(query, env).catch(() => []) : Promise.resolve([]),
   ]);
 
-  // Mezcla: prioriza docs que aparecen en AMBAS vías (más señal), luego
-  // los top de vector (semántico), luego top de FTS (léxico).
   const idsVector = new Set(vectores.map((d) => d.id));
+  const idsFtsSet = new Set(fts.map((d) => d.id));
   const enAmbas = fts.filter((d) => idsVector.has(d.id));
   const soloFts = fts.filter((d) => !idsVector.has(d.id));
-  const idsFtsSet = new Set(fts.map((d) => d.id));
   const soloVector = vectores.filter((d) => !idsFtsSet.has(d.id));
 
-  const combinados = [
-    ...enAmbas,       // máxima señal: FTS y vector coinciden
-    ...soloVector,    // señal semántica
-    ...soloFts,       // señal léxica
-  ].slice(0, MAX_DOCS);
+  // Mezcla rebalanceada (sesión 39): antes los resultados SOLO-vector
+  // llenaban todos los slots primero y expulsaban los léxicos; con el modelo
+  // de embeddings previo (inglés) eso enterraba las mejores coincidencias
+  // léxicas. Ahora: primero lo que coincide en AMBAS vías (máxima señal),
+  // luego intercalamos léxico y semántico EMPEZANDO por el léxico, que es la
+  // señal más confiable para el corpus en español.
+  let combinados = [...enAmbas, ...intercalar(soloFts, soloVector)].slice(0, MAX_DOCS);
 
   // Fallback LIKE solo si combinados es débil
   if (combinados.length < 2) {
@@ -56,7 +57,35 @@ export async function recuperarDocumentos(
     combinados.push(...like.filter((d) => !idsExist.has(d.id)));
   }
 
+  // Empujón SUAVE a las publicaciones del propio sitio (tipo='publicacion')
+  // sobre los PDFs sueltos del corpus (tipo='articulo'): es el contenido que
+  // el autor más quiere ver citado y suele ser de mayor calidad. El bonus es
+  // acotado — no entierra un documento del corpus muy relevante, solo rompe
+  // cuasi-empates de posición.
+  combinados = promoverPublicaciones(combinados);
+
   return combinados.slice(0, MAX_DOCS);
+}
+
+// Intercala dos listas empezando por la primera (léxica), sin perder elementos.
+function intercalar<T>(a: T[], b: T[]): T[] {
+  const out: T[] = [];
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i++) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+
+// Reordena de forma estable dando a las publicaciones del sitio un bonus
+// acotado de posición (~1 puesto). Array.prototype.sort es estable en V8.
+function promoverPublicaciones(docs: DocumentoRecuperado[]): DocumentoRecuperado[] {
+  const BONUS = 1.3;
+  return docs
+    .map((d, i) => ({ d, clave: i - (d.tipo === "publicacion" ? BONUS : 0) }))
+    .sort((x, y) => x.clave - y.clave)
+    .map((o) => o.d);
 }
 
 // ── FTS5 con BM25 ranking ─────────────────────────────────────
@@ -65,9 +94,28 @@ async function buscarConFTS(
   query: string,
   env: Env
 ): Promise<DocumentoRecuperado[]> {
-  const terminos = construirQueryFTS(query);
-  if (!terminos) return [];
+  const t = construirTerminosFTS(query);
+  if (!t) return [];
 
+  // AND-primero (sesión 39): exigir TODAS las palabras (en su raíz singular)
+  // da PRECISIÓN — evita que un documento gane solo por repetir una palabra
+  // muy común como "social/sociales" aunque no trate el tema. Si AND trae
+  // poco (consulta con muchos términos o corpus escaso), se completa con OR
+  // para no perder RECALL.
+  let docs = await ejecutarFTS(t.and, env);
+  if (docs.length < 3) {
+    const orDocs = await ejecutarFTS(t.or, env);
+    const ids = new Set(docs.map((d) => d.id));
+    docs = [...docs, ...orDocs.filter((d) => !ids.has(d.id))].slice(0, MAX_DOCS);
+  }
+  return docs;
+}
+
+async function ejecutarFTS(
+  match: string,
+  env: Env
+): Promise<DocumentoRecuperado[]> {
+  if (!match) return [];
   try {
     const res = await env.DB.prepare(`
       SELECT
@@ -79,7 +127,7 @@ async function buscarConFTS(
       ORDER BY bm25(documentos_fts)
       LIMIT ?
     `)
-      .bind(terminos, MAX_DOCS)
+      .bind(match, MAX_DOCS)
       .all<{
         id: number; titulo: string; slug: string; texto: string;
         tipo: string; palabras: string; fuente: string; score: number;
@@ -164,9 +212,9 @@ async function buscarConVector(
 ): Promise<DocumentoRecuperado[]> {
   if (!env.VECTORIZE) return [];
 
-  // Generar embedding de la query
+  // Generar embedding de la query (modelo multilingüe central, sesión 39).
   const embeddingRes = await env.AI.run(
-    "@cf/baai/bge-large-en-v1.5" as Parameters<typeof env.AI.run>[0],
+    EMBEDDING_MODEL,
     { text: [query] } as Parameters<typeof env.AI.run>[1]
   ) as { data: number[][] };
 
@@ -211,12 +259,26 @@ async function buscarConVector(
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function construirQueryFTS(query: string): string {
+function construirTerminosFTS(query: string): { and: string; or: string } | null {
   const palabras = extraerPalabras(query);
-  if (!palabras.length) return "";
+  if (!palabras.length) return null;
 
-  // Prefijo + OR para FTS5
-  return palabras.map((p) => `"${p}"*`).join(" OR ");
+  // Raíz singular + prefijo para FTS5. Un solo objeto con las dos variantes
+  // (AND para precisión, OR para recall) que usa buscarConFTS.
+  const stems = [...new Set(palabras.map(stemLigero))];
+  const prefijos = stems.map((s) => `"${s}"*`);
+  return { and: prefijos.join(" AND "), or: prefijos.join(" OR ") };
+}
+
+// Reduce el plural español a su raíz para el prefix-match de FTS5:
+// "clases"→"clase", "sociales"→"social", "movimientos"→"movimiento".
+// Sin esto, el prefijo `"clases"*` NO matchea "clase" en singular (el
+// prefijo de FTS5 solo extiende hacia adelante) y se perdían los textos de
+// teoría que usan el singular ("clase obrera", "clase dominante").
+function stemLigero(p: string): string {
+  if (p.length > 4 && p.endsWith("es")) return p.slice(0, -2);
+  if (p.length > 3 && p.endsWith("s")) return p.slice(0, -1);
+  return p;
 }
 
 function extraerPalabras(query: string): string[] {

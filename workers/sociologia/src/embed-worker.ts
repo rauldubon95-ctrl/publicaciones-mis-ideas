@@ -7,9 +7,9 @@
 // ─────────────────────────────────────────────────────────────
 import type { Env } from "./types";
 import { validarTokenPremium } from "./ratelimit";
+import { EMBEDDING_MODEL } from "./config";
 
 const BATCH = 10;              // documentos por batch
-const EMBEDDING_MODEL = "@cf/baai/bge-large-en-v1.5";
 
 interface EmbedProgress {
   lastId: number;

@@ -27,6 +27,27 @@
 // max_tokens + temperature) es idéntica, así que el cast es seguro en runtime.
 export const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast" as Parameters<Ai["run"]>[0];
 
+// Modelo de EMBEDDINGS para el retrieval semántico (Vectorize).
+//
+// IMPORTANTE (sesión 39): migrado desde "@cf/baai/bge-large-en-v1.5", que es
+// un modelo ENTRENADO EN INGLÉS (nótese el "-en-" en el nombre). Sobre el
+// corpus en ESPAÑOL producía embeddings de baja calidad → la búsqueda
+// semántica devolvía documentos flojamente relacionados en vez de los
+// artículos que realmente trataban el tema. Ese era el motivo de "vectoricé
+// pero no se refleja": los vectores existían, pero capturaban mal el español.
+//
+// bge-m3 es MULTILINGÜE (100+ idiomas, español incluido) y produce vectores
+// de 1024 dimensiones — la MISMA dimensión del índice Vectorize existente
+// ("sociologia-embeddings", 1024, cosine), así que es un reemplazo directo:
+// re-vectorizar sobrescribe los vectores por id, sin recrear el índice.
+//
+// TRAS DESPLEGAR A PRODUCCIÓN: re-vectorizar TODO el corpus desde
+// /admin/embed-backfill. Los vectores viejos son del modelo inglés y NO deben
+// mezclarse con consultas del modelo nuevo. Hasta re-vectorizar, la vía
+// semántica puede ser incoherente; el retrieval cae a FTS (léxico), que tras
+// la sesión 39 es la señal principal y ya es sólida.
+export const EMBEDDING_MODEL = "@cf/baai/bge-m3" as Parameters<Ai["run"]>[0];
+
 // Extrae de forma robusta el texto de la respuesta de Workers AI.
 // Los modelos instruct devuelven { response: string }. Esta función tolera
 // además formas alternativas ({ result: { response } }, anidados) y, si algún
