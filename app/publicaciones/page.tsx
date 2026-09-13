@@ -44,14 +44,33 @@ export default async function PublicacionesPage({
   const q = (params.q ?? "").trim();
   const catSlug = (params.categoria ?? "").trim();
 
-  // Filtro de la consulta (usamos objeto literal — Prisma infiere el tipo).
+  // Búsqueda por palabras. Antes solo buscaba la frase completa en
+  // titulo+resumen (demasiado restrictivo: no encontraba términos del cuerpo
+  // ni consultas de varias palabras). Ahora divide la consulta en palabras y
+  // exige que CADA palabra aparezca en al menos uno de los campos buscados
+  // (AND entre palabras, OR entre campos: titulo, resumen, contenido y
+  // etiquetas). `contenido` incluye el cuerpo del artículo.
+  const palabras = q.split(/\s+/).filter((p) => p.length >= 2).slice(0, 6);
+
   const where = {
     publicado: true,
-    ...(q && {
-      OR: [
-        { titulo: { contains: q, mode: "insensitive" as const } },
-        { resumen: { contains: q, mode: "insensitive" as const } },
-      ],
+    ...(palabras.length > 0 && {
+      AND: palabras.map((palabra) => ({
+        OR: [
+          { titulo: { contains: palabra, mode: "insensitive" as const } },
+          { resumen: { contains: palabra, mode: "insensitive" as const } },
+          { contenido: { contains: palabra, mode: "insensitive" as const } },
+          {
+            etiquetas: {
+              some: {
+                etiqueta: {
+                  nombre: { contains: palabra, mode: "insensitive" as const },
+                },
+              },
+            },
+          },
+        ],
+      })),
     }),
     ...(catSlug && { categoria: { slug: catSlug } }),
   };

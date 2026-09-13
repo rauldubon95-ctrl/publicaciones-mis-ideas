@@ -4,7 +4,7 @@ import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
 import { instruccionesContexto } from "../prompts";
-import { CHAT_MODEL } from "../config";
+import { CHAT_MODEL, extraerRespuestaIA } from "../config";
 
 const SYSTEM_SKILL = `Eres el asistente académico de Raúl Dubón especializado en ciencia política comparada y análisis del poder en América Latina.
 
@@ -78,12 +78,12 @@ export class PoliticalAnalysisSkill implements Skill {
 
     let rawOutput = "";
     try {
-      const aiRes = (await env.AI.run(CHAT_MODEL, {
+      const aiRes = await env.AI.run(CHAT_MODEL, {
         messages: construirPrompt(input, docs),
         max_tokens: maxTokens,
         temperature: 0.2,
-      } as Parameters<typeof env.AI.run>[1])) as { response?: string };
-      rawOutput = (aiRes.response ?? "").trim();
+      } as Parameters<typeof env.AI.run>[1]);
+      rawOutput = extraerRespuestaIA(aiRes);
     } catch {
       return sinFuentes(input.query);
     }
