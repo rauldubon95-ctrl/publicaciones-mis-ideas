@@ -4,7 +4,7 @@ import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
 import { validarOutput } from "../security";
 import { instruccionesContexto } from "../prompts";
-import { CHAT_MODEL } from "../config";
+import { CHAT_MODEL, extraerRespuestaIA } from "../config";
 
 const FRAMEWORK_KEYWORDS: Record<string, string[]> = {
   "conflict-theory": ["marx", "clase", "lucha", "weber", "dominacion", "poder", "conflicto", "capitalismo", "burgues", "proletariado", "explotacion"],
@@ -79,12 +79,12 @@ export class SociologicalAnalysisSkill implements Skill {
 
     let rawOutput = "";
     try {
-      const aiRes = (await env.AI.run(CHAT_MODEL, {
+      const aiRes = await env.AI.run(CHAT_MODEL, {
         messages,
         max_tokens: maxTokens,
         temperature: 0.2,
-      } as Parameters<typeof env.AI.run>[1])) as { response?: string };
-      rawOutput = (aiRes.response ?? "").trim();
+      } as Parameters<typeof env.AI.run>[1]);
+      rawOutput = extraerRespuestaIA(aiRes);
     } catch {
       return sinFuentes(input.query);
     }
