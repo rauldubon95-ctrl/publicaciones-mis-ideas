@@ -18,7 +18,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - CSS: **Tailwind 4.3.1** (sin `tailwind.config.ts`; tokens en `@theme` dentro de `globals.css`; plugin de typography)
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma 5.14
 - Storage: Supabase Storage — bucket `comics` (imágenes cómics + PDFs) + bucket `libros` (PDFs y portadas) + bucket `datos` (dashboards Excel)
-- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.118. Modelo: **Gemma 4 26B A4B IT** (migrado sesión 37 desde Llama 3.1 8B)
+- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.118. Modelo: **Llama 3.1 8B Instruct FP8 fast** (`@cf/meta/llama-3.1-8b-instruct-fp8-fast`). En sesión 37 se migró a Gemma 4 26B pero **rompió el chat** (Gemma 4 es reasoning: agotaba `max_tokens` razonando → `response` vacío). Revertido en sesión 38.
 - Visor PDF: `pdfjs-dist@^4.10.38` (Mozilla, con fix CVE-2024-4367)
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
@@ -31,7 +31,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | Componente | Estado | Notas |
 |---|---|---|
 | ✅ Next.js app | Producción | Vercel, `main`. **Next.js 16.2.9** (migrado a la línea 16 en sesión 24; Turbopack por defecto) + React 19.2.x + **Tailwind 4.3.1**. El middleware ahora es **`proxy.ts`** (renombrado oficial de Next 16; misma lógica CSP/nonce + guard `/api/admin` + anti-bot, runtime Node). |
-| ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. Modelo de chat migrado sesión 37 a `@cf/google/gemma-4-26b-a4b-it` (Gemma 4 26B, 4B activos MoE, 256k contexto, gratuito). Constante única `CHAT_MODEL` en `src/config.ts`. |
+| ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. Modelo de chat: `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (instruct, no-reasoning; el Gemma 4 de sesión 37 se revirtió en sesión 38 por romper el chat). Constante única `CHAT_MODEL` + helper `extraerRespuestaIA()` en `src/config.ts`. |
 | ✅ Skills: sociológica, histórica, política | Producción | `sociological-analysis`, `historical-analysis`, `political-analysis` en SkillRegistry |
 | ✅ Sync Supabase → D1 | Producción | Automático al publicar/despublicar + botón sync masivo en admin |
 | ✅ Token premium (admin sin límite IA) | Producción | HMAC(SESSION_SIGNING_SECRET \|\| ADMIN_SECRET, "premium-bypass-v1") |
@@ -104,7 +104,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 |---|---|---|
 | `DB` | D1 binding | `llm_sociolog` — ID en `wrangler.toml` |
 | `RATE_LIMIT` | KV binding | Rate limiting + telemetría |
-| `AI` | Workers AI binding | Chat: `@cf/google/gemma-4-26b-a4b-it` (sesión 37; modelo central en `workers/sociologia/src/config.ts` → `CHAT_MODEL`). Embeddings: `@cf/baai/bge-large-en-v1.5`. |
+| `AI` | Workers AI binding | Chat: `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (sesión 38; modelo central en `workers/sociologia/src/config.ts` → `CHAT_MODEL`). Embeddings: `@cf/baai/bge-large-en-v1.5`. |
 | `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback |
 | `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium. **Mismo valor que Vercel.** ✅ |
 | `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que Vercel.** ✅ |
@@ -402,7 +402,8 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 - **4 vulnerabilidades npm moderadas** (sesión 23) — `overrides` postcss + uuid.
 - **Migración Next 15→16** (sesión 24) — `middleware.ts` → `proxy.ts`, Turbopack por defecto.
 - **Migración Tailwind 3→4** (sesión 24) — sin `tailwind.config.ts`, tokens en `@theme`.
-- **Modelo IA Llama 3.1 8B → Gemma 4 26B** (sesión 37) — `@cf/google/gemma-4-26b-a4b-it` (26B params, 4B activos MoE, 256k contexto, gratuito). Type assertion para workers-types.
+- **Modelo IA Gemma 4 26B → Llama 3.1 8B (revert)** (sesión 38) — Gemma 4 (`@cf/google/gemma-4-26b-a4b-it`, sesión 37) es un modelo de **razonamiento**: agotaba `max_tokens` (400-800) pensando y devolvía `response` vacío → el chat respondía "El modelo no generó una respuesta" en producción. Revertido a `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (instruct, no-reasoning, el más económico de Workers AI). Nuevo helper `extraerRespuestaIA()` centraliza el parseo y descarta bloques `<think>` para blindar futuros cambios de modelo. **Lección**: verificar si un modelo es "reasoning" antes de migrar — necesitan mucho más `max_tokens` y otro manejo de salida.
+- **Búsqueda de publicaciones ampliada** (sesión 38) — `/publicaciones` solo buscaba la frase completa en `titulo`+`resumen` (muy restrictiva). Ahora divide la consulta en palabras (AND entre palabras, OR entre campos) y busca también en `contenido` y `etiquetas`. Pendiente opcional: insensibilidad a acentos (requiere extensión `unaccent` en Supabase).
 - **Tracking UUID→CUID bug** (sesión 37) — regex UUID en `/api/track` rechazaba todos los CUIDs → `/admin/metricas` en ceros. Reemplazada por `/^[a-z0-9-]{1,50}$/`. `TrackView` ya no silencia errores.
 - **Worker URL expuesta al cliente** (sesión 37) — hardcoded en `AsistenteChat.tsx` (client-side JS). Nuevo proxy `/api/chat` server-side con rate-limit 30/min + validación + timeout 15s. CSP `connect-src` ya no incluye la URL del Worker. `d1Sync.ts` y `healthChecks.ts` leen env var con fallback+warn.
 - **Retrieval no encontraba artículos del sitio** (sesión 37) — `sync.ts` solo pasaba etiquetas+categoria a `palabras`, dejando artículos sincronizados invisibles. Ahora incluye titulo + primeras 40 palabras del texto. LIKE fallback busca en titulo y texto además de palabras.
@@ -696,7 +697,9 @@ Reglas: rama nueva, NO mergear a main sin OK explícito. Actualizar CLAUDE.md al
 
 ---
 
-*Última actualización: **2026-09-13 (sesión 37)** — Fix tracking (UUID→CUID), eliminación URLs hardcodeadas (proxy `/api/chat`), modelo IA Gemma 4 26B, retrieval mejorado (sync enriquecido + LIKE ampliado), seguridad CSP + IP extraction. Todo en rama `claude/claude-md-review-tech-debt-1tcujm`, sin merge a main hasta OK explícito del usuario.*
+*Última actualización: **2026-09-13 (sesión 38)** — Hotfix: revertir modelo IA de Gemma 4 (reasoning, rompía el chat) a Llama 3.1 8B instruct + parseo defensivo de la respuesta IA; ampliar búsqueda de `/publicaciones` (contenido + etiquetas + multi-palabra). La sesión 37 ya se había mergeado a main.*
+
+*Sesión 38 (2026-09-13) — **Hotfix chat + búsqueda** [rama `claude/claude-md-review-tech-debt-1tcujm`, reiniciada desde main tras el merge de sesión 37]. Tras el merge de sesión 37 el chat respondía "El modelo no generó una respuesta" en producción: **Gemma 4 26B es un modelo de razonamiento** que consumía todo el presupuesto de `max_tokens` (400-800) pensando y dejaba `response` vacío. (1) `config.ts`: `CHAT_MODEL` revertido a `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (instruct/no-reasoning, el más barato de Workers AI, cabe en la asignación gratuita diaria de neuronas); nuevo helper `extraerRespuestaIA()` que tolera formas alternativas de respuesta y descarta bloques `<think>` — las 3 skills lo usan en vez de leer `aiRes.response` crudo. (2) `/publicaciones` búsqueda: antes solo la frase completa en titulo+resumen; ahora divide en palabras (AND entre palabras, OR entre campos) buscando en titulo, resumen, `contenido` y `etiquetas`. Typecheck Worker + Next.js limpios. Ofrecido al usuario upgrade opcional a Llama 3.3 70B (mejor calidad, ~6× neuronas). Pendiente opcional: acentos en búsqueda (extensión `unaccent`).*
 
 *Sesión 37 (2026-09-13) — **Fix tracking + hardcoded URLs + modelo IA + retrieval + seguridad** [rama `claude/claude-md-review-tech-debt-1tcujm`]. 5 fixes coordinados: (1) `/api/track` rechazaba todos los CUIDs con regex UUID → `/admin/metricas` en ceros desde siempre; regex reemplazada por patrón seguro `/^[a-z0-9-]{1,50}$/`. (2) Worker URL eliminada del cliente: nuevo proxy `/api/chat` server-side (rate-limit 30/min, validación, timeout 15s); `AsistenteChat.tsx` ya no contacta al Worker directamente; CSP `connect-src` limpiado. `d1Sync.ts` y `healthChecks.ts` leen `WORKER_URL` de env var. (3) Modelo IA: Llama 3.1 8B → Gemma 4 26B A4B IT (`@cf/google/gemma-4-26b-a4b-it`, 26B params, 4B activos MoE, 256k contexto, gratuito en Workers AI). (4) Retrieval: `sync.ts` enriquece `palabras` con titulo + primeras 40 palabras del texto (antes solo etiquetas/categoria → artículos sincronizados invisibles al LIKE); LIKE fallback busca en titulo y texto además de palabras; umbral mínimo de palabra de 4→3 chars. (5) Seguridad: IP extraction en `proxy.ts` corregida (`.at(-1)` → `[0]`); `TrackView` ya no silencia errores en dev. PENDIENTE: configurar `WORKER_URL` en Vercel Dashboard + OK usuario para merge a main.*
 
