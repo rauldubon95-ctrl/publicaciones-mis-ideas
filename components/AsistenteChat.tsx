@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
-
 // Mapea la ruta actual del sitio al contexto que se envía al Worker.
 // El Worker valida el valor contra su propia whitelist server-side, así
 // que enviar un valor no listado es inofensivo (se normaliza a "general").
@@ -66,7 +64,7 @@ export default function AsistenteChat() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (tokenPremium) headers["X-Premium-Token"] = tokenPremium;
 
-      const res = await fetch(WORKER_URL, {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers,
         body: JSON.stringify({

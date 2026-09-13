@@ -111,9 +111,17 @@ async function buscarConLIKE(
   const palabras = extraerPalabras(query);
   if (!palabras.length) return [];
 
-  const condiciones = palabras.map(() => "palabras LIKE ?").join(" OR ");
-  const scoreExpr = palabras.map(() => "(CASE WHEN palabras LIKE ? THEN 1 ELSE 0 END)").join("+");
-  const params = palabras.map((p) => `%${p}%`);
+  // Search in palabras, titulo, AND texto columns so synced articles
+  // (tipo='publicacion') are found even if palabras was sparse.
+  const condiciones = palabras
+    .map(() => "(palabras LIKE ? OR titulo LIKE ? OR texto LIKE ?)")
+    .join(" OR ");
+  const scoreExpr = palabras
+    .map(() => "(CASE WHEN palabras LIKE ? THEN 1 ELSE 0 END)" +
+               "+(CASE WHEN titulo LIKE ? THEN 1 ELSE 0 END)" +
+               "+(CASE WHEN texto LIKE ? THEN 0.5 ELSE 0 END)")
+    .join("+");
+  const params = palabras.flatMap((p) => [`%${p}%`, `%${p}%`, `%${p}%`]);
 
   try {
     const res = await env.DB.prepare(`
@@ -218,7 +226,7 @@ function extraerPalabras(query: string): string[] {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
-    .filter((p) => p.length >= 4 && !STOP_WORDS.has(p))
+    .filter((p) => p.length >= 3 && !STOP_WORDS.has(p))
     .slice(0, 8);
 }
 

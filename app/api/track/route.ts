@@ -42,8 +42,10 @@ export async function POST(req: NextRequest) {
     };
 
     const { tipo, contenidoId } = body;
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!contenidoId || typeof contenidoId !== "string" || !UUID_RE.test(contenidoId)) {
+    // Accept CUIDs (c + 20-30 alphanum) and UUIDs (8-4-4-4-12 hex) for forward compat.
+    // Reject anything else to prevent injection; Prisma FK constraint catches non-existent IDs.
+    const SAFE_ID_RE = /^[a-z0-9-]{1,50}$/;
+    if (!contenidoId || typeof contenidoId !== "string" || !SAFE_ID_RE.test(contenidoId)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
     if (!["publicacion", "recurso", "comic"].includes(tipo ?? "")) {

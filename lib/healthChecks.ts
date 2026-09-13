@@ -10,7 +10,14 @@ import { prisma } from "@/lib/prisma";
 import { conTimeout, fetchConTimeout } from "@/lib/timeout";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
+const WORKER_URL = (() => {
+  const url = process.env.WORKER_URL;
+  if (!url) {
+    console.warn("[healthChecks] WORKER_URL no configurada — usando fallback hardcoded. Configúrala en Vercel.");
+    return "https://sociologia.raul-dubon95.workers.dev";
+  }
+  return url;
+})();
 
 export interface EstadoDependencia {
   ok: boolean;

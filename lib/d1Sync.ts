@@ -4,7 +4,14 @@ import { createHmac } from "crypto";
 import { d1SyncSecret } from "@/lib/secrets";
 import { fetchConTimeout } from "@/lib/timeout";
 
-const WORKER_URL = "https://sociologia.raul-dubon95.workers.dev";
+const WORKER_URL = (() => {
+  const url = process.env.WORKER_URL;
+  if (!url) {
+    console.warn("[d1sync] WORKER_URL no configurada — usando fallback hardcoded. Configúrala en Vercel.");
+    return "https://sociologia.raul-dubon95.workers.dev";
+  }
+  return url;
+})();
 const SYNC_MESSAGE = "d1-sync-v1";
 
 export interface SyncPayload {
