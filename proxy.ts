@@ -6,7 +6,7 @@ function getIp(req: NextRequest): string {
   // En Vercel, x-vercel-forwarded-for no puede ser falsificado por el cliente
   return (
     req.headers.get("x-vercel-forwarded-for") ??
-    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("x-real-ip") ??
     "unknown"
   );
@@ -36,23 +36,14 @@ function construirCSP(nonce: string): string {
     ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
     : "*.supabase.co";
 
-  // H3: URL del Worker leída de env var (WORKER_URL) para no exponer
-  // el nombre de usuario de Cloudflare en el repositorio público.
-  const workerUrl =
-    process.env.WORKER_URL ?? "https://sociologia.raul-dubon95.workers.dev";
-
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.paypal.com`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
-    // worker-src: PDF.js crea un Web Worker desde una URL local (bundled por
-    // Next/Turbopack) para renderizar páginas sin bloquear el hilo principal.
-    // Añadimos 'self' (URL local) + blob: (algunos entornos wrappean el worker
-    // en un Blob). NO se permiten workers de terceros — solo self-hosted.
     "worker-src 'self' blob:",
     `img-src 'self' data: blob: https://${supabaseHost} https://www.paypal.com`,
-    `connect-src 'self' https://${supabaseHost} ${workerUrl} https://www.paypal.com https://api.paypal.com`,
+    `connect-src 'self' https://${supabaseHost} https://www.paypal.com https://api.paypal.com`,
     // frame-src: solo lo estrictamente necesario. El visor PDF ya no usa
     // iframe (renderiza con pdfjs-dist en canvas); no se permite embeber
     // Supabase para reducir superficie de ataque (least privilege).

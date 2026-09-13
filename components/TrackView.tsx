@@ -22,7 +22,11 @@ export default function TrackView({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tipo: tipoFinal, contenidoId: idFinal }),
-    }).catch(() => {});
+    }).catch((err) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[TrackView] error al registrar vista:", err);
+      }
+    });
   }, [tipoFinal, idFinal]);
 
   return null;

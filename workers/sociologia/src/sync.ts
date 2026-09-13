@@ -48,7 +48,20 @@ export async function handleSyncRequest(
   const texto = contenido
     ? stripHtml(contenido).slice(0, 50000)
     : "";
-  const palabras = [etiquetas, categoria].filter(Boolean).join(" ");
+  // Enriquecer palabras con titulo + primeras ~500 chars del texto + etiquetas + categoria.
+  // Antes solo incluía etiquetas y categoria, dejando artículos sincronizados
+  // (tipo='publicacion') invisibles al LIKE fallback en retrieval.
+  const palabrasTexto = texto
+    ? texto.slice(0, 500)
+        .toLowerCase()
+        .replace(/[^a-záéíóúüñ0-9\s]/gi, " ")
+        .split(/\s+/)
+        .filter((p) => p.length >= 3)
+        .filter((p, i, arr) => arr.indexOf(p) === i) // dedup
+        .slice(0, 40)
+        .join(" ")
+    : "";
+  const palabras = [titulo, etiquetas, categoria, palabrasTexto].filter(Boolean).join(" ");
 
   try {
     if (action === "delete") {
