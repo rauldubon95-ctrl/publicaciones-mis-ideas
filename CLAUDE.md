@@ -18,7 +18,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 - CSS: **Tailwind 4.3.1** (sin `tailwind.config.ts`; tokens en `@theme` dentro de `globals.css`; plugin de typography)
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma 5.14
 - Storage: Supabase Storage — bucket `comics` (imágenes cómics + PDFs) + bucket `libros` (PDFs y portadas) + bucket `datos` (dashboards Excel)
-- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.118 (subido desde 3.80 en sesión 31)
+- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.118. Modelo: **Gemma 4 26B A4B IT** (migrado sesión 37 desde Llama 3.1 8B)
 - Visor PDF: `pdfjs-dist@^4.10.38` (Mozilla, con fix CVE-2024-4367)
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
@@ -31,7 +31,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | Componente | Estado | Notas |
 |---|---|---|
 | ✅ Next.js app | Producción | Vercel, `main`. **Next.js 16.2.9** (migrado a la línea 16 en sesión 24; Turbopack por defecto) + React 19.2.x + **Tailwind 4.3.1**. El middleware ahora es **`proxy.ts`** (renombrado oficial de Next 16; misma lógica CSP/nonce + guard `/api/admin` + anti-bot, runtime Node). |
-| ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. Modelo de chat migrado sesión 22 a `@cf/meta/llama-3.1-8b-instruct-fast` (el anterior, `llama-3.1-8b-instruct`, descontinuado por Cloudflare el 2026-05-30). Constante única `CHAT_MODEL` en `src/config.ts`. |
+| ✅ Cloudflare Worker `sociologia` | Producción | Auto-deploy via Git integration. root dir: `workers/sociologia`. 3 skills activas. Modelo de chat migrado sesión 37 a `@cf/google/gemma-4-26b-a4b-it` (Gemma 4 26B, 4B activos MoE, 256k contexto, gratuito). Constante única `CHAT_MODEL` en `src/config.ts`. |
 | ✅ Skills: sociológica, histórica, política | Producción | `sociological-analysis`, `historical-analysis`, `political-analysis` en SkillRegistry |
 | ✅ Sync Supabase → D1 | Producción | Automático al publicar/despublicar + botón sync masivo en admin |
 | ✅ Token premium (admin sin límite IA) | Producción | HMAC(SESSION_SIGNING_SECRET \|\| ADMIN_SECRET, "premium-bypass-v1") |
@@ -94,6 +94,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 | `HEALTH_TOKEN` | Token para `/api/health` y `/api/health/deep` con métricas completas | Recomendado |
 | `CRON_SECRET` | Autentica el vigilante `/api/cron/health-check`. Vercel lo envía solo al cron diario. Sin él, el endpoint rechaza todo (401). Sesión 21. | Recomendado |
 | `INTERNAL_EVENT_TOKEN` | Token interno para `/api/seguridad/evento` | Recomendado |
+| `WORKER_URL` | URL del Worker de IA (`https://sociologia.raul-dubon95.workers.dev`). Usada por `d1Sync.ts`, `healthChecks.ts`, `/api/chat` proxy y `proxy.ts` CSP. Si no está, fallback hardcoded con warn. **Configurar en Vercel.** Sesión 37. | ✅ Requerida |
 | `PREMIUM_TOKEN` | **ELIMINADO** 2026-05-24. No reconfigurar. | ❌ |
 | `STRIPE_*` | **ELIMINADOS** sesión 12. Quitar de Vercel. | ❌ |
 
@@ -103,7 +104,7 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 |---|---|---|
 | `DB` | D1 binding | `llm_sociolog` — ID en `wrangler.toml` |
 | `RATE_LIMIT` | KV binding | Rate limiting + telemetría |
-| `AI` | Workers AI binding | Chat: `@cf/meta/llama-3.1-8b-instruct-fast` (sesión 22; modelo central en `workers/sociologia/src/config.ts` → `CHAT_MODEL`). Embeddings: `@cf/baai/bge-large-en-v1.5` (Vectorize off). |
+| `AI` | Workers AI binding | Chat: `@cf/google/gemma-4-26b-a4b-it` (sesión 37; modelo central en `workers/sociologia/src/config.ts` → `CHAT_MODEL`). Embeddings: `@cf/baai/bge-large-en-v1.5`. |
 | `ADMIN_SECRET` | Worker secret | **LEGACY** — fallback |
 | `SESSION_SIGNING_SECRET` | Worker secret | Valida token premium. **Mismo valor que Vercel.** ✅ |
 | `D1_SYNC_SECRET` | Worker secret | Autentica `/sync` y `/telemetria`. **Mismo valor que Vercel.** ✅ |
@@ -271,6 +272,7 @@ CREATE POLICY "adm_pedidolibro" ON "PedidoLibro" FOR ALL USING (true) WITH CHECK
 | `app/api/dashboard/comprar/route.ts` | POST: inicia compra dashboard → PedidoDashboard + orden PayPal (sesión 17) |
 | `app/api/dashboard/[id]/route.ts` | GET: tablero. Si premium && !admin && !acceso → omite `archivoUrl`/`preview` + `requiereAcceso:true` (sesión 17) |
 | `app/api/dashboard/[id]/descargar/route.ts` | GET: proxy gateado al Excel. 302 al bucket con acceso, 402 sin (sesión 17) |
+| `app/api/chat/route.ts` | POST (sesión 37): proxy server-side al Worker IA. Rate-limit 30/min, validación input, timeout 15s. AsistenteChat.tsx ya no contacta al Worker directamente. |
 | `app/api/donaciones/webhook/route.ts` | POST: webhook PayPal firmado. Discrimina `contenido:`, `libro:`, `recurso:`, `dashboard:`, donación. Idempotente. |
 | `app/api/donaciones/checkout/route.ts` | POST: crea orden PayPal para donación |
 | `app/api/admin/cotizaciones/[id]/responder/route.ts` | POST admin: responde cotización vía Resend (rate-limit 30/h, máx 5 respuestas/cot) (sesión 17) |
@@ -376,12 +378,12 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | Item | Detalle | Prioridad |
 |---|---|---|
 | `D1_SYNC_SECRET` posiblemente desincronizado | Síntomas: `/admin/observabilidad` no muestra telemetría. Mismo tipo de problema que tuvo `SESSION_SIGNING_SECRET` en sesión 35 (secrets de Vercel y Cloudflare son tablas independientes). Rotación con procedimiento documentado en sesión 35: generar nuevo → ambos lados → redeploy Vercel. | Alta |
-| `/admin/metricas` en ceros | Puede ser cache de `unstable_cache` (2 min), o fallo silencioso en Prisma queries. Investigar con F12 Network → response del endpoint. | Alta |
+| `/admin/metricas` en ceros | **Causa raíz encontrada sesión 37**: regex UUID en `/api/track` rechazaba todos los CUIDs de Prisma → 0 vistas registradas. Fix aplicado. Los datos empezarán a acumularse tras merge a main y redeploy. | ✅ Fix aplicado |
 | Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`). Sigue habiendo textos de baja calidad; el bug del agente de sesión 36 (improvisar panorama general) es SÍNTOMA de corpus ruidoso. Impacta directo en la calidad del asistente. | Alta |
 | Multi-paso + memoria conversacional | Diseño listo en `docs/agente-multi-paso-memoria-diseno.md` (sesión 36). Implementación aplazada — requiere telemetría real que muestre ≥3 consultas compuestas/mes que fallen. | Media (objetivo del usuario) |
 | Job CI "Auditar dependencias (web)" en rojo | Preexistente. Todos los PRs Dependabot llegan con este check fallando. Investigar en próxima sesión: probablemente `npm audit` reporta vulnerabilidades altas en transitivas de Next 16 (postcss/sharp otros). Verificar y actualizar overrides o esperar release upstream. | Media |
 | Telemetría en KV (no D1) | Datos duran 7 días. Dashboard persistente requeriría escribir a `documentos_telemetria` en D1. Aceptable mientras el uso sea bajo. | Media |
-| `WORKER_URL` no configurada en Vercel | Verificado en sesión 35 (diagnóstico mostró `workerUrlDeEnv: false`). El código usa fallback hardcodeado (`https://sociologia.raul-dubon95.workers.dev`) — funciona, pero no cumple el hardening H3 de sesión 28. Añadir `WORKER_URL` como env var en Vercel resuelve. | Media |
+| `WORKER_URL` pendiente en Vercel | Código actualizado sesión 37: 4 archivos leen `process.env.WORKER_URL` con fallback+warn. CSP ya no expone la URL. Proxy `/api/chat` creado. **Falta**: configurar la env var en Vercel Dashboard para eliminar el fallback hardcoded. | Media (acción manual) |
 | IP cruda en rate-limit | `RateLimitDb.clave` = `"IP:ruta"` guarda IP real (transitoria, fin anti-abuso legítimo). El resto de IPs van cifradas (`ipHash`). Purista: hashear también la clave. Sin exposición externa. | Baja |
 | Campo `stripeId` en `Donacion` | Nombre legacy: hoy guarda `paypalOrderId`. Renombrar requiere migración Supabase + Prisma + toque en 4 archivos. Solo cosmético. | Baja |
 | CF_API_TOKEN con restricción IP | GitHub Action `deploy-worker.yml` no puede deployar Worker desde CI (falla en el token). Cloudflare Git integration lo cubre. Sin remedio hasta que la IP del runner esté fija. | Baja |
@@ -400,6 +402,11 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 - **4 vulnerabilidades npm moderadas** (sesión 23) — `overrides` postcss + uuid.
 - **Migración Next 15→16** (sesión 24) — `middleware.ts` → `proxy.ts`, Turbopack por defecto.
 - **Migración Tailwind 3→4** (sesión 24) — sin `tailwind.config.ts`, tokens en `@theme`.
+- **Modelo IA Llama 3.1 8B → Gemma 4 26B** (sesión 37) — `@cf/google/gemma-4-26b-a4b-it` (26B params, 4B activos MoE, 256k contexto, gratuito). Type assertion para workers-types.
+- **Tracking UUID→CUID bug** (sesión 37) — regex UUID en `/api/track` rechazaba todos los CUIDs → `/admin/metricas` en ceros. Reemplazada por `/^[a-z0-9-]{1,50}$/`. `TrackView` ya no silencia errores.
+- **Worker URL expuesta al cliente** (sesión 37) — hardcoded en `AsistenteChat.tsx` (client-side JS). Nuevo proxy `/api/chat` server-side con rate-limit 30/min + validación + timeout 15s. CSP `connect-src` ya no incluye la URL del Worker. `d1Sync.ts` y `healthChecks.ts` leen env var con fallback+warn.
+- **Retrieval no encontraba artículos del sitio** (sesión 37) — `sync.ts` solo pasaba etiquetas+categoria a `palabras`, dejando artículos sincronizados invisibles. Ahora incluye titulo + primeras 40 palabras del texto. LIKE fallback busca en titulo y texto además de palabras.
+- **IP extraction en proxy.ts** (sesión 37) — `x-forwarded-for` tomaba último entry (`.at(-1)`, spoofeable) en vez del primero (`[0]`, IP real del cliente).
 - **Modelo IA descontinuado** (sesión 22) — migración a `llama-3.1-8b-instruct-fast`, constante `CHAT_MODEL` central.
 - **Anti-reshare** (sesiones 20/21) — caducidad 30 días + tope 5 descargas en las 4 rutas de pago con asimetría (libros = leer+descargar; recursos/dashboards = solo descarga; artículos = solo lectura).
 - **Incidente cookies en render** (sesión 20) — `/leer/*` pasaron a Route Handlers.
@@ -689,7 +696,9 @@ Reglas: rama nueva, NO mergear a main sin OK explícito. Actualizar CLAUDE.md al
 
 ---
 
-*Última actualización: **2026-09-09 (sesión 36)** — fix "improvisación general" del agente + refinamiento de prompts por sección + diseño multi-paso/memoria + 2 PRs Dependabot mergeados. Ver §18 para roadmap y `docs/agente-multi-paso-memoria-diseno.md` para el diseño técnico. Sesión anterior (35) — Vectorize en producción + flujos por sección + fix "holis". Cambios en el documento: §1 stack actualizado (Next 16.2.9, React 19.2.8, Node 24.x, Tailwind 4.3.1, wrangler 4.118); §11 completamente reescrita — separada en "Pendiente" (11 items reales) + "Cerrado" (histórico condensado en una lista); §18 reenfocado en el objetivo del usuario (mejorar el asistente IA); pie de página consolidado (antes: ~20 resúmenes exhaustivos de 500+ palabras cada uno; ahora: 1 línea por sesión). Cambios en código: `app/api/admin/cotizaciones/[id]/responder/route.ts` — `cuerpoHtml` ahora se llena con el HTML real que se envía (`htmlRespuestaCotizacion`), cerrando la deuda menor documentada desde la sesión 17. Se verificó contra el código que ya están cerradas y no documentadas: wrangler 3.x → 4.118 (sesión 31), sharp override, Node 24, npm audit fix, security scan paths con backslash, compartir social en `/dashboard/[id]`. Deuda pendiente relevante: limpieza de corpus D1 (alta), Vectorize (media, prerrequisito de membresía premium), razonamiento multi-paso del asistente (media, objetivo del usuario). Todo en rama, sin merge a main hasta OK explícito del usuario.*
+*Última actualización: **2026-09-13 (sesión 37)** — Fix tracking (UUID→CUID), eliminación URLs hardcodeadas (proxy `/api/chat`), modelo IA Gemma 4 26B, retrieval mejorado (sync enriquecido + LIKE ampliado), seguridad CSP + IP extraction. Todo en rama `claude/claude-md-review-tech-debt-1tcujm`, sin merge a main hasta OK explícito del usuario.*
+
+*Sesión 37 (2026-09-13) — **Fix tracking + hardcoded URLs + modelo IA + retrieval + seguridad** [rama `claude/claude-md-review-tech-debt-1tcujm`]. 5 fixes coordinados: (1) `/api/track` rechazaba todos los CUIDs con regex UUID → `/admin/metricas` en ceros desde siempre; regex reemplazada por patrón seguro `/^[a-z0-9-]{1,50}$/`. (2) Worker URL eliminada del cliente: nuevo proxy `/api/chat` server-side (rate-limit 30/min, validación, timeout 15s); `AsistenteChat.tsx` ya no contacta al Worker directamente; CSP `connect-src` limpiado. `d1Sync.ts` y `healthChecks.ts` leen `WORKER_URL` de env var. (3) Modelo IA: Llama 3.1 8B → Gemma 4 26B A4B IT (`@cf/google/gemma-4-26b-a4b-it`, 26B params, 4B activos MoE, 256k contexto, gratuito en Workers AI). (4) Retrieval: `sync.ts` enriquece `palabras` con titulo + primeras 40 palabras del texto (antes solo etiquetas/categoria → artículos sincronizados invisibles al LIKE); LIKE fallback busca en titulo y texto además de palabras; umbral mínimo de palabra de 4→3 chars. (5) Seguridad: IP extraction en `proxy.ts` corregida (`.at(-1)` → `[0]`); `TrackView` ya no silencia errores en dev. PENDIENTE: configurar `WORKER_URL` en Vercel Dashboard + OK usuario para merge a main.*
 
 *Sesión 36 (2026-09-09) — **Fix "improvisación general" + refinamiento prompts + diseño multi-paso + 2 PRs Dependabot** [rama `claude/agente-sesion36`, esperando OK del usuario para merge a main]. **Bug real detectado en producción**: preguntar "que sabe raul de sentido común" devolvía panorama general del corpus con 6 fuentes irrelevantes (colonialidad, ecologías de saberes, etc., nada de "sentido común"). El LLM improvisaba un resumen general aunque los docs recuperados no tratasen el tema. **4 fixes coordinados**: (1) REGLA CRÍTICA nueva al inicio de los 3 SYSTEM_SKILL (sociológica/histórica/política) — antes de analizar, el LLM debe evaluar si el corpus trata directamente la consulta; si no, responder "no tengo información suficiente" en formato mínimo; prohibición explícita de improvisar. (2) Post-proceso en `index.ts`: si la respuesta contiene "no tengo información suficiente" O `groundingRatio < 0.25`, colapsa todo a mensaje único con `confianza=baja` y `fuentes=[]`. (3) Retrieval: Vectorize corre EN PARALELO con FTS siempre que esté disponible (antes solo si FTS < 3); mezcla priorizando docs que aparecen en ambas vías (máxima señal), luego semántico, luego léxico. (4) `instruccionesContexto` refinado — sugerencias de tono explícitamente NO aplican cuando la respuesta es "no tengo información"; no mencionar libros si el corpus no incluye libros reales; no meter pitch de donaciones en respuestas académicas. **Diseño multi-paso + memoria**: `docs/agente-multi-paso-memoria-diseno.md` — arquitectura, cambios, seguridad, orden de implementación. NO implementado (esperar telemetría real que lo justifique). **Dependabot**: 2 PRs mergeados vía squash — PR #44 (worker `@cloudflare/workers-types` + `wrangler` a parches menores) y PR #41 (`actions/setup-node` v6→v7 en 4 workflows). Detectado en checks: job "Auditar dependencias (web)" en rojo desde hace semanas (preexistente, no bloquea merges pero hay que investigar). Gates: `tsc` + `wrangler deploy --dry-run` limpios. PENDIENTE: OK del usuario para mergear `claude/agente-sesion36` a main.*
 
