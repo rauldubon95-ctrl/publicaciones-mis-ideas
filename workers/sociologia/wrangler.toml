@@ -20,7 +20,10 @@ id = "2f279c63ddbf45f19aaf55a02d290b47"
 # Vectorize: retrieval semántico (activado sesión 35)
 # Índice creado con:
 #   npx wrangler vectorize create sociologia-embeddings --dimensions=1024 --metric=cosine
-# 1024 dims = tamaño del output del modelo @cf/baai/bge-large-en-v1.5
+# 1024 dims. Modelo de embeddings: @cf/baai/bge-m3 (multilingüe, 1024 dims),
+# migrado en sesión 39 desde @cf/baai/bge-large-en-v1.5 (inglés → mala calidad
+# sobre texto español). Misma dimensión → NO hay que recrear el índice, pero
+# SÍ re-vectorizar todo el corpus desde /admin/embed-backfill tras desplegar.
 # cosine = métrica estándar para embeddings de texto normalizados
 [[vectorize]]
 binding = "VECTORIZE"
