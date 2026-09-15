@@ -30,15 +30,9 @@ export const CONTEXTOS_VALIDOS: readonly ContextoSitio[] = [
   "general", "home", "publicacion", "libro", "donacion",
 ] as const;
 
-export interface WorkerRequest {
-  pregunta: string;
-  contexto?: ContextoSitio; // opcional; default "general"
-}
-
 export interface WorkerResponse {
   respuesta?: string;
   fuentes?: string[];           // títulos de documentos (compat v1)
-  fuentesDetalle?: FuenteDoc[]; // detalle enriquecido (nuevo)
   error?: string;
   mensaje?: string;
   restantes?: number;
@@ -60,15 +54,6 @@ export interface DocumentoRecuperado {
   fuente: string;
   score: number;
   via: "fts" | "like" | "vector"; // cómo fue recuperado
-}
-
-// ── Fuente para el frontend ───────────────────────────────────
-
-export interface FuenteDoc {
-  titulo: string;
-  fuente: string;
-  tipo: string;
-  score: number;
 }
 
 // ── Rate limit ────────────────────────────────────────────────
