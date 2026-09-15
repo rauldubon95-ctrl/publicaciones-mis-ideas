@@ -98,6 +98,93 @@ Con eso convertimos este menú en un plan priorizado con metas medibles.
 
 ---
 
+## 5. Sugerencias concretas de mejora (ampliado)
+
+> Esto son **recomendaciones** (opiniones fundadas en las capacidades reales
+> del sitio, no hechos medidos). Cada una marca esfuerzo estimado
+> (🟢 bajo · 🟡 medio · 🔴 alto) e impacto probable.
+
+### 5.1 Ganancias rápidas — experiencia y confianza
+
+1. **Propuesta de valor en la portada (above the fold).** 🟢 · impacto alto.
+   Que en los primeros 3 segundos quede claro *quién es Raúl, qué va a
+   encontrar el visitante y qué hacer* (leer / suscribirse / preguntarle al
+   asistente). Muchos sitios académicos entierran esto y el visitante se va
+   sin entender dónde está.
+2. **Página "Sobre Raúl" con credenciales.** 🟢 · impacto alto (confianza +
+   SEO). Formación, líneas de investigación, publicaciones, dónde ha sido
+   citado. Google premia la autoría demostrable (E-E-A-T) y el lector confía
+   más antes de pagar o suscribirse.
+3. **Experiencia de lectura.** 🟢 · impacto medio. Tiempo estimado de
+   lectura, barra de progreso, y al final del artículo un bloque "seguí
+   leyendo" con 2-3 relacionados. Alarga la sesión y baja el rebote.
+4. **Índice (tabla de contenidos) en artículos largos.** 🟢 · impacto medio.
+   Tus piezas son extensas; un índice navegable mejora lectura y SEO
+   (genera enlaces internos con ancla).
+5. **Captura de newsletter no intrusiva.** 🟢 · impacto alto. CTA al final
+   del artículo + un aviso discreto tras leer ~60%. La lista propia es tu
+   activo más durable (no depende de algoritmos).
+
+### 5.2 Contenido y adquisición (SEO / GEO)
+
+6. **Páginas pilar / dossiers por tema.** 🟡 · impacto alto. Una guía
+   profunda por eje ("Clases sociales", "Colonialidad del poder",
+   "Sociología del deporte") que enlace a todos tus artículos del tema.
+   Construye *autoridad temática*: es donde un académico con nicho propio
+   le gana a medios grandes.
+7. **Contenido tipo "¿qué es X?".** 🟡 · impacto alto (cola larga + GEO).
+   Responder preguntas concretas es como busca la gente *y* como consultan
+   los asistentes de IA. Cada concepto que dominás es una puerta de entrada.
+8. **Enlazado interno sistemático.** 🟢-🟡. Que cada artículo enlace a 2-3
+   relacionados y a su dossier. Reparte autoridad y mantiene al lector dentro.
+9. **Reutilización / distribución.** 🟡. Cada artículo = un hilo para redes
+   + un párrafo para el newsletter + un post para LinkedIn. El contenido ya
+   existe; el cuello es que nadie lo ve. (Tus skills de divulgación y
+   psicología del contenido sirven justo para esto.)
+10. **Datos estructurados FAQ/HowTo** donde aplique. 🟢. Aumenta la chance de
+    resultados enriquecidos en Google. La base JSON-LD ya está.
+
+### 5.3 El asistente IA como producto (tu diferenciador)
+
+11. **Darle entidad propia.** 🟡 · impacto alto. Una mini-landing que explique
+    "preguntale al corpus de Raúl", con 3 preguntas de ejemplo clicables y el
+    chat bien visible (no escondido en un ícono). Casi ningún sitio académico
+    en español tiene esto: es razón para entrar *y* para volver.
+12. **Tras el chunking**, que cite pasajes concretos (no solo títulos):
+    sube la percepción de rigor y lo vuelve compartible ("mirá lo que me
+    respondió sobre X").
+
+### 5.4 Retención y monetización
+
+13. **Membresía recurrente** (ya en CLAUDE.md §18). 🔴 · ingresos recurrentes.
+    Suscripción que desbloquee biblioteca members-only + asistente sin
+    límite. Convierte lectores fieles en ingreso estable (MRR).
+14. **Lead magnet gratuito.** 🟡. Un PDF/guía fuerte a cambio del email.
+    Crece la lista con gente realmente interesada en tus temas.
+15. **Revisar la fricción de los muros de pago.** 🟢-🟡. Que el resumen
+    público *enganche* y el muro explique claramente qué se recibe. Un muro
+    que aparece muy pronto o sin contexto espanta más de lo que convierte.
+
+### 5.5 Técnico / rendimiento / confianza
+
+16. **Core Web Vitals en móvil.** 🟡 (requiere la analítica de la sección 0).
+    La mayoría del tráfico de contenido es móvil; lo lento se abandona.
+17. **Pasada de accesibilidad.** 🟡. Foco visible, alt en imágenes,
+    navegación por teclado. Es experiencia y además SEO.
+18. **Embudo de servicios/cotizaciones.** 🟢. Revisar que desde un artículo
+    relevante haya un puente natural a `/servicios` (tu vía de ingresos por
+    consultoría).
+
+### 5.6 Si tuviera que elegir 3 para este mes
+
+1. **Medir** (sección 0) — sin esto, todo lo demás es a ciegas.
+2. **Página "Sobre Raúl" + propuesta de valor en portada** (#2 y #1) —
+   confianza y claridad, esfuerzo bajo.
+3. **Un dossier pilar** sobre tu tema más fuerte (#6) — la apuesta de SEO
+   que mejor le sienta a un académico con nicho propio.
+
+---
+
 *Nota de honestidad: este plan se basa en las capacidades reales del sitio
 (SEO/GEO, newsletter, asistente IA, muros de pago) documentadas en
 CLAUDE.md. No incluye números de tráfico porque hoy no los tenemos medidos;
