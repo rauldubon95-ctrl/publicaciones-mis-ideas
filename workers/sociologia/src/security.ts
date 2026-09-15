@@ -82,27 +82,23 @@ const INJECTION_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /respond\s+as\s+if\s+(i\s+were|we\s+were|you\s+were)\s+(on|in)/gi, label: "en_context_pretend_url" },
 ];
 
-// Sanitizar el contenido de un documento (documento envuelto)
-// El contenido de PDFs NUNCA se convierte en instrucción
-export function envolverDocumento(
-  contenido: string,
-  docId: string,
-  chunkId: string,
-  fuente: string
-): string {
-  // Neutralizar patrones de instrucción que puedan estar en el PDF
-  const sanitizado = contenido
+// Sanitiza el CONTENIDO de un documento del corpus antes de pasarlo al
+// modelo: neutraliza patrones que un PDF podría llevar como intento de
+// inyección de instrucciones. El corpus es del propio autor (no lo sube un
+// atacante), así que esto es defensa en profundidad, no una barrera crítica.
+// La aplican las 3 skills sobre el texto de cada documento recuperado.
+// (Antes esta lógica vivía en `envolverDocumento`, parte del extinto
+// pipeline "Worker v1"; sesión 40 la conserva y la conecta a la ruta real.)
+export function sanitizarContenidoDoc(contenido: string): string {
+  return contenido
     .replace(/\[SYSTEM\]/gi, "[SYS_BLOQUEADO]")
     .replace(/\[INST\]/gi, "[INST_BLOQUEADO]")
     .replace(/<<SYS>>/gi, "[SYS_BLOQUEADO]")
     .replace(/<\|im_start\|>/gi, "[IM_BLOQUEADO]")
     .replace(/ignore\s+previous\s+instructions?/gi, "[INSTRUCCION_BLOQUEADA]")
+    .replace(/ignora[r]?\s+(todas?\s+)?(las?\s+)?instrucciones?/gi, "[INSTRUCCION_BLOQUEADA]")
     .replace(/you\s+are\s+now/gi, "[REDEFINICION_BLOQUEADA]")
     .replace(/forget\s+(all\s+)?instructions?/gi, "[OLVIDO_BLOQUEADO]");
-
-  return `[INICIO_DOCUMENTO id="${docId}" chunk="${chunkId}" fuente="${fuente}"]
-${sanitizado}
-[FIN_DOCUMENTO]`;
 }
 
 // Análisis multi-capa de injection en la query del usuario
@@ -197,18 +193,4 @@ export function validarOutput(texto: string): {
   }
 
   return { seguro: true };
-}
-
-// Detectar si la query habla de un tema fuera del corpus (sin recuperación)
-export function esQueryAcademica(query: string): boolean {
-  const TOPICOS_VALIDOS = [
-    /sociolog/i, /politic/i, /social/i, /ideolog/i, /marx/i, /weber/i,
-    /capital/i, /clase\s+social/i, /movimiento/i, /estado/i, /poder/i,
-    /democraci/i, /discurso/i, /cultura/i, /educaci/i, /econom/i,
-    /desigualdad/i, /pobrez/i, /género/i, /identidad/i, /racismo/i,
-    /colonialismo/i, /imperialismo/i, /neoliberal/i, /globalizaci/i,
-    /ciudadan/i, /derechos/i, /publicaci/i, /artículo/i, /raúl/i,
-    /dubón/i, /centroamérica/i, /guatemala/i, /honduras/i, /latinoamérica/i,
-  ];
-  return TOPICOS_VALIDOS.some((r) => r.test(query));
 }

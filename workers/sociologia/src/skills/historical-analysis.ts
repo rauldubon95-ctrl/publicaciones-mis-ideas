@@ -2,7 +2,7 @@ import type { Env } from "../types";
 import type { DocumentoRecuperado } from "../types";
 import type { Skill, SkillInput, SkillOutput } from "./registry";
 import { recuperarDocumentos, calcularGrounding } from "../retrieval";
-import { validarOutput } from "../security";
+import { validarOutput, sanitizarContenidoDoc } from "../security";
 import { instruccionesContexto } from "../prompts";
 import { CHAT_MODEL, extraerRespuestaIA } from "../config";
 import { etiquetaFuente, quitarEtiquetasInternas } from "../fuentes";
@@ -96,7 +96,7 @@ export class HistoricalAnalysisSkill implements Skill {
 
 function construirPrompt(input: SkillInput, docs: DocumentoRecuperado[]) {
   const contexto = docs
-    .map((d) => `${etiquetaFuente(d.titulo)}\n${d.texto.slice(0, 1800)}`)
+    .map((d) => `${etiquetaFuente(d.titulo)}\n${sanitizarContenidoDoc(d.texto.slice(0, 1800))}`)
     .join("\n\n---\n\n");
   const systemFinal = SYSTEM_SKILL + instruccionesContexto(input.contextoSitio ?? "general");
   return [

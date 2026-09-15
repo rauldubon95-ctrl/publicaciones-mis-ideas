@@ -377,7 +377,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 
 | Item | Detalle | Prioridad |
 |---|---|---|
-| `D1_SYNC_SECRET` posiblemente desincronizado | Síntomas: `/admin/observabilidad` no muestra telemetría. Mismo tipo de problema que tuvo `SESSION_SIGNING_SECRET` en sesión 35 (secrets de Vercel y Cloudflare son tablas independientes). Rotación con procedimiento documentado en sesión 35: generar nuevo → ambos lados → redeploy Vercel. | Alta |
+| ✅ `D1_SYNC_SECRET` sincronizado | **Resuelto sesión 40**: `/admin/observabilidad` ya muestra telemetría (confirmado por el usuario). El secret quedó idéntico en Vercel y Cloudflare. | ✅ |
 | `/admin/metricas` en ceros | **Causa raíz encontrada sesión 37**: regex UUID en `/api/track` rechazaba todos los CUIDs de Prisma → 0 vistas registradas. Fix aplicado. Los datos empezarán a acumularse tras merge a main y redeploy. | ✅ Fix aplicado |
 | Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`). Sigue habiendo textos de baja calidad; el bug del agente de sesión 36 (improvisar panorama general) es SÍNTOMA de corpus ruidoso. Impacta directo en la calidad del asistente. | Alta |
 | Multi-paso + memoria conversacional | Diseño listo en `docs/agente-multi-paso-memoria-diseno.md` (sesión 36). Implementación aplazada — requiere telemetría real que muestre ≥3 consultas compuestas/mes que fallen. | Media (objetivo del usuario) |
@@ -521,7 +521,7 @@ Automático al publicar/despublicar. Para sincronizar todos:
 | Dashboards Excel con muro de pago PayPal | ✅ Producción sesión 17 |
 | Respuesta a cotizaciones (máx 5/cot) desde admin | ✅ Producción sesión 17 |
 | Asistente IA con 3 skills académicas | ✅ Producción |
-| Telemetría IA en /admin/observabilidad | ✅ Producción (posible bug de D1_SYNC_SECRET, ver §11) |
+| Telemetría IA en /admin/observabilidad | ✅ Producción (funcionando, confirmado sesión 40) |
 | Security hardening completo (fases 1–5) | ✅ Producción |
 | Retrieval semántico (Vectorize) | ✅ **Producción sesión 35** (594 docs vectorizados) |
 | Flujos del agente por sección web | ✅ **Producción sesión 35** (5 contextos con whitelist) |
@@ -591,14 +591,8 @@ por falta de pasos intermedios.
 
 ### 🔴 Prioridad inmediata (bugs pequeños detectados sesión 35)
 
-1. **Rotar `D1_SYNC_SECRET`** — mismo procedimiento que se usó para
-   `SESSION_SIGNING_SECRET` en sesión 35. Síntoma: `/admin/observabilidad`
-   sin datos. Pasos:
-   - Generar 64 chars random URL-safe
-   - Ponerlo idéntico en Vercel Settings → Environment Variables Y en
-     Cloudflare Worker → Settings → Variables and Secrets
-   - Redeploy Vercel
-   - Reintentar `/admin/observabilidad`
+1. ✅ **`D1_SYNC_SECRET` — RESUELTO (sesión 40).** `/admin/observabilidad`
+   ya muestra telemetría; el secret quedó sincronizado en Vercel y Cloudflare.
 
 2. **Configurar `WORKER_URL` en Vercel** — env var faltante.
    Value: `https://sociologia.raul-dubon95.workers.dev`. Redeploy.
@@ -697,7 +691,9 @@ Reglas: rama nueva, NO mergear a main sin OK explícito. Actualizar CLAUDE.md al
 
 ---
 
-*Última actualización: **2026-09-13 (sesión 39)** — Mejora del asistente IA: recuperación (FTS AND-primero con raíz singular + rebalanceo FTS/vector + prioridad a publicaciones), limpieza de nombres de fuentes (fin de la fuga de `[DOC 531: ...]` y de los filenames crudos), y modelo de embeddings multilingüe `bge-m3`. Mergeado a main con OK del usuario.*
+*Última actualización: **2026-09-15 (sesión 40)** — Cierre/auditoría: eliminación de código muerto del Worker (pipeline legado "Worker v1"), sanitización del corpus reconectada a la ruta activa, telemetría confirmada funcionando, y nuevos docs (`auditoria-worker-2026-09-15.md`, `plan-crecimiento-web.md`). Mergeado a main con OK del usuario.*
+
+*Sesión 40 (2026-09-15) — **Auditoría de cierre: código muerto + seguridad + docs + plan de crecimiento** [rama `claude/inspiring-archimedes-sgc5g5`, mergeada a main con OK del usuario]. (1) **Código muerto eliminado** del Worker (pipeline legado "Worker v1", 0 usos desde la migración a skills): en `prompts.ts` `SYSTEM_PROMPT`/`construirMensajes`/`construirContexto`/`extraerCita`/`construirAdvertencia`/`determinarConfianza`; en `security.ts` `envolverDocumento` y `esQueryAcademica`; en `types.ts` `WorkerRequest`/`FuenteDoc`/campo `fuentesDetalle`. (2) **Seguridad**: la sanitización anti-inyección del contenido del corpus (antes en `envolverDocumento`, huérfana) se conservó como `sanitizarContenidoDoc` en `security.ts` y **se conectó a las 3 skills** (aplican sobre `d.texto` antes de mandarlo al modelo) — defensa en profundidad; el corpus es del autor, no de un atacante. La detección de inyección sobre la PREGUNTA del usuario ya estaba activa e intacta. (3) **Telemetría**: `/admin/observabilidad` confirmado funcionando por el usuario → `D1_SYNC_SECRET` sincronizado (cerrado en §11 y §18). (4) **Docs**: `migrations/d1/README.md` (marca esos scripts como "no ejecutar"), `docs/auditoria-worker-2026-09-15.md` (registro de la auditoría), `docs/plan-crecimiento-web.md` (plan de visitas + experiencia; primer paso: instalar analítica de tráfico porque hoy no se mide el origen de visitas). Gates: typecheck Worker + `wrangler deploy --dry-run` limpios. **Pendiente mayor sin cambios**: chunking del corpus (bloqueante: PDFs originales).*
 
 *Sesión 39 (2026-09-13) — **Arreglo de la calidad del asistente: recuperación + nombres de fuentes + embeddings multilingües** [rama `claude/inspiring-archimedes-sgc5g5`, mergeada a main con OK explícito del usuario]. Diagnóstico verificado contra la D1 de producción (594 docs: 550 corpus `articulo` + 43 `publicacion` + 1 skill): la consulta "clases sociales" devolvía ruido (deporte/docentes) y no los papers reales del autor (Wood id 1743, Laclau/proletariado id 1738, Hinkelammert id 1736). **3 causas + fixes:** (1) **Léxico**: el FTS armaba `"clases"* OR "sociales"*`; el prefijo NO matchea el singular ("clase") y el OR premiaba la palabra común "social/sociales". Ahora `construirTerminosFTS` usa raíz singular (`stemLigero`) y AND-primero (`"clase"* AND "social"*`), cae a OR si trae <3. Verificado por SQL: con AND aparecen Wood/Laclau/Hinkelammert arriba. (2) **Semántico**: el modelo de embeddings era `@cf/baai/bge-large-en-v1.5` (INGLÉS) sobre corpus español → embeddings flojos ("vectoricé pero no se refleja"). Migrado a `@cf/baai/bge-m3` (multilingüe, 1024 dims = misma dimensión del índice; constante `EMBEDDING_MODEL` en `config.ts`, usada por `retrieval.ts` y `embed-worker.ts`). (3) **Mezcla**: los resultados solo-vector copaban los 6 slots y expulsaban lo léxico; ahora `intercalar()` empieza por FTS y `promoverPublicaciones()` da bonus acotado a `tipo='publicacion'`. **Nombres de fuentes**: nuevo `workers/sociologia/src/fuentes.ts` (`limpiarTitulo`, `etiquetaFuente` sin id interno, `quitarEtiquetasInternas`); las 3 skills pasan al modelo `[Fuente: título limpio]` en vez de `[DOC 531: filename.pdf]` y sanean la salida; `extraerFuentesTitulos` limpia los títulos que ve el usuario. **Corpus (Fase C)**: se detectó que **los 550 docs `articulo` están truncados a 8.000 chars** (un solo fragmento por fuente) → techo de calidad real; plan de re-ingesta con chunking en `docs/re-ingesta-corpus-chunking-diseno.md` (NO implementado; bloqueante: ubicación de los PDFs originales). Los "clusters" (deporte/educación/metodología) NO son basura (incluyen trabajo del propio autor) → no se podan. **PENDIENTES manuales del usuario:** (a) re-vectorizar en `/admin/embed-backfill` tras el deploy (obligatorio; los vectores viejos son del modelo inglés); (b) borrar 5 docs basura/sensibles en la consola D1 — `DELETE FROM documentos WHERE id IN (260,257,271,985,1262); INSERT INTO documentos_fts(documentos_fts) VALUES('rebuild');` (el id 260 es dato personal; el borrado desde la IA quedó bloqueado por la política "mass delete"). Gates: typecheck Worker + `wrangler deploy --dry-run` limpios.*
 
