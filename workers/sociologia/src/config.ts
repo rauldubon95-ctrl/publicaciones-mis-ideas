@@ -48,6 +48,41 @@ export const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast" as Parameter
 // la sesión 39 es la señal principal y ya es sólida.
 export const EMBEDDING_MODEL = "@cf/baai/bge-m3" as Parameters<Ai["run"]>[0];
 
+// ─────────────────────────────────────────────────────────────
+// Lista blanca del corpus del asistente (sesión 41 — seguridad jurídica).
+//
+// PROBLEMA: la tabla `documentos` mezcla 43 artículos propios
+// (tipo='publicacion') con 545 textos de terceros (tipo='articulo'), muchos
+// con copyright vigente e incluso bajados de bibliotecas piratas (Anna's
+// Archive, z-lib, Scribd). El asistente los citaba y parafraseaba en público
+// → exposición real por derechos de autor.
+//
+// DECISIÓN (opt-in, no opt-out): el asistente SOLO puede recuperar contenido
+// propio o expresamente verificado como de uso libre. Es más seguro permitir
+// lo verificado que intentar bloquear lo ajeno entre 545 items.
+//
+// - `tipo='publicacion'` (los artículos del sitio, del autor) entra SIEMPRE.
+// - CORPUS_ALLOWLIST_IDS: ids sueltos de `documentos` verificados como propios
+//   o de uso libre (dominio público comprobado, normativa oficial, acceso
+//   abierto con licencia revisada). Crece a medida que se audita el corpus
+//   (ver docs/inventario-corpus-derechos.md).
+//
+// Todo lo demás queda FUERA del alcance del asistente aunque siga en la base.
+export const CORPUS_ALLOWLIST_IDS: number[] = [
+  253, // "Economía invisible… (Dubón, 2024)" — artículo propio del autor.
+];
+
+// Cláusula SQL reutilizable que restringe una consulta sobre `documentos` al
+// contenido permitido. `alias` es el prefijo de tabla (p. ej. "d" en un JOIN);
+// vacío para consultas sin alias. Los ids se interpolan como enteros validados,
+// nunca texto de usuario, así que no hay riesgo de inyección.
+export function clausulaCorpusPermitido(alias = ""): string {
+  const p = alias ? `${alias}.` : "";
+  const ids = CORPUS_ALLOWLIST_IDS.filter((n) => Number.isInteger(n));
+  const inClause = ids.length ? ` OR ${p}id IN (${ids.join(",")})` : "";
+  return `(${p}tipo = 'publicacion'${inClause})`;
+}
+
 // Extrae de forma robusta el texto de la respuesta de Workers AI.
 // Los modelos instruct devuelven { response: string }. Esta función tolera
 // además formas alternativas ({ result: { response } }, anidados) y, si algún
