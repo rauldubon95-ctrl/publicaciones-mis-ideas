@@ -81,9 +81,20 @@ export const CORPUS_ALLOWLIST_IDS: number[] = [
   366, 368, 370, 372, 374, 376, 378, 380, 382, 383, 385, 387, 389, 391,
   728, 729, 730, 975, 1168, 1382, 1418,
 
-  // Pendiente de revisar licencia por item antes de sumar (ver
-  // docs/inventario-corpus-derechos.md §6): acceso abierto (OJS/Dialnet),
-  // informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/BID), dominio público por
+  // — Acceso abierto: artículos de revista indexados en Dialnet + patrón OJS
+  //   (Open Journal Systems). La mayoría de revistas académicas de la región
+  //   publican bajo licencias Creative Commons; el asistente cita la fuente por
+  //   título, cubriendo la atribución. CAVEAT (sesión 41): estar en Dialnet/OJS
+  //   NO garantiza licencia libre — el permiso depende de cada revista. Riesgo
+  //   bajo (uso académico con atribución), decisión del usuario de conservarlos.
+  494, 495, 496, 497, 498, 499, 500, 501, 503, 504, 505, 506, 507, 508,
+  1315, 1316, 1317, 1318,
+  214, 221, 255, 256, 262, 265, 270, 273, 343,
+
+  // Pendiente de revisar por item antes de sumar (ver
+  // docs/inventario-corpus-derechos.md §6): otros artículos de revista de
+  // acceso abierto sin patrón OJS/Dialnet en el nombre (por nombre de revista),
+  // informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/BID) y dominio público por
   // antigüedad (revisar que no sean traducciones modernas).
 ];
 
