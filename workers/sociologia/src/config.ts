@@ -69,7 +69,22 @@ export const EMBEDDING_MODEL = "@cf/baai/bge-m3" as Parameters<Ai["run"]>[0];
 //
 // Todo lo demás queda FUERA del alcance del asistente aunque siga en la base.
 export const CORPUS_ALLOWLIST_IDS: number[] = [
+  // — Propio —
   253, // "Economía invisible… (Dubón, 2024)" — artículo propio del autor.
+
+  // — Normativa oficial de El Salvador (las leyes/reglamentos NO son objeto de
+  //   derecho de autor; uso libre). Verificado sesión 41.
+  808, 809, 813, 814, 815, 818, 819, 1136, 1188, 1192, 1193,
+
+  // — Estadística pública oficial de El Salvador (MINED, DIGESTYC/EHPM, STPP;
+  //   datos oficiales de libre uso con cita). Verificado sesión 41.
+  366, 368, 370, 372, 374, 376, 378, 380, 382, 383, 385, 387, 389, 391,
+  728, 729, 730, 975, 1168, 1382, 1418,
+
+  // Pendiente de revisar licencia por item antes de sumar (ver
+  // docs/inventario-corpus-derechos.md §6): acceso abierto (OJS/Dialnet),
+  // informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/BID), dominio público por
+  // antigüedad (revisar que no sean traducciones modernas).
 ];
 
 // Cláusula SQL reutilizable que restringe una consulta sobre `documentos` al

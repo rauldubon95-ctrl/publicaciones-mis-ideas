@@ -93,7 +93,31 @@ export default function PrivacidadPage() {
           <li><strong>Cloudflare</strong> — el asistente de inteligencia artificial.</li>
         </ul>
 
-        <h2>5. Cookies</h2>
+        <h2>5. El asistente de inteligencia artificial</h2>
+        <p>
+          El sitio tiene un asistente de IA con el que puedes conversar. Sobre tus datos:
+        </p>
+        <ul>
+          <li>
+            Tu pregunta se envía a la infraestructura de <strong>Cloudflare (Workers AI)</strong>{" "}
+            para generar la respuesta con base en el contenido del sitio.
+          </li>
+          <li>
+            <strong>No guardo el texto de tus conversaciones.</strong> Solo se registran
+            métricas anónimas de uso (tiempos de respuesta, calidad, si hubo error) durante
+            unos <strong>7 días</strong>, para vigilar abusos y mejorar el asistente. Esas
+            métricas <em>no</em> contienen tus preguntas ni las respuestas.
+          </li>
+          <li>
+            No se crea un perfil tuyo ni se usan tus conversaciones con fines publicitarios.
+          </li>
+          <li>
+            No escribas datos personales sensibles en el chat: es una herramienta pública
+            de divulgación, no un canal privado.
+          </li>
+        </ul>
+
+        <h2>6. Cookies</h2>
         <p>
           Uso cookies <strong>solo funcionales</strong>, no publicitarias ni de rastreo de
           terceros:
@@ -106,7 +130,7 @@ export default function PrivacidadPage() {
           <li><strong>Cookie de administración</strong> — solo para mi sesión de administrador.</li>
         </ul>
 
-        <h2>6. Cómo protejo tus datos</h2>
+        <h2>7. Cómo protejo tus datos</h2>
         <ul>
           <li>Las <strong>huellas de IP se guardan cifradas</strong> (no la IP real).</li>
           <li>La base de datos está <strong>cerrada</strong>: tus datos no son accesibles públicamente.</li>
@@ -114,14 +138,14 @@ export default function PrivacidadPage() {
           <li>Los <strong>datos de pago los maneja PayPal</strong>, no este sitio.</li>
         </ul>
 
-        <h2>7. Cuánto tiempo los conservo</h2>
+        <h2>8. Cuánto tiempo los conservo</h2>
         <p>
           Conservo tus datos solo mientras hagan falta: los de tu suscripción, hasta que
           canceles; los de una compra o donación, el tiempo razonable para soporte y registro.
           Cuando ya no son necesarios, se eliminan.
         </p>
 
-        <h2>8. Tus derechos</h2>
+        <h2>9. Tus derechos</h2>
         <p>
           Puedes pedirme en cualquier momento <strong>acceder</strong> a los datos que tengo de
           ti, <strong>corregirlos</strong> o <strong>eliminarlos</strong>. Si te suscribiste al
@@ -130,14 +154,14 @@ export default function PrivacidadPage() {
           <a href={`mailto:${CONTACTO}`}>{CONTACTO}</a> y la atenderé.
         </p>
 
-        <h2>9. Visitantes de otros países</h2>
+        <h2>10. Visitantes de otros países</h2>
         <p>
           Si me visitas desde la Unión Europea u otra región con normativa propia (como el
           RGPD), se respetan los mismos principios descritos aquí: minimización, consentimiento
           para el boletín, seguridad y tus derechos de acceso y eliminación.
         </p>
 
-        <h2>10. Cambios a este aviso</h2>
+        <h2>11. Cambios a este aviso</h2>
         <p>
           Si actualizo este aviso, cambiaré la fecha del encabezado. Te recomiendo revisarlo
           de vez en cuando.

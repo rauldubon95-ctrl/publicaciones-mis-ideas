@@ -14,6 +14,7 @@ const SECUNDARIO = [
   { href: "/servicios", label: "Consultoría" },
   { href: "/donar", label: "Apoyar" },
   { href: "/privacidad", label: "Privacidad" },
+  { href: "/terminos", label: "Términos" },
 ];
 
 export default function Footer() {
@@ -124,6 +125,9 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <Link href="/privacidad" className="hover:text-zinc-300 transition-colors">
               Política de privacidad
+            </Link>
+            <Link href="/terminos" className="hover:text-zinc-300 transition-colors">
+              Términos de uso
             </Link>
             <Link href="/donar" className="hover:text-zinc-300 transition-colors">
               Apoyar el proyecto
