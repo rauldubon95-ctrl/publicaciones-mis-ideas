@@ -3,7 +3,7 @@
 // Trabaja sobre la tabla real: documentos (D1: llm_sociolog)
 // ─────────────────────────────────────────────────────────────
 import type { DocumentoRecuperado, Env } from "./types";
-import { EMBEDDING_MODEL } from "./config";
+import { EMBEDDING_MODEL, clausulaCorpusPermitido } from "./config";
 
 const MAX_DOCS = 6;
 const MAX_TEXTO = 2200; // chars por documento al LLM (~550 tokens)
@@ -124,6 +124,7 @@ async function ejecutarFTS(
       FROM documentos_fts
       JOIN documentos d ON documentos_fts.rowid = d.id
       WHERE documentos_fts MATCH ?
+        AND ${clausulaCorpusPermitido("d")}
       ORDER BY bm25(documentos_fts)
       LIMIT ?
     `)
@@ -177,6 +178,7 @@ async function buscarConLIKE(
              (${scoreExpr}) AS score
       FROM documentos
       WHERE (${condiciones})
+        AND ${clausulaCorpusPermitido()}
       ORDER BY score DESC
       LIMIT ?
     `)
@@ -235,8 +237,11 @@ async function buscarConVector(
     .filter((id) => /^\d+$/.test(id));
   if (idsValidos.length === 0) return [];
   const ids = idsValidos.join(",");
+  // Aunque Vectorize devuelva vectores de documentos de terceros, aquí se
+  // filtran contra la lista blanca: solo se hidratan (y por tanto se citan)
+  // los permitidos. Los demás match semánticos se descartan silenciosamente.
   const res = await env.DB.prepare(
-    `SELECT id, titulo, slug, texto, tipo, palabras, fuente FROM documentos WHERE id IN (${ids})`
+    `SELECT id, titulo, slug, texto, tipo, palabras, fuente FROM documentos WHERE id IN (${ids}) AND ${clausulaCorpusPermitido()}`
   ).all<{
     id: number; titulo: string; slug: string; texto: string;
     tipo: string; palabras: string; fuente: string;

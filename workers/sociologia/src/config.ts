@@ -48,6 +48,56 @@ export const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast" as Parameter
 // la sesión 39 es la señal principal y ya es sólida.
 export const EMBEDDING_MODEL = "@cf/baai/bge-m3" as Parameters<Ai["run"]>[0];
 
+// ─────────────────────────────────────────────────────────────
+// Lista blanca del corpus del asistente (sesión 41 — seguridad jurídica).
+//
+// PROBLEMA: la tabla `documentos` mezcla 43 artículos propios
+// (tipo='publicacion') con 545 textos de terceros (tipo='articulo'), muchos
+// con copyright vigente e incluso bajados de bibliotecas piratas (Anna's
+// Archive, z-lib, Scribd). El asistente los citaba y parafraseaba en público
+// → exposición real por derechos de autor.
+//
+// DECISIÓN (opt-in, no opt-out): el asistente SOLO puede recuperar contenido
+// propio o expresamente verificado como de uso libre. Es más seguro permitir
+// lo verificado que intentar bloquear lo ajeno entre 545 items.
+//
+// - `tipo='publicacion'` (los artículos del sitio, del autor) entra SIEMPRE.
+// - CORPUS_ALLOWLIST_IDS: ids sueltos de `documentos` verificados como propios
+//   o de uso libre (dominio público comprobado, normativa oficial, acceso
+//   abierto con licencia revisada). Crece a medida que se audita el corpus
+//   (ver docs/inventario-corpus-derechos.md).
+//
+// Todo lo demás queda FUERA del alcance del asistente aunque siga en la base.
+export const CORPUS_ALLOWLIST_IDS: number[] = [
+  // — Propio —
+  253, // "Economía invisible… (Dubón, 2024)" — artículo propio del autor.
+
+  // — Normativa oficial de El Salvador (las leyes/reglamentos NO son objeto de
+  //   derecho de autor; uso libre). Verificado sesión 41.
+  808, 809, 813, 814, 815, 818, 819, 1136, 1188, 1192, 1193,
+
+  // — Estadística pública oficial de El Salvador (MINED, DIGESTYC/EHPM, STPP;
+  //   datos oficiales de libre uso con cita). Verificado sesión 41.
+  366, 368, 370, 372, 374, 376, 378, 380, 382, 383, 385, 387, 389, 391,
+  728, 729, 730, 975, 1168, 1382, 1418,
+
+  // Pendiente de revisar licencia por item antes de sumar (ver
+  // docs/inventario-corpus-derechos.md §6): acceso abierto (OJS/Dialnet),
+  // informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/BID), dominio público por
+  // antigüedad (revisar que no sean traducciones modernas).
+];
+
+// Cláusula SQL reutilizable que restringe una consulta sobre `documentos` al
+// contenido permitido. `alias` es el prefijo de tabla (p. ej. "d" en un JOIN);
+// vacío para consultas sin alias. Los ids se interpolan como enteros validados,
+// nunca texto de usuario, así que no hay riesgo de inyección.
+export function clausulaCorpusPermitido(alias = ""): string {
+  const p = alias ? `${alias}.` : "";
+  const ids = CORPUS_ALLOWLIST_IDS.filter((n) => Number.isInteger(n));
+  const inClause = ids.length ? ` OR ${p}id IN (${ids.join(",")})` : "";
+  return `(${p}tipo = 'publicacion'${inClause})`;
+}
+
 // Extrae de forma robusta el texto de la respuesta de Workers AI.
 // Los modelos instruct devuelven { response: string }. Esta función tolera
 // además formas alternativas ({ result: { response } }, anidados) y, si algún
