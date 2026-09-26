@@ -164,9 +164,11 @@ antes de entrar a la lista blanca:
    - Propio: `253`.
    - Normativa oficial ES (no copyrightable): `808, 809, 813, 814, 815, 818, 819, 1136, 1188, 1192, 1193`.
    - Estadística pública oficial ES: `366, 368, 370, 372, 374, 376, 378, 380, 382, 383, 385, 387, 389, 391, 728, 729, 730, 975, 1168, 1382, 1418`.
-   - Acceso abierto (Dialnet + patrón OJS; decisión del usuario, sesión 41): `494, 495, 496, 497, 498, 499, 500, 501, 503, 504, 505, 506, 507, 508, 1315, 1316, 1317, 1318` (Dialnet) + `214, 221, 255, 256, 262, 265, 270, 273, 343` (OJS). **Caveat:** estar en Dialnet/OJS no garantiza licencia libre; riesgo bajo por ser académico con atribución (el asistente cita por título).
-   - Total corpus permitido: ~103 documentos.
-   - **Aún NO en la lista blanca** (pendiente de revisar por item): otros artículos de revista de acceso abierto sin patrón OJS/Dialnet en el nombre, informes de organismos, dominio público por antigüedad.
+   - Acceso abierto (Dialnet + patrón OJS + revistas por nombre; decisión del usuario, sesión 41): `494, 495, 496, 497, 498, 499, 500, 501, 503, 504, 505, 506, 507, 508, 1315, 1316, 1317, 1318` (Dialnet) + `214, 221, 255, 256, 262, 265, 270, 273, 343` (OJS) + `225, 298, 351, 1077, 1514, 1597, 1598, 1600` (revistas por nombre). **Caveat:** estar en Dialnet/OJS/revista no garantiza licencia libre; riesgo bajo por ser académico con atribución (el asistente cita por título).
+   - Informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/OCDE/BID/OIT/USAID/GIZ/UNODC/OIJ/OEA/SICA/FMI): `285, 509, 739, 745, 1207, 1212, 1220, 1263, 1273, 1274, 1388, 1389, 1390, 1401, 1423, 1430, 1432, 1517, 1529, 1530, 1571, 1585, 1586, 1587, 1715, 1724, 1731`. **Caveat:** reproducción con atribución, a veces solo no comercial. Excluido `1152` (posible consultoría, revisar propio vs cliente).
+   - Dominio público por antigüedad (pre-1930 + fuentes coloniales): `1227, 1442, 1473, 1474, 1261, 1267`. **Caveat:** cuidar ediciones/traducciones modernas.
+   - Total corpus permitido: ~144 documentos.
+   - **Aún NO en la lista blanca** (pendiente de revisar por item): artículos académicos con nombre autor-año (probable acceso abierto, pero podría colarse un capítulo de libro); documentos de consultoría/ONG §5 (decidir propio vs cliente).
 2. **Borrado de la base (tú, en consola D1):** ver `docs/plan-borrado-corpus.md`
    (pendiente de generar) con el SQL para borrar §4 y §5 de `documentos` +
    `documentos_fts`, y el `deleteByIds` de Vectorize.

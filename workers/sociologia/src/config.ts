@@ -90,12 +90,35 @@ export const CORPUS_ALLOWLIST_IDS: number[] = [
   494, 495, 496, 497, 498, 499, 500, 501, 503, 504, 505, 506, 507, 508,
   1315, 1316, 1317, 1318,
   214, 221, 255, 256, 262, 265, 270, 273, 343,
+  // Otras revistas de acceso abierto identificadas por nombre (RETOS, OBETS,
+  // Ágora, NHESS/EGU, Redipe, La Universidad UES, Relaciones Internacionales).
+  225, 298, 351, 1077, 1514, 1597, 1598, 1600,
+
+  // — Informes de organismos internacionales (sesión 41, decisión del usuario).
+  //   CEPAL, PNUD/UNDP, UNICEF, UNESCO/OEI, OCDE, BID, OIT, OIM, USAID, GIZ,
+  //   UNODC, OIJ/CAF, OEA, SICA, FMI. Riesgo BAJO-MEDIO: casi todos permiten
+  //   reproducción CON ATRIBUCIÓN, a veces solo uso no comercial; el asistente
+  //   cita por título (uso académico/educativo). Excluido el id 1152
+  //   ("Propuesta PNUD") por ser posible doc de consultoría (revisar si es
+  //   propio o de cliente antes de sumarlo).
+  285, 509, 739, 745, 1207, 1212, 1220, 1263, 1273, 1274, 1388, 1389, 1390,
+  1401, 1423, 1430, 1432, 1517, 1529, 1530, 1571, 1585, 1586, 1587, 1715,
+  1724, 1731,
+
+  // — Dominio público por antigüedad (publicaciones pre-1930 y fuentes
+  //   primarias coloniales). El texto original es de dominio público; cuidar
+  //   que la edición/traducción concreta no añada material moderno con derechos.
+  1227, // Anales de la Comisión Nacional de Educación (1919)
+  1442, // Juventud, Tomo VI No 6 (1895)
+  1473, 1474, // La Universidad, Serie V (1895)
+  1261, // Brevísima relación de la destrucción de las Indias (Las Casas, 1552)
+  1267, // Cartas de relación de Pedro de Alvarado (s. XVI)
 
   // Pendiente de revisar por item antes de sumar (ver
-  // docs/inventario-corpus-derechos.md §6): otros artículos de revista de
-  // acceso abierto sin patrón OJS/Dialnet en el nombre (por nombre de revista),
-  // informes de organismos (CEPAL/PNUD/UNICEF/UNESCO/BID) y dominio público por
-  // antigüedad (revisar que no sean traducciones modernas).
+  // docs/inventario-corpus-derechos.md §6): artículos académicos con nombre
+  // autor-año (probable acceso abierto, pero podría colarse algún capítulo de
+  // libro — revisar uno por uno); documentos de consultoría/ONG (§5, decidir
+  // propio vs cliente).
 ];
 
 // Cláusula SQL reutilizable que restringe una consulta sobre `documentos` al
