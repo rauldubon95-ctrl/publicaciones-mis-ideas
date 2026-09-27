@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
 
+  if (typeof resumen !== "string" || resumen.length > 600) {
+    return NextResponse.json({ error: "El resumen no debe superar 600 caracteres" }, { status: 400 });
+  }
+
   const finalSlug = toSlug(slug || titulo);
 
   const existente = await prisma.publicacion.findUnique({ where: { slug: finalSlug } });

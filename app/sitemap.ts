@@ -60,6 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const paginasEstaticas: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: fechaSitio, changeFrequency: "daily", priority: 1 },
+    { url: `${BASE_URL}/sobre-mi`, lastModified: fechaSitio, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/publicaciones`, lastModified: fechaPub, changeFrequency: "daily", priority: 0.9 },
     { url: `${BASE_URL}/libros`, lastModified: fechaLib, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/recursos`, lastModified: fechaRec, changeFrequency: "weekly", priority: 0.7 },

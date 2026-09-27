@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const TIPOS_VALIDOS = ["articulo", "conferencia", "aviso"];
+const TIPOS_VALIDOS = ["articulo", "conferencia", "destacado"];
 
 // GET: lista TODAS las novedades (activas e inactivas) para el panel admin.
 export async function GET() {

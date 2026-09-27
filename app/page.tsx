@@ -4,6 +4,7 @@ import PublicacionCard from "@/components/PublicacionCard";
 import Paginacion from "@/components/Paginacion";
 import SubscriptionForm from "@/components/SubscriptionForm";
 import NovedadesSidebar from "@/components/NovedadesSidebar";
+import AutorDestacado from "@/components/AutorDestacado";
 import HeroIlustracion from "@/components/HeroIlustracion";
 import type { Metadata } from "next";
 import { canonicalWithPage } from "@/lib/seo";
@@ -135,13 +136,13 @@ export default async function HomePage({
       {/* Contenedor principal con novedades laterales opcional              */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
-        {novedades.length > 0 && (
-          <aside className="lg:hidden mb-10 border border-zinc-200 rounded-xl p-4 bg-white/60">
-            <NovedadesSidebar novedades={novedades} />
-          </aside>
-        )}
+        {/* Enganche del autor + novedades — arriba en móvil */}
+        <aside className="lg:hidden mb-10 space-y-6">
+          <AutorDestacado />
+          {novedades.length > 0 && <NovedadesSidebar novedades={novedades} />}
+        </aside>
 
-        <div className={novedades.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-12" : ""}>
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-12">
           <div className="min-w-0">
             {/* ─────────────────────────────────────────────────────────── */}
             {/* Categorías — chips horizontales                              */}
@@ -309,11 +310,12 @@ export default async function HomePage({
             </section>
           </div>
 
-          {novedades.length > 0 && (
-            <aside className="hidden lg:block">
-              <NovedadesSidebar novedades={novedades} />
-            </aside>
-          )}
+          <aside className="hidden lg:block">
+            <div className="lg:sticky lg:top-24 space-y-8">
+              <AutorDestacado />
+              {novedades.length > 0 && <NovedadesSidebar novedades={novedades} />}
+            </div>
+          </aside>
         </div>
       </div>
     </>

@@ -15,9 +15,9 @@ interface Novedad {
 }
 
 const TIPOS = [
-  { value: "articulo", label: "Artículo externo" },
+  { value: "articulo", label: "Artículo" },
   { value: "conferencia", label: "Conferencia" },
-  { value: "aviso", label: "Aviso" },
+  { value: "destacado", label: "Destacado" },
 ];
 
 const VACIA = { titulo: "", textoCorto: "", url: "", tipo: "articulo", activo: true, orden: 0, expiraAt: "" };
@@ -124,7 +124,7 @@ export default function NovedadesAdminPage() {
           onChange={(e) => setForm({ ...form, titulo: e.target.value })} maxLength={200} required />
         <input className={inputCls} placeholder="Texto corto (opcional)" value={form.textoCorto}
           onChange={(e) => setForm({ ...form, textoCorto: e.target.value })} maxLength={200} />
-        <input className={inputCls} placeholder="https://… (destino externo)" value={form.url}
+        <input className={inputCls} placeholder="/sobre-mi (interno) o https://… (externo)" value={form.url}
           onChange={(e) => setForm({ ...form, url: e.target.value })} maxLength={500} required />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <select className={inputCls} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>

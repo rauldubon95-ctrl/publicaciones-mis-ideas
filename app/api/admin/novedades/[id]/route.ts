@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const TIPOS_VALIDOS = ["articulo", "conferencia", "aviso"];
+const TIPOS_VALIDOS = ["articulo", "conferencia", "destacado"];
 
 // PUT: actualiza una novedad.
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
