@@ -6,6 +6,7 @@ import SelectorMoneda from "./SelectorMoneda";
 
 const nav = [
   { href: "/", label: "Inicio" },
+  { href: "/sobre-mi", label: "Sobre mí" },
   { href: "/publicaciones", label: "Publicaciones" },
   { href: "/libros", label: "Libros" },
   { href: "/recursos", label: "Recursos" },

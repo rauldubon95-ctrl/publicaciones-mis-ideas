@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (
     typeof titulo !== "string" || titulo.trim().length === 0 || titulo.length > 200 ||
     typeof slug !== "string" || slug.trim().length === 0 || slug.length > 200 ||
-    typeof resumen !== "string" || resumen.trim().length === 0 || resumen.length > 500 ||
+    typeof resumen !== "string" || resumen.trim().length === 0 || resumen.length > 600 ||
     typeof contenido !== "string" || contenido.trim().length === 0 || contenido.length > 100000
   ) {
     return NextResponse.json({ error: "Campos inválidos o demasiado largos" }, { status: 400 });

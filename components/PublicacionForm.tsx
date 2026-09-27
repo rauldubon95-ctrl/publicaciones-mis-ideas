@@ -215,11 +215,12 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
             value={resumen}
             onChange={(e) => setResumen(e.target.value)}
             required
-            rows={2}
-            maxLength={300}
+            rows={4}
+            maxLength={600}
             className="input resize-none"
-            placeholder="Breve descripción visible en listados (máx. 300 caracteres)"
+            placeholder="Descripción visible en listados y como meta descripción para buscadores (máx. 600 caracteres)"
           />
+          <p className="text-xs text-zinc-400 mt-1 text-right">{resumen.length}/600</p>
         </div>
 
         <div className="sm:col-span-2">

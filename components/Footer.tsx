@@ -10,6 +10,7 @@ const NAVEGACION = [
 ];
 
 const SECUNDARIO = [
+  { href: "/sobre-mi", label: "Sobre mí" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/servicios", label: "Consultoría" },
   { href: "/donar", label: "Apoyar" },

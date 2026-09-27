@@ -518,7 +518,7 @@ model Novedad {
   titulo     String
   textoCorto String?   // descripción breve opcional
   url        String    // destino externo (redirección)
-  tipo       String    @default("articulo") // articulo | conferencia | aviso
+  tipo       String    @default("articulo") // articulo | conferencia | destacado
   activo     Boolean   @default(true)
   orden      Int       @default(0)
   expiraAt   DateTime? // null = no caduca; si pasa, deja de mostrarse
