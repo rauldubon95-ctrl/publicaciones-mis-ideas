@@ -157,10 +157,6 @@ const EXPERIENCIA = [
 
 const FORMACION = [
   {
-    titulo: "MBA en Gestión Óptima de Proyectos (en curso)",
-    detalle: "Beca GADEX — ESCO, Agencia de El Salvador para la Cooperación Internacional.",
-  },
-  {
     titulo: "Licenciatura en Sociología — Graduado Cum Honorífico (2021)",
     detalle: "Universidad de El Salvador (UES). Metodología cuali y cuantitativa, análisis estadístico y sociología de la educación.",
   },
@@ -241,8 +237,7 @@ export default function SobreMiPage() {
           Europea, organizaciones del Sistema ONU y organismos de cooperación bilateral, incluyendo
           el diseño de líneas de base, caracterizaciones territoriales, sistemas de M&amp;E e
           instrumentos de recolección cuali-cuantitativa. Combino una sólida formación en ciencias
-          sociales con especialización en gestión de proyectos y certificaciones en protección
-          integral de la niñez y la Agenda 2030.
+          sociales con certificaciones en protección integral de la niñez y la Agenda 2030.
         </p>
       </section>
 
