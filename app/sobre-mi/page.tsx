@@ -27,7 +27,6 @@ const ESPECIALIDADES = [
   "Monitoreo y evaluación (M&E)",
   "Líneas de base y caracterizaciones",
   "Protección de niñez y adolescencia",
-  "Igualdad de género",
   "Seguridad alimentaria (marco CARI)",
   "Análisis de datos (SPSS, R, Python, ATLAS.ti)",
   "Power BI · Looker Studio · KoboToolbox",
@@ -64,6 +63,13 @@ const EXPERIENCIA = [
       "Diseño e impartición de un plan de formación de 40 horas en monitoreo, evaluación, rendición de cuentas y aprendizaje para equipos de formación juvenil.",
   },
   {
+    periodo: "Abr. – Jun. 2026",
+    rol: "Consultor — Levantamiento y sistematización de información cualitativa",
+    org: "Servicio Social Pasionista (SSPAS) — Proyecto “Construyendo Paz” (FAD Juventud / Generalitat Valenciana)",
+    detalle:
+      "Investigación cualitativa sobre políticas de prevención de la violencia en El Salvador: trabajo de campo en territorios del interior, codificación de entrevistas y grupos focales e informe de hallazgos clave.",
+  },
+  {
     periodo: "Nov. 2025 – Abr. 2026",
     rol: "Consultor — Sistema de M&E y Línea de Base",
     org: "Aldeas Infantiles SOS El Salvador — Proyecto financiado por la Unión Europea",
@@ -86,6 +92,13 @@ const EXPERIENCIA = [
   },
   {
     periodo: "2025",
+    rol: "Técnico en Monitoreo y Seguimiento Pedagógico",
+    org: "Universidad Don Bosco — Consultoría modalidades flexibles",
+    detalle:
+      "Validación del sistema de monitoreo de cinco modalidades flexibles de educación mediante observación en centros escolares y entrevistas, y construcción de un modelo contextualizado de seguimiento pedagógico.",
+  },
+  {
+    periodo: "Jun. – Dic. 2025",
     rol: "Consultor en M&E — Proyecto FORMA-TE",
     org: "CEMYPE, Universidad Evangélica de El Salvador",
     detalle:
@@ -99,11 +112,46 @@ const EXPERIENCIA = [
       "Coordinación de investigaciones de impacto social a escala nacional con niñez y adolescencia, y diseño de metodología de monitoreo de ODS con elaboración de artículos indexados.",
   },
   {
+    periodo: "2024",
+    rol: "Sistematizador de investigación histórica",
+    org: "Universidad Evangélica de El Salvador",
+    detalle:
+      "Sistematización y codificación en ATLAS.ti para el estudio “Incidencia de la Subcuenca del Río Sucio en la configuración sociohistórica de Quezaltepeque, 1524–1950”.",
+  },
+  {
+    periodo: "2024",
+    rol: "Implementación de proyecto socio-deportivo",
+    org: "Asociación Deporte Sin Fronteras — Embajada de Irlanda",
+    detalle:
+      "Coordinación del proyecto Olas de Oportunidades (formación laboral de jóvenes en salvamento acuático) y gestión del equipo de campo.",
+  },
+  {
+    periodo: "2023 – 2024",
+    rol: "Co-investigador — Políticas deportivas universitarias",
+    org: "Universidad Evangélica de El Salvador / ANADES",
+    detalle:
+      "Estudio cualitativo sobre modelos de implementación de políticas deportivas en estudiantes de educación superior: entrevistas, cuestionarios, grupos focales y análisis temático.",
+  },
+  {
     periodo: "2023 – 2024",
     rol: "Co-investigador — Estudio medioambiental",
     org: "OXFAM El Salvador",
     detalle:
       "Sistematización de experiencias de personas defensoras ambientales, con enfoque de derechos y sostenibilidad.",
+  },
+  {
+    periodo: "2023",
+    rol: "Técnico de campo — Consultorías sociales",
+    org: "Aldeas Infantiles SOS El Salvador",
+    detalle:
+      "Análisis situacional del impacto del COVID-19 en jóvenes de Sonsonate, Acajutla, San Miguel y Conchagua, con validación de datos y herramientas cualitativas de campo.",
+  },
+  {
+    periodo: "2020 – 2021",
+    rol: "Implementación de proyecto de juventudes",
+    org: "Instituto Holandés para la Democracia Multipartidaria (NIMD)",
+    detalle:
+      "Articulación de espacios para juventudes que promueven la participación democrática y redes juveniles a nivel comunitario.",
   },
 ];
 
@@ -113,15 +161,19 @@ const FORMACION = [
     detalle: "Beca GADEX — ESCO, Agencia de El Salvador para la Cooperación Internacional.",
   },
   {
-    titulo: "Licenciatura en Sociología — Egresado Cum Honorífico (2021)",
+    titulo: "Licenciatura en Sociología — Graduado Cum Honorífico (2021)",
     detalle: "Universidad de El Salvador (UES). Metodología cuali y cuantitativa, análisis estadístico y sociología de la educación.",
   },
 ];
 
 const PUBLICACIONES = [
+  "Quintanilla Magaña, A., Dubón, J.R., Flores de Pérez, K. y Juárez, J.O. (2026). Reconstrucción histórica del deporte como extensión universitaria en El Salvador (f. s. XIX–2010). Ciencia, Cultura y Sociedad, 12(1), 35–58. https://doi.org/10.69789/ccs.v12i1.757",
+  "Dubón, J.R. (2026). Abordaje metodológico. Incidencia de la subcuenca del río Sucio en la configuración sociohistórica de Quezaltepeque, 1524–1950. Ciencia, Cultura y Sociedad, 12(1), 86–113. https://doi.org/10.69789/ccs.v12i1.850",
+  "Juárez, J.O. y Dubón, J.R. (2025). Dirección estratégica y un modelo de gobernanza para el desarrollo comunitario a través del deporte. Revista Centroamericana de Administración Pública, 88, 172–182. https://doi.org/10.35485/rcap88_9",
   "Dubón, J.R. et al. (2024). Economía invisible de mujeres y su contribución en el deporte infantil. Revista FairPlay, Universitat Pompeu Fabra, Barcelona.",
   "Dubón, J.R. (2023). Evaluación del impacto de los CAMPUS socio-deportivos. INDES, El Salvador.",
-  "Co-autoría en la Revista Minerva (UES) y en el estudio “Perspectivas en los modelos de implementación de políticas deportivas” (UEES / ANADES).",
+  "Co-autor del estudio “Perspectivas en los modelos de implementación de políticas deportivas” (UEES / ANADES).",
+  "Ponente en el congreso “Aprendiendo Juntos” (SSPAS, 2025): hallazgos sobre condiciones socioeducativas en centros escolares de Mejicanos.",
 ];
 
 export default function SobreMiPage() {
@@ -179,7 +231,7 @@ export default function SobreMiPage() {
       {/* Perfil profesional */}
       <section className="mb-14">
         <p className="text-zinc-700 text-base leading-relaxed">
-          Soy sociólogo por la Universidad de El Salvador (egresado <em>Cum Honorífico</em>) con
+          Soy sociólogo por la Universidad de El Salvador (graduado <em>Cum Honorífico</em>) con
           más de siete años de experiencia acumulada en investigación social aplicada, monitoreo y
           evaluación de programas y trabajo directo con niñez, adolescencia y juventudes en
           contextos educativos y comunitarios.
@@ -190,7 +242,7 @@ export default function SobreMiPage() {
           el diseño de líneas de base, caracterizaciones territoriales, sistemas de M&amp;E e
           instrumentos de recolección cuali-cuantitativa. Combino una sólida formación en ciencias
           sociales con especialización en gestión de proyectos y certificaciones en protección
-          integral de la niñez, igualdad de género y la Agenda 2030.
+          integral de la niñez y la Agenda 2030.
         </p>
       </section>
 
@@ -233,9 +285,7 @@ export default function SobreMiPage() {
           ))}
         </div>
         <p className="text-sm text-zinc-400 mt-6">
-          Y otras consultorías en investigación social, M&amp;E y protección de la niñez con
-          instituciones como la Universidad Don Bosco, NIMD, Aldeas Infantiles SOS y la Embajada de
-          Irlanda. Cartas de referencia disponibles a solicitud.
+          Cartas de referencia disponibles a solicitud.
         </p>
       </section>
 
