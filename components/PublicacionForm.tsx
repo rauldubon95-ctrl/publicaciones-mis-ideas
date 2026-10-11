@@ -49,6 +49,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
   const [notificando, setNotificando] = useState(false);
   const [resultadoNotif, setResultadoNotif] = useState<string | null>(null);
   const [subiendoWord, setSubiendoWord] = useState(false);
+  const [avisosWord, setAvisosWord] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleWordUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -56,6 +57,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
     if (!file) return;
     setSubiendoWord(true);
     setErrorMsg("");
+    setAvisosWord([]);
     try {
       const form = new FormData();
       form.append("archivo", file);
@@ -66,6 +68,7 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
       }
       const data = await res.json();
       setContenido(data.contenido);
+      setAvisosWord(Array.isArray(data.avisos) ? data.avisos : []);
       if (!esEdicion && !titulo) {
         setTitulo(data.titulo);
         setSlug(toSlug(data.titulo));
@@ -258,6 +261,13 @@ export default function PublicacionForm({ categorias, publicacion }: Props) {
               </button>
             </div>
           </div>
+          {avisosWord.length > 0 && (
+            <ul className="mb-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 space-y-0.5">
+              {avisosWord.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          )}
           <textarea
             value={contenido}
             onChange={(e) => setContenido(e.target.value)}

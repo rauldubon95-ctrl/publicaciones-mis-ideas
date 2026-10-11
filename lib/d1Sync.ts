@@ -3,6 +3,7 @@
 import { createHmac } from "crypto";
 import { d1SyncSecret } from "@/lib/secrets";
 import { fetchConTimeout } from "@/lib/timeout";
+import { quitarImagenesMarkdown } from "@/lib/markdownSeguro";
 
 const WORKER_URL = (() => {
   const url = process.env.WORKER_URL;
@@ -37,7 +38,7 @@ export async function syncPublicacionToD1(
     action,
     slug: payload.slug,
     titulo: payload.titulo,
-    contenido: payload.contenido,
+    contenido: quitarImagenesMarkdown(payload.contenido),
     etiquetas: payload.etiquetas?.join(" "),
     categoria: payload.categoria,
     fuente,

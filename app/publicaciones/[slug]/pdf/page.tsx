@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { urlTransformArticulo } from "@/lib/markdownSeguro";
 import type { Metadata } from "next";
 import PrintButton from "./PrintButton";
 
@@ -62,7 +63,7 @@ export default async function PdfPage({ params }: Props) {
 
         {/* Cuerpo del artículo */}
         <main className="pdf-body prose-pdf">
-          <ReactMarkdown>{publicacion.contenido}</ReactMarkdown>
+          <ReactMarkdown urlTransform={urlTransformArticulo}>{publicacion.contenido}</ReactMarkdown>
         </main>
 
         {/* Pie de página */}

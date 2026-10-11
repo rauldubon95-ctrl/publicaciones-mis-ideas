@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatFecha } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { urlTransformArticulo } from "@/lib/markdownSeguro";
 import ReaccionButtons from "@/components/ReaccionButtons";
 import TrackView from "@/components/TrackView";
 import TarjetaAutor from "@/components/TarjetaAutor";
@@ -264,7 +265,13 @@ export default async function PublicacionPage({ params, searchParams }: Props) {
       <div className="prose prose-zinc prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700 max-w-none mb-12">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
+          urlTransform={urlTransformArticulo}
           components={{
+            img: ({ src, alt }) =>
+              src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={typeof src === "string" ? src : undefined} alt={alt ?? ""} loading="lazy" className="mx-auto my-6 h-auto max-w-full rounded border border-zinc-200" />
+              ) : null,
             table: ({ ...props }) => (
               <div className="overflow-x-auto my-6">
                 <table className="w-full text-sm border-collapse" {...props} />
