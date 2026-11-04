@@ -59,23 +59,6 @@ export async function descargarDesdeBucket(
 export const BUCKET_LIBROS = "libros";
 export const BUCKET_DATOS = "datos";
 
-export async function subirArchivoLibro(
-  buffer: Buffer,
-  nombreArchivo: string,
-  tipo: string,
-  carpeta: "pdfs" | "portadas"
-): Promise<string> {
-  const sb = getSupabaseAdmin();
-  await sb.storage.createBucket(BUCKET_LIBROS, { public: true }).catch(() => {});
-  const ruta = `${carpeta}/${Date.now()}-${nombreArchivo.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-  const { error } = await sb.storage
-    .from(BUCKET_LIBROS)
-    .upload(ruta, buffer, { contentType: tipo, upsert: false });
-  if (error) throw new Error(`Error al subir archivo: ${error.message}`);
-  const { data } = sb.storage.from(BUCKET_LIBROS).getPublicUrl(ruta);
-  return data.publicUrl;
-}
-
 export async function eliminarArchivoLibro(url: string): Promise<void> {
   const sb = getSupabaseAdmin();
   const base = sb.storage.from(BUCKET_LIBROS).getPublicUrl("").data.publicUrl;

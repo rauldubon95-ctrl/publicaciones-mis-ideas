@@ -1,58 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthorized, unauthorizedResponse } from "@/lib/adminAuth";
-import { subirArchivoLibro } from "@/lib/supabase-admin";
+import { getSupabaseAdmin, BUCKET_LIBROS } from "@/lib/supabase-admin";
+import { LIMITES_LIBRO, TIPOS_PORTADA, type TipoArchivoLibro } from "@/lib/archivosLibro";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const MAX_PDF = 50 * 1024 * 1024; // 50 MB
-const MAX_IMG =  5 * 1024 * 1024; //  5 MB
-
+// Paso 1 de la subida de archivos de libro (PDF o portada).
+//
+// Antes el archivo viajaba entero dentro de esta petición (multipart). Vercel
+// corta el cuerpo de una función a 4,5 MB y responde con texto plano
+// "Request Entity Too Large" → el formulario fallaba al hacer res.json()
+// ("Unexpected token 'R'..."). Ahora esta ruta solo recibe metadatos (JSON
+// pequeño) y devuelve una URL firmada para que el navegador suba el archivo
+// DIRECTO a Supabase Storage, igual que los cómics. El archivo nunca pasa por
+// Vercel. La verificación del contenido real (magic bytes) se hace después en
+// /api/admin/libros/upload/confirmar.
 export async function POST(req: NextRequest) {
   if (!(await isAdminAuthorized())) return unauthorizedResponse();
 
-  const form = await req.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
+  const body = (await req.json().catch(() => null)) as
+    | { tipo?: string; nombre?: string; contentType?: string; tamano?: number }
+    | null;
+  if (!body) return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
 
-  const tipo    = form.get("tipo") as string | null;   // "pdf" | "portada"
-  const archivo = form.get("archivo") as File | null;
-
-  if (!tipo || !archivo)
-    return NextResponse.json({ error: "Faltan campos: tipo, archivo" }, { status: 400 });
-
-  if (tipo === "pdf") {
-    if (!archivo.type.includes("pdf"))
-      return NextResponse.json({ error: "El archivo debe ser un PDF" }, { status: 422 });
-    if (archivo.size > MAX_PDF)
-      return NextResponse.json({ error: "El PDF no puede superar 50 MB" }, { status: 413 });
-  } else if (tipo === "portada") {
-    if (!archivo.type.startsWith("image/"))
-      return NextResponse.json({ error: "La portada debe ser una imagen (JPG, PNG, WebP)" }, { status: 422 });
-    if (archivo.size > MAX_IMG)
-      return NextResponse.json({ error: "La imagen no puede superar 5 MB" }, { status: 413 });
-  } else {
+  const { tipo, nombre, contentType, tamano } = body;
+  if (!tipo || !nombre || !contentType || typeof tamano !== "number") {
+    return NextResponse.json({ error: "Faltan campos: tipo, nombre, contentType, tamano" }, { status: 400 });
+  }
+  if (tipo !== "pdf" && tipo !== "portada") {
     return NextResponse.json({ error: "tipo inválido — usa 'pdf' o 'portada'" }, { status: 400 });
   }
+  const t = tipo as TipoArchivoLibro;
 
-  const buffer  = Buffer.from(await archivo.arrayBuffer());
-
-  // M3: validar magic bytes del PDF — el MIME que declara el navegador es
-  // manipulable por el cliente. Los primeros 4 bytes del PDF deben ser %PDF.
-  if (tipo === "pdf") {
-    if (buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
-      return NextResponse.json({ error: "El archivo no es un PDF válido." }, { status: 422 });
-    }
+  if (t === "pdf" && contentType !== "application/pdf") {
+    return NextResponse.json({ error: "El archivo debe ser un PDF" }, { status: 422 });
+  }
+  if (t === "portada" && !TIPOS_PORTADA.includes(contentType)) {
+    return NextResponse.json({ error: "La portada debe ser una imagen (JPG, PNG, WebP)" }, { status: 422 });
+  }
+  if (tamano <= 0 || tamano > LIMITES_LIBRO[t].bytes) {
+    return NextResponse.json(
+      { error: `El archivo no puede superar ${LIMITES_LIBRO[t].etiqueta}` },
+      { status: 413 },
+    );
   }
 
-  // M3: sanitizar nombre de archivo — eliminamos caracteres fuera del
-  // rango alfanumérico seguro antes de almacenarlo en Supabase Storage.
-  const nombreSeguro = archivo.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-  const carpeta = tipo === "pdf" ? "pdfs" : "portadas";
+  const sb = getSupabaseAdmin();
+  const carpeta = t === "pdf" ? "pdfs" : "portadas";
+  const nombreSeguro = nombre.replace(/[^a-zA-Z0-9.\-_]/g, "_").slice(-120);
+  const ruta = `${carpeta}/${Date.now()}-${nombreSeguro}`;
 
-  try {
-    const url = await subirArchivoLibro(buffer, nombreSeguro, archivo.type, carpeta);
-    return NextResponse.json({ url });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  const { data, error } = await sb.storage.from(BUCKET_LIBROS).createSignedUploadUrl(ruta);
+  if (error || !data) {
+    return NextResponse.json(
+      { error: "No se pudo crear la URL de subida: " + (error?.message ?? "error desconocido") },
+      { status: 500 },
+    );
   }
+
+  return NextResponse.json({ signedUrl: data.signedUrl, ruta });
 }
