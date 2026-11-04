@@ -18,6 +18,19 @@ interface Props {
   };
 }
 
+// Lee la respuesta como JSON sin reventar si el servidor devolvió texto plano
+// (p. ej. un error de la plataforma) y lanza un error legible si no es 2xx.
+async function leerJson<T>(res: Response): Promise<T & { error?: string }> {
+  const texto = await res.text();
+  let data: (T & { error?: string }) | null = null;
+  try { data = JSON.parse(texto); } catch { /* respuesta no JSON */ }
+  if (!res.ok) {
+    throw new Error(data?.error ?? `Error del servidor (${res.status}): ${texto.slice(0, 120)}`);
+  }
+  if (!data) throw new Error("Respuesta inesperada del servidor");
+  return data;
+}
+
 export default function LibroForm({ libro }: Props) {
   const router = useRouter();
   const esEdicion = !!libro;
@@ -49,14 +62,47 @@ export default function LibroForm({ libro }: Props) {
   ) {
     setSub(true);
     setError("");
-    const form = new FormData();
-    form.append("tipo", tipo);
-    form.append("archivo", file);
+    // Algunos sistemas no informan el MIME del PDF; el servidor verifica igual
+    // la firma binaria real (%PDF) en el paso de confirmación.
+    const contentType =
+      tipo === "pdf" && file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : file.type;
     try {
-      const res = await fetch("/api/admin/libros/upload", { method: "POST", body: form });
-      const data = await res.json() as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Error al subir");
-      onOk(data.url, file.name);
+      // Paso 1: pedir URL firmada (petición pequeña, sin el archivo).
+      // El archivo NO pasa por Vercel: su límite de 4,5 MB por petición era lo
+      // que causaba "Request Entity Too Large" con PDFs grandes.
+      const firma = await leerJson<{ signedUrl?: string; ruta?: string }>(
+        await fetch("/api/admin/libros/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo, nombre: file.name, contentType, tamano: file.size }),
+        }),
+      );
+      if (!firma.signedUrl || !firma.ruta) throw new Error("No se pudo preparar la subida");
+
+      // Paso 2: subir el archivo directo a Supabase Storage desde el navegador.
+      const subida = await fetch(firma.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body: file,
+      });
+      if (!subida.ok) {
+        throw new Error(
+          subida.status === 413
+            ? "El archivo supera el tamaño máximo que acepta el almacenamiento."
+            : `Error al subir el archivo al almacenamiento (${subida.status})`,
+        );
+      }
+
+      // Paso 3: el servidor verifica que el contenido sea válido y da la URL pública.
+      const conf = await leerJson<{ url?: string }>(
+        await fetch("/api/admin/libros/upload/confirmar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo, ruta: firma.ruta }),
+        }),
+      );
+      if (!conf.url) throw new Error("No se pudo confirmar la subida");
+      onOk(conf.url, file.name);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al subir archivo");
     } finally {
@@ -141,7 +187,7 @@ export default function LibroForm({ libro }: Props) {
               Quitar portada
             </button>
           )}
-          <input ref={imgRef} type="file" accept="image/*" className="hidden"
+          <input ref={imgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (!f) return;
