@@ -29,7 +29,7 @@ export default function Paginacion({ paginaActual, totalPaginas, baseUrl }: Prop
 
   return (
     <nav
-      className="flex items-center justify-center gap-1 mt-10"
+      className="flex flex-wrap items-center justify-center gap-1 mt-10"
       aria-label="Paginación de artículos"
     >
       {paginaActual > 1 ? (
