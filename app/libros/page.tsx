@@ -33,7 +33,7 @@ export default async function LibrosPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <header className="mb-12 lg:mb-14">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-3">
+        <p className="text-sm font-medium text-amber-800 mb-3">
           Biblioteca
         </p>
         <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 tracking-tight mb-4">

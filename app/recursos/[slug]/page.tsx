@@ -96,7 +96,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
       <JsonLd data={[recursoJsonLd, breadcrumb]} />
       <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
-      <nav className="text-xs text-zinc-500 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-sm text-zinc-600 mb-3 flex flex-wrap items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/recursos" className="hover:text-zinc-600 transition-colors">Recursos</Link>

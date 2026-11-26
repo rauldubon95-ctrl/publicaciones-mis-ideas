@@ -38,7 +38,7 @@ export default async function ServiciosPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
       {/* Hero */}
       <section className="mb-16 border-b border-zinc-200 pb-12">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">
+        <p className="text-sm font-medium text-amber-800 mb-3">
           Consultoría profesional
         </p>
         <h1 className="text-4xl font-serif font-semibold text-zinc-900 mb-4 leading-tight">

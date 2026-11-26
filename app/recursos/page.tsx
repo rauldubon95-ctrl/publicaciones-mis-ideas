@@ -33,7 +33,7 @@ export default async function RecursosPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <header className="mb-12 lg:mb-14">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-3">
+        <p className="text-sm font-medium text-amber-800 mb-3">
           Insumos metodológicos
         </p>
         <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 tracking-tight mb-4">
@@ -49,59 +49,27 @@ export default async function RecursosPage() {
           <p className="text-sm">No hay recursos publicados aún.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Tarjetas tipográficas: un solo enlace por tarjeta, sin portadas de relleno. */}
           {recursos.map((r) => (
-            <article
-              key={r.id}
-              className="group flex flex-col bg-white border border-zinc-200 rounded-xl overflow-hidden hover:border-zinc-300 hover:shadow-md hover:shadow-zinc-200/40 transition-all"
-            >
-              {/* Portada abstracta: papel tipografiado */}
-              <Link href={`/recursos/${r.slug}`} className="block relative aspect-[16/10] bg-linear-to-br from-stone-50 to-amber-50 border-b border-zinc-100 overflow-hidden">
-                {/* Simulación de páginas apiladas */}
-                <div className="absolute inset-4 bg-white border border-zinc-200 rounded-sm shadow-sm p-3 flex flex-col gap-1 rotate-[-1deg]">
-                  <div className="h-1 bg-zinc-200 rounded-full w-3/4"></div>
-                  <div className="h-1 bg-zinc-200 rounded-full w-full"></div>
-                  <div className="h-1 bg-zinc-200 rounded-full w-4/5"></div>
-                  <div className="h-1 bg-zinc-200 rounded-full w-2/3"></div>
-                </div>
-                <div className="absolute inset-4 bg-white border border-zinc-200 rounded-sm shadow-sm p-3 flex flex-col gap-1 rotate-[1.5deg]">
-                  <div className="h-1 bg-zinc-300 rounded-full w-3/5"></div>
-                  <div className="h-1 bg-zinc-200 rounded-full w-full"></div>
-                  <div className="h-1 bg-zinc-200 rounded-full w-4/5"></div>
-                </div>
-                {r.esPremium && (
-                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-700 text-white text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3 6 6 1-4.5 4.5 1 6.5L12 17l-5.5 3 1-6.5L3 9l6-1z" />
-                    </svg>
-                    Premium
-                  </span>
-                )}
-              </Link>
-
-              <div className="flex-1 flex flex-col p-5 gap-2">
-                <Link href={`/recursos/${r.slug}`}>
-                  <h2 className="font-serif font-semibold text-zinc-900 text-lg leading-snug group-hover:text-amber-700 transition-colors">
-                    {r.titulo}
-                  </h2>
+            <article key={r.id} className="group relative flex flex-col border-t border-zinc-300 pt-5">
+              {r.esPremium && (
+                <p className="mb-2 text-sm font-medium text-amber-800">Premium</p>
+              )}
+              <h2 className="font-serif text-xl font-semibold leading-snug text-zinc-900 text-balance">
+                <Link
+                  href={`/recursos/${r.slug}`}
+                  className="after:absolute after:inset-0 decoration-1 underline-offset-4 group-hover:underline"
+                >
+                  {r.titulo}
                 </Link>
-                <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3 flex-1">
-                  {r.descripcion}
-                </p>
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-zinc-100">
-                  <time className="text-xs text-zinc-500">{formatFecha(r.creadoAt)}</time>
-                  <div className="flex items-center gap-3">
-                    {r.esPremium && r.precioCentavos != null && r.precioCentavos > 0 && (
-                      <PrecioConConversion centavosUSD={r.precioCentavos} tamano="sm" mostrarNotaReferencial={false} />
-                    )}
-                    <Link
-                      href={`/recursos/${r.slug}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 transition-colors"
-                    >
-                      Consultar <span aria-hidden>→</span>
-                    </Link>
-                  </div>
-                </div>
+              </h2>
+              <p className="mt-2 flex-1 text-zinc-600 leading-relaxed line-clamp-3 text-pretty">{r.descripcion}</p>
+              <div className="mt-4 flex items-center justify-between gap-3 text-sm text-zinc-500">
+                <time dateTime={new Date(r.creadoAt).toISOString()}>{formatFecha(r.creadoAt)}</time>
+                {r.esPremium && r.precioCentavos != null && r.precioCentavos > 0 && (
+                  <PrecioConConversion centavosUSD={r.precioCentavos} tamano="sm" mostrarNotaReferencial={false} />
+                )}
               </div>
             </article>
           ))}
