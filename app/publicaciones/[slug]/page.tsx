@@ -225,6 +225,7 @@ export default async function PublicacionPage({ params, searchParams }: Props) {
   ]);
 
   const encabezados = crearEncabezados();
+  let numeroTabla = 0; // nombre único por tabla para lectores de pantalla
   const enlaceTexto = "font-medium text-zinc-900 underline decoration-zinc-400 underline-offset-4 hover:decoration-zinc-900";
 
   return (
@@ -361,7 +362,7 @@ export default async function PublicacionPage({ params, searchParams }: Props) {
                 // para que también se recorra con el teclado (axe:
                 // scrollable-region-focusable).
                 table: ({ ...props }) => (
-                  <div className="overflow-x-auto my-6" tabIndex={0} role="region" aria-label="Tabla (se desplaza horizontalmente)">
+                  <div className="overflow-x-auto my-6" tabIndex={0} role="region" aria-label={`Tabla ${++numeroTabla} (se desplaza horizontalmente)`}>
                     <table className="w-full font-sans text-sm border-collapse" {...props} />
                   </div>
                 ),
