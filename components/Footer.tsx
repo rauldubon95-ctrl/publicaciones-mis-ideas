@@ -71,7 +71,7 @@ export default function Footer() {
         {/* Navegación */}
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+            <h2 className="text-sm font-semibold text-white mb-4">
               Navegación
             </h2>
             <ul className="space-y-2">
@@ -88,7 +88,7 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+            <h2 className="text-sm font-semibold text-white mb-4">
               Más
             </h2>
             <ul className="space-y-2">
@@ -108,7 +108,7 @@ export default function Footer() {
 
         {/* Newsletter */}
         <div>
-          <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+          <h2 className="text-sm font-semibold text-white mb-4">
             Suscríbete al boletín
           </h2>
           <p className="text-sm text-zinc-400 leading-relaxed mb-4">

@@ -357,8 +357,11 @@ export default async function PublicacionPage({ params, searchParams }: Props) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={typeof src === "string" ? src : undefined} alt={alt ?? ""} loading="lazy" className="mx-auto my-6 h-auto max-w-full rounded border border-zinc-200" />
                   ) : null,
+                // La tabla puede desplazarse de lado: el contenedor recibe foco
+                // para que también se recorra con el teclado (axe:
+                // scrollable-region-focusable).
                 table: ({ ...props }) => (
-                  <div className="overflow-x-auto my-6">
+                  <div className="overflow-x-auto my-6" tabIndex={0} role="region" aria-label="Tabla (se desplaza horizontalmente)">
                     <table className="w-full font-sans text-sm border-collapse" {...props} />
                   </div>
                 ),

@@ -212,7 +212,7 @@ export default function SobreMiPage() {
 
       {/* Encabezado */}
       <header className="mb-12">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-4">
+        <p className="text-sm font-medium text-amber-800 mb-4">
           Quién soy
         </p>
         <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 leading-[1.05] tracking-tight mb-4">
@@ -270,7 +270,7 @@ export default function SobreMiPage() {
                 className="absolute -left-[27px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-white"
                 aria-hidden
               />
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 mb-1">
+              <p className="text-sm font-medium text-amber-800 mb-1">
                 {exp.periodo}
               </p>
               <p className="font-serif font-semibold text-zinc-900 leading-snug">{exp.rol}</p>
@@ -307,7 +307,7 @@ export default function SobreMiPage() {
               key={libro.titulo}
               className="border border-zinc-200 rounded-xl bg-zinc-50/60 p-5"
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 mb-1">
+              <p className="text-sm font-medium text-amber-800 mb-1">
                 {libro.volumen}
               </p>
               <p className="font-serif font-semibold text-zinc-900 text-lg leading-snug">

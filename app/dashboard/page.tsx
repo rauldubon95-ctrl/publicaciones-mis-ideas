@@ -29,7 +29,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-      <nav className="text-xs text-zinc-500 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-sm text-zinc-600 mb-8 flex flex-wrap items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <span className="text-zinc-600">Dashboard</span>

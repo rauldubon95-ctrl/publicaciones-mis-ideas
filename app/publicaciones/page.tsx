@@ -117,7 +117,7 @@ export default async function PublicacionesPage({
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <header className="mb-10 lg:mb-12">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-3">
+        <p className="text-sm font-medium text-amber-800 mb-3">
           Archivo · escritos e investigación
         </p>
         <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 mb-3 tracking-tight">

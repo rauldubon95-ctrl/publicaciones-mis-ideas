@@ -24,7 +24,7 @@ export default function NovedadesSidebar({ novedades }: { novedades: NovedadItem
 
   return (
     <div>
-      <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+      <h2 className="text-sm font-medium text-zinc-700 mb-4">
         Novedades
       </h2>
       <ul className="space-y-4">
@@ -37,7 +37,7 @@ export default function NovedadesSidebar({ novedades }: { novedades: NovedadItem
                 {...(esInterno ? {} : { target: "_blank", rel: "noopener nofollow" })}
                 className="group block"
               >
-                <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-brand-600 mb-1">
+                <span className="inline-block text-xs font-medium text-brand-700 mb-1">
                   {ETIQUETA[n.tipo] ?? "Novedad"}
                 </span>
                 <p className="text-sm text-zinc-700 leading-snug group-hover:text-brand-700 transition-colors">

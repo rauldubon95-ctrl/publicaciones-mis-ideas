@@ -91,7 +91,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <JsonLd data={breadcrumb} />
-      <nav className="text-xs text-zinc-500 mb-6 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-sm text-zinc-600 mb-6 flex flex-wrap items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/publicaciones" className="hover:text-zinc-600 transition-colors">Publicaciones</Link>
@@ -104,7 +104,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
           <span className="text-4xl leading-none mt-1">{categoria.icono}</span>
         )}
         <div className="flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-2">
+          <p className="text-sm font-medium text-amber-800 mb-2">
             Categoría
           </p>
           <h1 className="text-4xl sm:text-5xl font-serif font-semibold text-zinc-900 tracking-tight mb-3">
