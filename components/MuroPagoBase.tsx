@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import PagoSeguroInfo from "./PagoSeguroInfo";
 import PrecioConConversionClient from "./PrecioConConversionClient";
 
@@ -50,6 +50,7 @@ export default function MuroPagoBase({
   const [nombre, setNombre] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  const uid = useId();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -133,36 +134,43 @@ export default function MuroPagoBase({
         />
 
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1">
+          <label htmlFor={`${uid}-email`} className="block text-xs font-medium text-zinc-600 mb-1">
             Correo electrónico
           </label>
           <input
+            id={`${uid}-email`}
+            name="email"
             type="email"
+            autoComplete="email"
+            spellCheck={false}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@correo.com"
             required
             maxLength={200}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-500 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1">
+          <label htmlFor={`${uid}-nombre`} className="block text-xs font-medium text-zinc-600 mb-1">
             Nombre (opcional)
           </label>
           <input
+            id={`${uid}-nombre`}
+            name="nombre"
             type="text"
+            autoComplete="name"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Tu nombre"
             maxLength={100}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-300 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-500 outline-hidden focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white"
           />
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">
+          <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">
             {error}
           </p>
         )}
@@ -174,7 +182,7 @@ export default function MuroPagoBase({
         >
           {cargando ? (
             <>
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-4 h-4 animate-spin motion-reduce:[animation-duration:6s]" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
@@ -185,7 +193,7 @@ export default function MuroPagoBase({
           )}
         </button>
 
-        <p className="text-center text-xs text-zinc-400 pt-2">
+        <p className="text-center text-xs text-zinc-500 pt-2">
           Serás redirigido a PayPal para completar el pago
         </p>
       </form>

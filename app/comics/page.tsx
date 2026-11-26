@@ -54,7 +54,7 @@ export default async function ComicsPage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {comics.map((c) => {
+          {comics.map((c, i) => {
             const primera = c.paginas[0];
             const pdf = primera ? esPdf(primera.imageUrl, primera.caption) : false;
             const tienePortadaImg = primera && !pdf;
@@ -72,6 +72,11 @@ export default async function ComicsPage() {
                     <img
                       src={primera.imageUrl}
                       alt={c.titulo}
+                      // La 1.ª portada suele ser el elemento más grande al abrir
+                      // la página (LCP): prioridad alta. Desde la 4.ª (debajo
+                      // del pliegue) se cargan al acercarse con el scroll.
+                      fetchPriority={i === 0 ? "high" : undefined}
+                      loading={i >= 3 ? "lazy" : undefined}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface Servicio {
   id: string;
@@ -24,8 +24,9 @@ const PRESUPUESTO_OPCIONES = [
 ];
 
 export default function ServiciosConFormulario({ servicios }: Props) {
-  const [modalAbierto, setModalAbierto] = useState(false);
   const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const nombreRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -50,29 +51,45 @@ export default function ServiciosConFormulario({ servicios }: Props) {
       tipoServicio: servicio?.titulo ?? "",
     }));
     setResultado(null);
-    setModalAbierto(true);
+    // <dialog> nativo en modo modal: el navegador vuelve inerte el resto de la
+    // página, encierra el foco, cierra con Esc / gesto "atrás" y devuelve el
+    // foco al botón que lo abrió. Nada de eso hay que programarlo a mano.
+    dialogRef.current?.showModal();
+    nombreRef.current?.focus();
   }
 
-  const cerrarModal = useCallback(() => {
-    setModalAbierto(false);
+  function cerrarModal() {
+    dialogRef.current?.close();
+  }
+
+  // Limpieza al cerrar por cualquier vía (botón, Esc, clic fuera).
+  const alCerrar = useCallback(() => {
     setServicioSeleccionado(null);
     setResultado(null);
     setForm({ nombre: "", correo: "", organizacion: "", tipoServicio: "", descripcion: "", presupuesto: "", website: "" });
   }, []);
 
-  // Cerrar con Escape
+  // Cerrar al hacer clic fuera del panel. `closedby="any"` lo hace solo en
+  // Chrome/Edge/Firefox; Safari aún no lo soporta, así que ahí se emula
+  // comparando la posición del puntero (no event.target, que también es el
+  // <dialog> en su propio padding).
   useEffect(() => {
-    if (!modalAbierto) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") cerrarModal(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [modalAbierto, cerrarModal]);
-
-  // Bloquear scroll del body al abrir el modal
-  useEffect(() => {
-    document.body.style.overflow = modalAbierto ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [modalAbierto]);
+    const dialog = dialogRef.current;
+    if (!dialog || "closedBy" in HTMLDialogElement.prototype) return;
+    const fuera = (e: PointerEvent) => {
+      const r = dialog.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    };
+    let pulsoFuera = false;
+    const down = (e: PointerEvent) => { pulsoFuera = fuera(e); };
+    const up = (e: PointerEvent) => { if (pulsoFuera && fuera(e)) dialog.close(); };
+    dialog.addEventListener("pointerdown", down);
+    dialog.addEventListener("pointerup", up);
+    return () => {
+      dialog.removeEventListener("pointerdown", down);
+      dialog.removeEventListener("pointerup", up);
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -171,42 +188,33 @@ export default function ServiciosConFormulario({ servicios }: Props) {
         </button>
       </div>
 
-      {/* Modal de cotización */}
-      {modalAbierto && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-titulo"
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
-            onClick={cerrarModal}
-            aria-hidden
-          />
-
-          {/* Panel */}
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-zinc-100 px-6 py-4 flex items-start justify-between">
+      {/* Modal de cotización: <dialog> nativo (siempre en el DOM, se abre con showModal). */}
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="modal-titulo"
+        onClose={alCerrar}
+        {...({ closedby: "any" } as Record<string, string>)}
+        className="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] p-0 bg-white rounded-xl shadow-2xl"
+      >
+            <div className="sticky top-0 z-10 bg-white border-b border-zinc-100 px-6 py-4 flex items-start justify-between">
               <div>
-                <h2 id="modal-titulo" className="font-serif font-semibold text-zinc-900">
+                <h1 id="modal-titulo" className="font-serif font-semibold text-zinc-900 text-base">
                   Solicitar cotización
-                </h2>
+                </h1>
                 {servicioSeleccionado && (
-                  <p className="text-xs text-zinc-400 mt-0.5">{servicioSeleccionado.titulo}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{servicioSeleccionado.titulo}</p>
                 )}
               </div>
               <button
                 onClick={cerrarModal}
-                className="text-zinc-400 hover:text-zinc-700 transition-colors ml-4 text-xl leading-none"
+                className="text-zinc-500 hover:text-zinc-800 transition-colors ml-4 text-xl leading-none min-w-6 min-h-6"
                 aria-label="Cerrar formulario"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Honeypot — invisible para humanos */}
               <input
                 type="text"
@@ -225,7 +233,9 @@ export default function ServiciosConFormulario({ servicios }: Props) {
                     Nombre completo <span className="text-red-500">*</span>
                   </label>
                   <input
+                    ref={nombreRef}
                     id="cot-nombre"
+                    name="nombre"
                     type="text"
                     required
                     maxLength={100}
@@ -242,7 +252,9 @@ export default function ServiciosConFormulario({ servicios }: Props) {
                   </label>
                   <input
                     id="cot-correo"
+                    name="correo"
                     type="email"
+                    spellCheck={false}
                     required
                     maxLength={200}
                     value={form.correo}
@@ -300,7 +312,7 @@ export default function ServiciosConFormulario({ servicios }: Props) {
                   className="input resize-none"
                   placeholder="Describe tu proyecto, necesidades y contexto…"
                 />
-                <p className="text-xs text-zinc-400 mt-1 text-right">
+                <p className="text-xs text-zinc-500 mt-1 text-right">
                   {form.descripcion.length}/2000
                 </p>
               </div>
@@ -354,13 +366,11 @@ export default function ServiciosConFormulario({ servicios }: Props) {
                 </button>
               </div>
 
-              <p className="text-xs text-zinc-400 text-center">
+              <p className="text-xs text-zinc-500 text-center">
                 Tu información es confidencial y solo se usará para responder tu consulta.
               </p>
             </form>
-          </div>
-        </div>
-      )}
+      </dialog>
     </>
   );
 }

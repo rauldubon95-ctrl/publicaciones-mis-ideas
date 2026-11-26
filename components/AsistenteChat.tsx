@@ -47,7 +47,8 @@ export default function AsistenteChat() {
 
   useEffect(() => {
     if (abierto) {
-      endRef.current?.scrollIntoView({ behavior: "smooth" });
+      const reducir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      endRef.current?.scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
       inputRef.current?.focus();
     }
   }, [abierto, mensajes]);
@@ -129,19 +130,21 @@ export default function AsistenteChat() {
   const esPremium = !!tokenPremium;
 
   return (
-    <>
+    <aside aria-label="Asistente de IA">
       {/* Botón flotante */}
       <button
         onClick={() => setAbierto((v) => !v)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-zinc-900 text-white shadow-xl flex items-center justify-center hover:bg-zinc-700 transition-colors"
-        aria-label="Abrir asistente de ciencias sociales"
+        aria-label={abierto ? "Cerrar asistente de ciencias sociales" : "Abrir asistente de ciencias sociales"}
+        aria-expanded={abierto}
+        aria-controls="panel-asistente"
       >
         {abierto ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
@@ -150,7 +153,7 @@ export default function AsistenteChat() {
 
       {/* Panel de chat */}
       {abierto && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-1.5rem)] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div id="panel-asistente" className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-1.5rem)] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-zinc-900 text-white px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold shrink-0">
@@ -169,9 +172,10 @@ export default function AsistenteChat() {
               <button
                 onClick={() => setMensajes([])}
                 title="Limpiar conversación"
+                aria-label="Limpiar conversación"
                 className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 ml-1"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
@@ -180,13 +184,17 @@ export default function AsistenteChat() {
           </div>
 
           {/* Mensajes */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80 min-h-[200px]">
+          <div
+            role="log"
+            aria-label="Conversación con el asistente"
+            className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80 min-h-[200px]"
+          >
             {mensajes.length === 0 && (
-              <div className="text-center text-zinc-400 text-xs mt-4 px-4">
-                <p className="mb-2 text-2xl">📚</p>
+              <div className="text-center text-zinc-500 text-xs mt-4 px-4">
+                <p className="mb-2 text-2xl" aria-hidden="true">📚</p>
                 <p>Pregúntame sobre los artículos y publicaciones de Raúl Dubón.</p>
                 {!esPremium && (
-                  <p className="mt-1 text-zinc-300">5 consultas gratuitas por día</p>
+                  <p className="mt-1">5 consultas gratuitas por día</p>
                 )}
               </div>
             )}
@@ -213,7 +221,7 @@ export default function AsistenteChat() {
                   )}
                   {m.fuentes && m.fuentes.length > 0 && (
                     <div className="mt-1.5 border-t border-zinc-200 pt-1.5">
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-zinc-600">
                         Fuentes: {m.fuentes.join(" · ")}
                       </p>
                       {m.confianza && m.confianza !== "alta" && (
@@ -229,10 +237,10 @@ export default function AsistenteChat() {
 
             {cargando && (
               <div className="flex justify-start">
-                <div className="bg-zinc-100 rounded-xl rounded-bl-sm px-4 py-2.5 flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" />
+                <div aria-hidden="true" className="bg-zinc-100 rounded-xl rounded-bl-sm px-4 py-2.5 flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full motion-safe:animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full motion-safe:animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full motion-safe:animate-bounce" />
                 </div>
               </div>
             )}
@@ -253,7 +261,7 @@ export default function AsistenteChat() {
                 rows={1}
                 maxLength={LIMITE_CHARS}
                 disabled={cargando}
-                className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-hidden focus:ring-1 focus:ring-zinc-400 disabled:opacity-50 max-h-24 overflow-y-auto"
+                className="flex-1 resize-none text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-zinc-500 disabled:opacity-50 max-h-24 overflow-y-auto"
                 style={{ minHeight: "38px" }}
               />
               <button
@@ -262,20 +270,20 @@ export default function AsistenteChat() {
                 className="w-9 h-9 shrink-0 bg-zinc-900 text-white rounded-lg flex items-center justify-center hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 aria-label="Enviar"
               >
-                <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               </button>
             </div>
             {pregunta.length > 0 && (
-              <p className={`text-right text-xs pr-1 ${pregunta.length >= LIMITE_CHARS * 0.9 ? "text-red-400" : "text-zinc-300"}`}>
+              <p className={`text-right text-xs pr-1 ${pregunta.length >= LIMITE_CHARS * 0.9 ? "text-red-600" : "text-zinc-500"}`}>
                 {pregunta.length}/{LIMITE_CHARS}
               </p>
             )}
           </div>
         </div>
       )}
-    </>
+    </aside>
   );
 }

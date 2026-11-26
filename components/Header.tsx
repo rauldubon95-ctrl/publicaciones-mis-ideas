@@ -72,6 +72,7 @@ export default function Header() {
               <Link
                 key={href}
                 href={href}
+                aria-current={activo ? "page" : undefined}
                 className={`relative px-3 py-2 text-sm font-medium transition-colors ${
                   activo
                     ? "text-zinc-900"
@@ -91,7 +92,8 @@ export default function Header() {
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Buscador */}
           {buscando ? (
-            <form onSubmit={submitBusqueda} className="hidden sm:flex items-center gap-1">
+            <search className="hidden sm:block">
+            <form onSubmit={submitBusqueda} className="flex items-center gap-1">
               <input
                 ref={buscadorRef}
                 type="search"
@@ -107,18 +109,19 @@ export default function Header() {
                 className="p-2 text-zinc-500 hover:text-zinc-900 transition-colors"
                 aria-label="Buscar"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
             </form>
+            </search>
           ) : (
             <button
               onClick={() => setBuscando(true)}
               className="hidden sm:flex p-2 text-zinc-500 hover:text-zinc-900 transition-colors"
               aria-label="Abrir buscador"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
@@ -143,13 +146,14 @@ export default function Header() {
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}
+            aria-controls="menu-movil"
           >
             {open ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
@@ -159,17 +163,22 @@ export default function Header() {
 
       {/* Menú móvil desplegable */}
       {open && (
-        <nav className="lg:hidden border-t border-zinc-100 bg-white px-4 py-3 flex flex-col gap-1" aria-label="Navegación móvil">
+        <nav
+          id="menu-movil"
+          className="lg:hidden border-t border-zinc-100 bg-white px-4 py-3 flex flex-col gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain"
+          aria-label="Navegación móvil"
+        >
           {nav.map(({ href, label }) => {
             const activo = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`px-3 py-2.5 rounded text-sm font-medium transition-colors ${
+                aria-current={activo ? "page" : undefined}
+                className={`px-3 py-2.5 rounded text-sm font-medium transition-colors border-l-2 ${
                   activo
-                    ? "bg-amber-50 text-amber-900"
-                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                    ? "bg-amber-50 text-amber-900 border-amber-600"
+                    : "border-transparent text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
                 }`}
               >
                 {label}
@@ -181,6 +190,7 @@ export default function Header() {
               <span className="text-xs text-zinc-500">Moneda referencial</span>
               <SelectorMoneda />
             </div>
+            <search>
             <form onSubmit={submitBusqueda} className="flex gap-2">
               <input
                 type="search"
@@ -195,11 +205,12 @@ export default function Header() {
                 className="p-2 text-zinc-500 hover:text-zinc-900"
                 aria-label="Buscar"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
             </form>
+            </search>
             <Link
               href="/#suscribirme"
               className="inline-flex justify-center items-center bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-medium px-4 py-2.5 rounded-full transition-colors"

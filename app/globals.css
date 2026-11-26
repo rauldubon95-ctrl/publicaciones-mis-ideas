@@ -67,13 +67,55 @@
 }
 
 @layer base {
+  /* Desplazamiento suave solo si la persona no pidió reducir el movimiento. */
   html {
-    @apply scroll-smooth;
+    @apply motion-safe:scroll-smooth;
   }
+
+  /* <dialog> modal nativo: que el gesto de scroll (sobre el panel o sobre el
+     fondo oscuro) no desplace la página de atrás. Reemplaza el viejo
+     `body { overflow: hidden }`, que quitaba la barra de scroll y movía el
+     layout. En Safari es mejora progresiva: showModal() igual deja la página
+     inerte. */
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+  dialog::backdrop {
+    background-color: rgb(0 0 0 / 0.5);
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
   body {
     @apply bg-[#f8f7f4] text-zinc-900 antialiased;
   }
   h1, h2, h3, h4 {
     @apply font-serif;
   }
+}
+
+/* iOS hace zoom al enfocar un campo con letra < 16 px. En pantallas táctiles
+   los campos quedan en mínimo 1rem; en escritorio no cambia nada. Va fuera de
+   toda capa a propósito, para ganarle a las utilidades `text-sm` de Tailwind. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"]),
+  textarea,
+  select {
+    font-size: max(1rem, 1em);
+  }
+}
+
+/* Oculta visualmente pero deja el texto para lectores de pantalla. Si el
+   elemento recibe foco (p. ej. el enlace "Saltar al contenido") se muestra. */
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
 }
