@@ -96,7 +96,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
       <JsonLd data={[recursoJsonLd, breadcrumb]} />
       <TrackView tipo="recurso" contenidoId={recurso.id} />
       {/* Navegación */}
-      <nav className="text-xs text-zinc-400 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-xs text-zinc-500 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/recursos" className="hover:text-zinc-600 transition-colors">Recursos</Link>
@@ -131,7 +131,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
         <div className="min-w-0">
           <h1 className="text-xl font-serif font-semibold text-zinc-900 truncate">{recurso.titulo}</h1>
           {recurso.descripcion && (
-            <p className="text-zinc-400 text-xs mt-0.5 truncate">{recurso.descripcion}</p>
+            <p className="text-zinc-500 text-xs mt-0.5 truncate">{recurso.descripcion}</p>
           )}
         </div>
         {puedeVer && (
@@ -161,7 +161,7 @@ export default async function RecursoPage({ params, searchParams }: Props) {
             />
           </div>
 
-          <p className="text-xs text-zinc-300 mt-2 text-center">
+          <p className="text-xs text-zinc-500 mt-2 text-center">
             Contenido interactivo · Solo lectura
           </p>
         </>

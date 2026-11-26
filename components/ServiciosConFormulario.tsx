@@ -135,7 +135,7 @@ export default function ServiciosConFormulario({ servicios }: Props) {
       <div className="space-y-14">
         {categorias.map((cat) => (
           <section key={cat}>
-            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-6 pb-2 border-b border-zinc-100">
+            <h2 className="font-serif text-2xl font-semibold text-zinc-900 mb-6 pb-3 border-b border-zinc-200">
               {cat}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

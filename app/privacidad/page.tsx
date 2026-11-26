@@ -23,8 +23,8 @@ export const metadata: Metadata = {
 
 export default function PrivacidadPage() {
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+      <nav className="text-xs text-zinc-500 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <span className="text-zinc-600">Aviso de privacidad</span>
@@ -33,7 +33,7 @@ export default function PrivacidadPage() {
       <h1 className="text-3xl font-serif font-semibold text-zinc-900 mb-3">
         Aviso de privacidad
       </h1>
-      <p className="text-sm text-zinc-400 mb-10">Última actualización: {ACTUALIZADO}</p>
+      <p className="text-sm text-zinc-500 mb-10">Última actualización: {ACTUALIZADO}</p>
 
       <div className="prose prose-zinc max-w-none prose-headings:font-serif prose-headings:font-semibold prose-a:text-brand-700">
         <p>
@@ -167,6 +167,6 @@ export default function PrivacidadPage() {
           de vez en cuando.
         </p>
       </div>
-    </main>
+    </div>
   );
 }

@@ -49,7 +49,7 @@ export default async function ComicsPage() {
       </header>
 
       {comics.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-sm">No hay materiales publicados aún.</p>
         </div>
       ) : (
@@ -104,7 +104,7 @@ export default async function ComicsPage() {
                   <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2 flex-1">
                     {c.descripcion}
                   </p>
-                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-100 text-xs text-zinc-400">
+                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-100 text-xs text-zinc-500">
                     <time>{formatFecha(c.creadoAt)}</time>
                     {!pdf && <span>{c._count.paginas} páginas</span>}
                     {pdf && (

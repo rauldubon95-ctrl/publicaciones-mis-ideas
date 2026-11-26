@@ -31,7 +31,7 @@ export default async function LibrosPage() {
   const libros = await getLibros();
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <header className="mb-12 lg:mb-14">
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 mb-3">
           Biblioteca
@@ -46,7 +46,7 @@ export default async function LibrosPage() {
 
       {libros.length === 0 ? (
         <div className="border border-dashed border-zinc-200 rounded-2xl p-16 text-center">
-          <p className="text-zinc-400">Próximamente habrá libros disponibles aquí.</p>
+          <p className="text-zinc-500">Próximamente habrá libros disponibles aquí.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
@@ -88,7 +88,7 @@ export default async function LibrosPage() {
                 <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3">
                   {l.descripcion}
                 </p>
-                <div className="flex items-start gap-3 mt-1 text-xs text-zinc-400">
+                <div className="flex items-start gap-3 mt-1 text-xs text-zinc-500">
                   {l.paginas && <span className="mt-0.5">{l.paginas} páginas</span>}
                   {l.paginas != null && l.precioCentavos != null && <span aria-hidden className="mt-0.5">·</span>}
                   {l.precioCentavos != null && l.precioCentavos > 0 ? (
@@ -102,6 +102,6 @@ export default async function LibrosPage() {
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

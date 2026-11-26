@@ -26,7 +26,7 @@ export default function SeccionComentarios({
       <h2 className="text-xl font-serif font-semibold text-zinc-900 mb-6 flex items-baseline gap-2">
         Comentarios
         {total > 0 && (
-          <span className="text-sm font-sans font-normal text-zinc-400">({total})</span>
+          <span className="text-sm font-sans font-normal text-zinc-500">({total})</span>
         )}
       </h2>
 

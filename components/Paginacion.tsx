@@ -48,7 +48,7 @@ export default function Paginacion({ paginaActual, totalPaginas, baseUrl }: Prop
 
       {paginas.map((p, i) =>
         p === "..." ? (
-          <span key={`elipsis-${i}`} className="px-2 py-1.5 text-sm text-zinc-400 select-none">
+          <span key={`elipsis-${i}`} className="px-2 py-1.5 text-sm text-zinc-500 select-none">
             …
           </span>
         ) : (

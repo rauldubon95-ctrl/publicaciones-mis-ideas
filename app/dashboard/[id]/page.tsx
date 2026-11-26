@@ -76,7 +76,7 @@ export default function TableroPage() {
 
   if (!tablero) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-zinc-300 animate-pulse">
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-zinc-500 animate-pulse">
         Cargando...
       </div>
     );
@@ -88,7 +88,7 @@ export default function TableroPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
       {/* Breadcrumb */}
-      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-sm text-zinc-600 mb-8 flex flex-wrap items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/dashboard" className="hover:text-zinc-600 transition-colors">Dashboard</Link>
@@ -130,7 +130,7 @@ export default function TableroPage() {
           <p className="text-zinc-500 text-sm leading-relaxed mb-4">{tablero.descripcion}</p>
         )}
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3 text-xs text-zinc-400">
+          <div className="flex items-center gap-3 text-xs text-zinc-500">
             {tablero.archivoNombre && <span>{tablero.archivoNombre}</span>}
             {preview && vista === "tabla" && puedeVer && (
               <span>
@@ -196,7 +196,7 @@ export default function TableroPage() {
           {vista === "tabla" && (preview ? (
             <div>
               {preview.sheetName && (
-                <p className="text-xs text-zinc-400 mb-2">Hoja: <strong>{preview.sheetName}</strong></p>
+                <p className="text-xs text-zinc-500 mb-2">Hoja: <strong>{preview.sheetName}</strong></p>
               )}
               <div className="border border-zinc-200 rounded-xl overflow-hidden">
                 <div className="overflow-auto" style={{ maxHeight: "65vh" }}>
@@ -214,7 +214,7 @@ export default function TableroPage() {
                     <tbody>
                       {preview.rows.map((row, ri) => (
                         <tr key={ri} className={ri % 2 === 0 ? "bg-white" : "bg-zinc-50"}>
-                          <td className="px-3 py-2 text-xs text-zinc-300 text-right border-r border-zinc-100 select-none">
+                          <td className="px-3 py-2 text-xs text-zinc-500 text-right border-r border-zinc-100 select-none">
                             {ri + 1}
                           </td>
                           {preview.headers.map((_, ci) => (
@@ -229,13 +229,13 @@ export default function TableroPage() {
                 </div>
               </div>
               {preview.totalRows > 500 && (
-                <p className="text-xs text-zinc-400 mt-2 text-center">
+                <p className="text-xs text-zinc-500 mt-2 text-center">
                   Se muestran las primeras 500 filas. Descargá el archivo para ver el conjunto completo.
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-zinc-400 text-sm">Sin vista previa disponible.</p>
+            <p className="text-zinc-500 text-sm">Sin vista previa disponible.</p>
           ))}
 
           {/* Vista: Dashboard con Office Online */}

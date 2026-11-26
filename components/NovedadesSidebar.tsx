@@ -24,7 +24,7 @@ export default function NovedadesSidebar({ novedades }: { novedades: NovedadItem
 
   return (
     <div>
-      <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4">
+      <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
         Novedades
       </h2>
       <ul className="space-y-4">
@@ -44,7 +44,7 @@ export default function NovedadesSidebar({ novedades }: { novedades: NovedadItem
                   {n.titulo}
                 </p>
                 {n.textoCorto && (
-                  <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{n.textoCorto}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-snug">{n.textoCorto}</p>
                 )}
               </Link>
             </li>

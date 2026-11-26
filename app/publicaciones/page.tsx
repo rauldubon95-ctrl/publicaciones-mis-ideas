@@ -209,7 +209,7 @@ export default async function PublicacionesPage({
       </div>
 
       {publicaciones.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-sm mb-1">No hay publicaciones que coincidan.</p>
           {(q || catSlug) && (
             <Link href="/publicaciones" className="text-xs text-amber-700 hover:underline">

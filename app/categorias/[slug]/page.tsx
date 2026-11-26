@@ -91,7 +91,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
       <JsonLd data={breadcrumb} />
-      <nav className="text-xs text-zinc-400 mb-6 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-xs text-zinc-500 mb-6 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/publicaciones" className="hover:text-zinc-600 transition-colors">Publicaciones</Link>
@@ -115,7 +115,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
               {categoria.descripcion}
             </p>
           )}
-          <p className="text-zinc-400 text-xs mt-4">
+          <p className="text-zinc-500 text-xs mt-4">
             {total} {total === 1 ? "publicación" : "publicaciones"}
             {totalPaginas > 1 && ` · página ${pagina} de ${totalPaginas}`}
           </p>
@@ -123,7 +123,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
       </header>
 
       {publicaciones.length === 0 ? (
-        <div className="text-center py-16 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+        <div className="text-center py-16 text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-sm">No hay publicaciones en esta categoría.</p>
         </div>
       ) : (

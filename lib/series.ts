@@ -59,6 +59,9 @@ export const SERIES: Serie[] = [
   {
     slug: "sujeto-historico-y-pensamiento-critico",
     titulo: "Sujeto histórico y pensamiento crítico",
+    // Artículos 02, 03, 04 y 06 llevan el número en el nombre de archivo; el 01
+    // y el 05 se dedujeron por formato de cabecera, tema y fecha (20 may y 1 jun
+    // encajan en la secuencia 22, 23, 24 may y 2 jun).
     descripcion:
       "Seis artículos sobre cómo el pensamiento crítico latinoamericano reformuló la pregunta por el sujeto de la transformación social.",
     unidad: "Artículo",
@@ -74,8 +77,10 @@ export const SERIES: Serie[] = [
   {
     slug: "teologia-politica-critica",
     titulo: "Teología política crítica",
+    // La Parte IV menciona "el Dios-Sustantivo… el César-Verbo… y la
+    // Iglesia-Bisagra": la III (Iglesia-Bisagra) no está en la base (sesión 45).
     descripcion:
-      "Serie sobre la relación entre religión, poder y autoritarismo en América Latina contemporánea.",
+      "Serie en cuatro partes sobre religión, poder y autoritarismo en América Latina. La Parte III aún no está publicada en este sitio.",
     unidad: "Parte",
     capitulos: [
       { slug: "el-dios-sustantivo", etiqueta: "Parte I" },

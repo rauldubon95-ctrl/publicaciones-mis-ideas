@@ -45,7 +45,7 @@ export default async function RecursosPage() {
       </header>
 
       {recursos.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-sm">No hay recursos publicados aún.</p>
         </div>
       ) : (
@@ -70,7 +70,7 @@ export default async function RecursosPage() {
                   <div className="h-1 bg-zinc-200 rounded-full w-4/5"></div>
                 </div>
                 {r.esPremium && (
-                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-600 text-white text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full">
+                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-700 text-white text-xs font-medium px-2.5 py-0.5 rounded-full">
                     <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2l3 6 6 1-4.5 4.5 1 6.5L12 17l-5.5 3 1-6.5L3 9l6-1z" />
                     </svg>
@@ -89,7 +89,7 @@ export default async function RecursosPage() {
                   {r.descripcion}
                 </p>
                 <div className="flex items-center justify-between pt-3 mt-2 border-t border-zinc-100">
-                  <time className="text-xs text-zinc-400">{formatFecha(r.creadoAt)}</time>
+                  <time className="text-xs text-zinc-500">{formatFecha(r.creadoAt)}</time>
                   <div className="flex items-center gap-3">
                     {r.esPremium && r.precioCentavos != null && r.precioCentavos > 0 && (
                       <PrecioConConversion centavosUSD={r.precioCentavos} tamano="sm" mostrarNotaReferencial={false} />
