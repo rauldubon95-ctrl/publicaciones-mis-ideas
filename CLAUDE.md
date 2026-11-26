@@ -13,12 +13,12 @@ Plataforma académica personal de Raúl Dubón. Publicaciones, recursos, cómics
 **Marca:** "Raúl Dubón" — aplicada en layout, Header, Footer, AsistenteChat, Worker CORS, metadata.
 
 **Stack (verificado sesión 34, 2026-09-05):**
-- Frontend: **Next.js 16.2.9** + **React 19.2.8** (App Router, Turbopack) desplegado en Vercel
+- Frontend: **Next.js 16.4.6** (subido desde 16.2.9 en sesión 45 por CVEs críticos) + **React 19.2.8** (App Router, Turbopack) desplegado en Vercel
 - Runtime Node: **24.x** (subido desde 20.x en sesión 31; Node 20 se depreca 2026-10-01)
 - CSS: **Tailwind 4.3.1** (sin `tailwind.config.ts`; tokens en `@theme` dentro de `globals.css`; plugin de typography)
 - Base de datos principal: PostgreSQL en Supabase, accedida vía Prisma 5.14
 - Storage: Supabase Storage — bucket `comics` (imágenes cómics + PDFs + imágenes de artículos importados de Word bajo `articulos/`, sesión 43) + bucket `libros` (PDFs y portadas) + bucket `datos` (dashboards Excel)
-- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.118. Modelo: **Llama 3.1 8B Instruct FP8 fast** (`@cf/meta/llama-3.1-8b-instruct-fp8-fast`). En sesión 37 se migró a Gemma 4 26B pero **rompió el chat** (Gemma 4 es reasoning: agotaba `max_tokens` razonando → `response` vacío). Revertido en sesión 38.
+- IA: Cloudflare Worker (`workers/sociologia/`) con D1 + KV + Workers AI. Wrangler 4.165 (sesión 45). Modelo: **Llama 3.1 8B Instruct FP8 fast** (`@cf/meta/llama-3.1-8b-instruct-fp8-fast`). En sesión 37 se migró a Gemma 4 26B pero **rompió el chat** (Gemma 4 es reasoning: agotaba `max_tokens` razonando → `response` vacío). Revertido en sesión 38.
 - Visor PDF: `pdfjs-dist@^4.10.38` (Mozilla, con fix CVE-2024-4367)
 
 **Repositorio:** `rauldubon95-ctrl/publicaciones-mis-ideas`
@@ -381,7 +381,6 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | `/admin/metricas` en ceros | **Causa raíz encontrada sesión 37**: regex UUID en `/api/track` rechazaba todos los CUIDs de Prisma → 0 vistas registradas. Fix aplicado. Los datos empezarán a acumularse tras merge a main y redeploy. | ✅ Fix aplicado |
 | Más limpieza corpus D1 | **594 documentos reales** en `documentos` (D1 `llm_sociolog`). Sigue habiendo textos de baja calidad; el bug del agente de sesión 36 (improvisar panorama general) es SÍNTOMA de corpus ruidoso. Impacta directo en la calidad del asistente. | Alta |
 | Multi-paso + memoria conversacional | Diseño listo en `docs/agente-multi-paso-memoria-diseno.md` (sesión 36). Implementación aplazada — requiere telemetría real que muestre ≥3 consultas compuestas/mes que fallen. | Media (objetivo del usuario) |
-| Job CI "Auditar dependencias (web)" en rojo | Preexistente. Todos los PRs Dependabot llegan con este check fallando. Investigar en próxima sesión: probablemente `npm audit` reporta vulnerabilidades altas en transitivas de Next 16 (postcss/sharp otros). Verificar y actualizar overrides o esperar release upstream. | Media |
 | Telemetría en KV (no D1) | Datos duran 7 días. Dashboard persistente requeriría escribir a `documentos_telemetria` en D1. Aceptable mientras el uso sea bajo. | Media |
 | `WORKER_URL` pendiente en Vercel | Código actualizado sesión 37: 4 archivos leen `process.env.WORKER_URL` con fallback+warn. CSP ya no expone la URL. Proxy `/api/chat` creado. **Falta**: configurar la env var en Vercel Dashboard para eliminar el fallback hardcoded. | Media (acción manual) |
 | IP cruda en rate-limit | `RateLimitDb.clave` = `"IP:ruta"` guarda IP real (transitoria, fin anti-abuso legítimo). El resto de IPs van cifradas (`ipHash`). Purista: hashear también la clave. Sin exposición externa. | Baja |
@@ -395,7 +394,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 | Botones ámbar (Donar / muros de pago) | Texto blanco sobre `amber-600` = **3,19:1** (mínimo 4,5:1 para texto de 14 px). `amber-700` da 5,05:1. Decisión de diseño. | Media |
 | Borde de campos `.input` | `border-zinc-300` = 1,48:1; WCAG 1.4.11 pide 3:1 para el borde de un control. | Baja |
 | Menú del Header como popover nativo | La guía `navbar` propone una sola lista con `popover` + medición por `ResizeObserver`. Refactor grande; lo urgente (menú móvil alcanzable, `aria-current`) ya se hizo en sesión 45. | Baja |
-| ESLint sin configuración | `npm run lint` = `next lint`, que Next 16 eliminó; tampoco hay `.eslintrc`/`eslint.config`. Preexistente. | Baja |
+| Sin linter | Sesión 45 quitó `eslint@8` + `eslint-config-next@15` (sin config, sin uso en CI, `next lint` eliminado en Next 16) y el script `lint`. Si se quiere lint, reintroducir ESLint 9 con `eslint.config.mjs`. | Baja |
 | Multi-worker / orquestación | Ver §17. Solo existe 1 worker. Pendiente hasta tener casos reales de consultas multi-paso. | Futura |
 
 ### Cerrado (histórico condensado)
@@ -448,6 +447,7 @@ WebhookEventoProcesado → eventId (PK), proveedor, tipoEvento — idempotencia 
 - **sharp override ^0.35** (sesión 31, `cdebdfa`) — cierra 2 CVEs de libvips dentro de Next 16.
 - **npm audit fix** (sesión 31, `d95e493`) — postcss/brace-expansion/@tailwindcss/postcss.
 - **Bloqueo de scans con backslash + descubrimiento MCP/UCP** (sesión 31, `c10b217`) — `esScanPath` detecta `\`/`%5c`; añade `.well-known/mcp` y familia.
+- **12 vulnerabilidades web (1 crítica) + 4 altas worker → 0** (sesión 45) — `next` 16.2.9→16.4.6 (RCE en Image Optimization con SVG, SSRF, etc.; el sitio usa `next/image`), override `sharp ^0.35.5`, override `postcss-selector-parser ^6.1.5` (vía `@tailwindcss/typography`), `brace-expansion` 1.1.22 (vía `exceljs`), fuera ESLint (720→423 paquetes en el lockfile), worker `wrangler` 4.125→4.165.0. Todas las versiones con ≥7 días publicadas (cooldown). Gates: `tsc` web+worker, `next build`, `wrangler deploy --dry-run`, CSS `prose` idéntico.
 - **`cuerpoHtml` vacío en `RespuestaCotizacion`** (sesión 34) — llenado con el HTML real que se envía (`htmlRespuestaCotizacion(...)`).
 
 ---

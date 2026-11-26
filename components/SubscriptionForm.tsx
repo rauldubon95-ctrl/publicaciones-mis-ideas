@@ -44,7 +44,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
 
   if (estado === "ok") {
     return (
-      <div className={esDark ? "text-zinc-300" : "text-zinc-700"}>
+      <div role="status" className={esDark ? "text-zinc-300" : "text-zinc-700"}>
         <div className="flex items-start gap-3">
           <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${esDark ? "bg-emerald-500/20" : "bg-emerald-100"}`}>
             <svg className={`w-4 h-4 ${esDark ? "text-emerald-400" : "text-emerald-600"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -65,7 +65,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
   }
 
   // Estilos por variante
-  const inputBase = "flex-1 min-w-0 rounded-full px-4 py-2.5 text-sm focus:outline-hidden focus:ring-2 transition";
+  const inputBase = "flex-[1_1_12rem] min-w-0 rounded-full px-4 py-2.5 text-sm focus:outline-hidden focus:ring-2 transition";
   const inputStyles = esDark
     ? `${inputBase} bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:ring-amber-500/60 focus:border-transparent`
     : `${inputBase} bg-white border border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:ring-amber-500/60 focus:border-transparent`;
@@ -74,12 +74,12 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
     ? "shrink-0 inline-flex items-center bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors disabled:opacity-50"
     : "shrink-0 inline-flex items-center bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors disabled:opacity-50";
 
-  const helperStyles = esDark ? "text-xs text-zinc-500 mt-2" : "text-xs text-zinc-400 mt-2";
+  const helperStyles = esDark ? "text-xs text-zinc-400 mt-2" : "text-xs text-zinc-500 mt-2";
 
   // Hero variant: solo email + botón en fila. Sin nombre.
   if (esHero) {
     return (
-      <form onSubmit={handleSubmit} noValidate className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="w-full max-w-md">
         <input
           type="text"
           name="website"
@@ -88,7 +88,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
           style={{ display: "none" }}
           aria-hidden="true"
         />
-        <div className="flex gap-2 items-stretch">
+        <div className="flex flex-wrap gap-2 items-stretch">
           <input
             type="email"
             required
@@ -96,12 +96,15 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             maxLength={200}
+            name="email"
+            autoComplete="email"
+            spellCheck={false}
             className={inputStyles}
             aria-label="Correo electrónico"
           />
           <button
             type="submit"
-            disabled={estado === "enviando" || !email.trim()}
+            disabled={estado === "enviando"}
             className={btnStyles}
           >
             {estado === "enviando" ? "Enviando…" : "Suscribirme"}
@@ -109,7 +112,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
         </div>
 
         {estado === "error" && (
-          <p className={`text-xs mt-2 ${esDark ? "text-red-400" : "text-red-600"}`}>{mensajeError}</p>
+          <p role="alert" className={`text-xs mt-2 ${esDark ? "text-red-400" : "text-red-600"}`}>{mensajeError}</p>
         )}
         <p className={`${helperStyles} flex items-center gap-1.5`}>
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -123,7 +126,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
 
   // Default y dark: nombre opcional + email + botón, apilados
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
       <input
         type="text"
         name="website"
@@ -133,7 +136,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
         aria-hidden="true"
       />
 
-      <div className="flex gap-2 items-stretch">
+      <div className="flex flex-wrap gap-2 items-stretch">
         <input
           type="email"
           required
@@ -141,12 +144,15 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           maxLength={200}
+          name="email"
+          autoComplete="email"
+          spellCheck={false}
           className={inputStyles}
           aria-label="Correo electrónico"
         />
         <button
           type="submit"
-          disabled={estado === "enviando" || !email.trim()}
+          disabled={estado === "enviando"}
           className={btnStyles}
         >
           {estado === "enviando" ? "…" : "Suscribirme"}
@@ -157,6 +163,9 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
       {!esDark && (
         <input
           type="text"
+          name="nombre"
+          autoComplete="name"
+          aria-label="Tu nombre (opcional)"
           placeholder="Tu nombre (opcional)"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
@@ -166,7 +175,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
       )}
 
       {estado === "error" && (
-        <p className={`text-xs ${esDark ? "text-red-400" : "text-red-600"}`}>{mensajeError}</p>
+        <p role="alert" className={`text-xs ${esDark ? "text-red-400" : "text-red-600"}`}>{mensajeError}</p>
       )}
       <p className={helperStyles}>
         No enviamos spam. Puedes darte de baja cuando quieras.
