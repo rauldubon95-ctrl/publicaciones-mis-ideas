@@ -90,8 +90,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
       <body className="min-h-screen flex flex-col">
         <JsonLd data={[personaJsonLd, sitioJsonLd, organizacionJsonLd]} />
+        {/* Primer elemento enfocable: permite saltar el menú con el teclado. */}
+        <a
+          href="#contenido"
+          className="visually-hidden fixed top-2 left-2 z-[60] rounded-sm bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
+        >
+          Saltar al contenido
+        </a>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="contenido" className="flex-1">{children}</main>
         <Footer />
         <AsistenteChat />
       </body>

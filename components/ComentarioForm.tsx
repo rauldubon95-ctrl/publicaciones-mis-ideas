@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ComentarioArbol } from "@/app/api/comentarios/route";
 
 export default function ComentarioForm({
@@ -13,6 +13,7 @@ export default function ComentarioForm({
   const [contenido, setContenido] = useState("");
   const [estado, setEstado] = useState<"idle" | "enviando" | "ok" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const uid = useId();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,18 +43,31 @@ export default function ComentarioForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <h3 className="font-semibold text-zinc-800 text-sm">Dejar un comentario</h3>
+    <form onSubmit={handleSubmit} aria-labelledby={`${uid}-titulo`} className="space-y-3">
+      <h3 id={`${uid}-titulo`} className="font-semibold text-zinc-800 text-sm">Dejar un comentario</h3>
+      {/* Etiquetas visibles: el placeholder desaparece al escribir y no sirve como nombre del campo. */}
+      <label htmlFor={`${uid}-nombre`} className="block text-xs font-medium text-zinc-600 -mb-2">
+        Tu nombre
+      </label>
       <input
+        id={`${uid}-nombre`}
+        name="nombre"
         type="text"
-        placeholder="Tu nombre"
+        autoComplete="name"
+        placeholder="Ej. María López"
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
         maxLength={80}
         required
         className="input"
       />
+      <label htmlFor={`${uid}-contenido`} className="block text-xs font-medium text-zinc-600 -mb-2">
+        Comentario
+      </label>
       <textarea
+        id={`${uid}-contenido`}
+        name="contenido"
+        aria-describedby={`${uid}-ayuda`}
         placeholder="Escribe tu comentario…"
         value={contenido}
         onChange={(e) => setContenido(e.target.value)}
@@ -70,16 +84,12 @@ export default function ComentarioForm({
         >
           {estado === "enviando" ? "Enviando…" : "Publicar comentario"}
         </button>
-        {estado === "ok" && (
-          <span className="text-emerald-600 text-sm animate-in fade-in duration-300">
-            ¡Comentario publicado!
-          </span>
-        )}
-        {estado === "error" && (
-          <span className="text-red-600 text-sm">{errorMsg}</span>
-        )}
+        <span role="status" className={`text-sm ${estado === "error" ? "text-red-700" : "text-emerald-700"}`}>
+          {estado === "ok" && "¡Comentario publicado!"}
+          {estado === "error" && errorMsg}
+        </span>
       </div>
-      <p className="text-[11px] text-zinc-400">
+      <p id={`${uid}-ayuda`} className="text-[11px] text-zinc-500">
         Máximo 1000 caracteres · No se permiten enlaces externos
       </p>
     </form>

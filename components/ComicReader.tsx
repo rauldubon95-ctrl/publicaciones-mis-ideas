@@ -56,14 +56,16 @@ export default function ComicReader({ paginas }: { paginas: Pagina[] }) {
       {/* Modo scroll — todas las páginas */}
       {modoScroll ? (
         <div className="space-y-4">
-          {paginas.map((p) => (
+          {paginas.map((p, i) => (
             <figure key={p.id} className="border border-zinc-200 bg-white overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={p.imageUrl}
                 alt={p.caption ?? `Página ${p.orden}`}
                 className="w-full object-contain"
-                loading="lazy"
+                // La página 1 es lo primero que se ve: sin lazy y con prioridad.
+                fetchPriority={i === 0 ? "high" : undefined}
+                loading={i === 0 ? undefined : "lazy"}
               />
               {p.caption && (
                 <figcaption className="px-4 py-2 text-xs text-zinc-500 border-t border-zinc-100 bg-zinc-50">
@@ -82,6 +84,7 @@ export default function ComicReader({ paginas }: { paginas: Pagina[] }) {
               key={paginas[actual].id}
               src={paginas[actual].imageUrl}
               alt={paginas[actual].caption ?? `Página ${paginas[actual].orden}`}
+              fetchPriority="high"
               className="w-full object-contain"
             />
             {paginas[actual].caption && (

@@ -35,7 +35,10 @@ yarn-error.log*
 
 # Claude Code / MCP (puede contener project refs o tokens)
 .mcp.json
-.claude/
+.claude/*
+# Excepción: las skills del proyecto sí se versionan (sin secretos; hoy solo
+# el enlace a .agents/skills/modern-web-guidance).
+!.claude/skills/
 
 # typescript
 *.tsbuildinfo

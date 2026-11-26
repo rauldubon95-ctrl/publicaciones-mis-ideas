@@ -35,11 +35,17 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
+            <label
+              htmlFor="current-password"
+              className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5"
+            >
               Clave secreta
             </label>
             <input
+              id="current-password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               value={clave}
               onChange={(e) => setClave(e.target.value)}
               required
