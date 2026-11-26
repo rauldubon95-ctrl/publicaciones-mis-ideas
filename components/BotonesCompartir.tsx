@@ -77,7 +77,7 @@ export default function BotonesCompartir({ titulo, path }: Props) {
 
   return (
     <div className="flex items-center gap-2 my-6">
-      <span className="text-xs text-zinc-400 uppercase tracking-wider mr-1">
+      <span className="text-sm font-medium text-zinc-700 mr-1">
         Compartir
       </span>
       {enlaces.map((e) => (

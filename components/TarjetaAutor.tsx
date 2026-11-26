@@ -15,7 +15,7 @@ export default function TarjetaAutor() {
 
   return (
     <aside className="border border-zinc-200 bg-zinc-50 p-6 mt-12">
-      <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-4">
+      <p className="text-sm font-medium text-zinc-700 mb-4">
         Sobre el autor
       </p>
 

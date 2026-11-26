@@ -10,7 +10,7 @@ export default function AutorDestacado() {
 
   return (
     <div className="border border-zinc-200 rounded-xl bg-white/70 p-5">
-      <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-4">
+      <p className="text-sm font-medium text-zinc-700 mb-4">
         Sobre el autor
       </p>
 
@@ -43,7 +43,7 @@ export default function AutorDestacado() {
       </Link>
 
       <div className="mt-5 pt-4 border-t border-zinc-100">
-        <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+        <p className="text-sm font-medium text-zinc-700 mb-2">
           Trilogía publicada
         </p>
         <ul className="space-y-1.5">

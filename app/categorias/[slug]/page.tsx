@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
+import { minutosPorSlug } from "@/lib/lectura";
 import Paginacion from "@/components/Paginacion";
 import JsonLd from "@/components/JsonLd";
 import Link from "next/link";
@@ -77,6 +78,7 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
   const data = await getCategoriaData(slug, pagina);
   if (!data) notFound();
   const { categoria, publicaciones, total } = data;
+  const minutos = await minutosPorSlug(publicaciones.map((p) => p.slug));
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
@@ -126,9 +128,10 @@ export default async function CategoriaPage({ params, searchParams }: Props) {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Archivo en formato índice: fecha, serie o tema, título, resumen, tiempo de lectura. */}
+          <div className="border-b border-zinc-200">
             {publicaciones.map((p) => (
-              <PublicacionCard key={p.id} publicacion={p} />
+              <PublicacionCard key={p.id} publicacion={p} minutos={minutos[p.slug]} variante="lista" />
             ))}
           </div>
           <Paginacion

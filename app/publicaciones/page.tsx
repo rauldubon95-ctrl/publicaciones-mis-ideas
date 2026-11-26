@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import PublicacionCard from "@/components/PublicacionCard";
+import { minutosPorSlug } from "@/lib/lectura";
 import Paginacion from "@/components/Paginacion";
 import type { Metadata } from "next";
 import { canonicalWithPage } from "@/lib/seo";
@@ -100,6 +101,7 @@ export default async function PublicacionesPage({
         ]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const minutos = await minutosPorSlug(publicaciones.map((p) => p.slug));
   const categoriasActivas = categorias.filter((c) => c._count.publicaciones > 0);
   const categoriaActiva = catSlug
     ? categoriasActivas.find((c) => c.slug === catSlug)
@@ -177,7 +179,7 @@ export default async function PublicacionesPage({
                   }`}
                 >
                   <span>{cat.nombre}</span>
-                  <span className={activo ? "text-zinc-300" : "text-zinc-400"}>
+                  <span className={activo ? "text-zinc-300" : "text-zinc-500"}>
                     {cat._count.publicaciones}
                   </span>
                 </Link>
@@ -217,9 +219,10 @@ export default async function PublicacionesPage({
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Archivo en formato índice: fecha, serie o tema, título, resumen, tiempo de lectura. */}
+          <div className="border-b border-zinc-200">
             {publicaciones.map((p) => (
-              <PublicacionCard key={p.id} publicacion={p} />
+              <PublicacionCard key={p.id} publicacion={p} minutos={minutos[p.slug]} variante="lista" />
             ))}
           </div>
           <Paginacion paginaActual={pagina} totalPaginas={totalPaginas} baseUrl={baseUrl} />
