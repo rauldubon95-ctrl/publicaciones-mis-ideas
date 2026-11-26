@@ -4,6 +4,7 @@ import SubscriptionForm from "./SubscriptionForm";
 const NAVEGACION = [
   { href: "/", label: "Inicio" },
   { href: "/publicaciones", label: "Publicaciones" },
+  { href: "/series", label: "Series" },
   { href: "/libros", label: "Libros" },
   { href: "/recursos", label: "Recursos" },
   { href: "/comics", label: "Cómics" },
@@ -29,8 +30,8 @@ export default function Footer() {
             Raúl Dubón
           </p>
           <p className="text-sm text-zinc-400 leading-relaxed mt-3 max-w-xs">
-            Sociólogo. Investigador, docente y consultor. Un espacio para divulgar
-            reflexiones, proyectos e ideas sobre lo social.
+            Sociólogo. Investigador, docente y consultor. Ensayos, investigaciones y
+            libros por capítulos sobre ideología, clases sociales, Estado y desigualdad.
           </p>
           <div className="flex items-center gap-4 mt-6 text-zinc-500">
             <a
@@ -70,9 +71,9 @@ export default function Footer() {
         {/* Navegación */}
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <h3 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+            <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
               Navegación
-            </h3>
+            </h2>
             <ul className="space-y-2">
               {NAVEGACION.map((s) => (
                 <li key={s.href}>
@@ -87,9 +88,9 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+            <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
               Más
-            </h3>
+            </h2>
             <ul className="space-y-2">
               {SECUNDARIO.map((s) => (
                 <li key={s.href}>
@@ -107,9 +108,9 @@ export default function Footer() {
 
         {/* Newsletter */}
         <div>
-          <h3 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+          <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
             Suscríbete al boletín
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-400 leading-relaxed mb-4">
             Recibe nuevas publicaciones, recursos y reflexiones directamente en tu correo.
           </p>
@@ -121,7 +122,7 @@ export default function Footer() {
 
       {/* Barra inferior */}
       <div className="border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <span>© {new Date().getFullYear()} Raúl Dubón. Todos los derechos reservados.</span>
           <div className="flex items-center gap-4">
             <Link href="/privacidad" className="hover:text-zinc-300 transition-colors">

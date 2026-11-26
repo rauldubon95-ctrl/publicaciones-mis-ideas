@@ -94,7 +94,7 @@ export default function SelectorMoneda() {
       >
         <span aria-hidden className="text-sm leading-none">{actual.bandera}</span>
         <span className="tabular-nums">{actual.codigo}</span>
-        <svg className={`w-3 h-3 text-zinc-400 transition-transform ${abierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+        <svg className={`w-3 h-3 text-zinc-500 transition-transform ${abierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -106,7 +106,7 @@ export default function SelectorMoneda() {
           aria-label="Monedas disponibles"
         >
           <div className="px-3 py-2 border-b border-zinc-100">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
               Moneda referencial
             </p>
             <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">
@@ -131,7 +131,7 @@ export default function SelectorMoneda() {
                 <span aria-hidden className="text-base leading-none shrink-0">{m.bandera}</span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{m.nombre}</p>
-                  <p className="text-[11px] text-zinc-400 truncate">{m.paisPrincipal}</p>
+                  <p className="text-[11px] text-zinc-500 truncate">{m.paisPrincipal}</p>
                 </div>
                 <span className="text-xs font-semibold text-zinc-500 tabular-nums shrink-0">{m.codigo}</span>
                 {activo && (

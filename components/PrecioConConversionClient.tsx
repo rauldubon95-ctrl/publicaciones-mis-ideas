@@ -107,7 +107,7 @@ export default function PrecioConConversionClient({
       <span aria-hidden>≈ </span>
       <span className="font-medium text-zinc-600">{convertidoFormateado}</span>
       {mostrarNotaReferencial && (
-        <span className="text-zinc-400"> · referencial{!cargado ? " (aprox.)" : ""}</span>
+        <span className="text-zinc-500"> · referencial{!cargado ? " (aprox.)" : ""}</span>
       )}
     </p>
   );

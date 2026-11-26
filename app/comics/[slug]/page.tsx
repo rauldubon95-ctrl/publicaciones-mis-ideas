@@ -82,7 +82,7 @@ export default async function ComicPage({ params }: Props) {
     <div className={`${modoPdf ? "max-w-5xl" : "max-w-3xl"} mx-auto px-4 sm:px-6 py-12`}>
       <JsonLd data={[comicJsonLd, breadcrumb]} />
       <TrackView tipo="comic" contenidoId={comic.id} />
-      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-xs text-zinc-500 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <Link href="/comics" className="hover:text-zinc-600 transition-colors">Cómics</Link>
@@ -96,7 +96,7 @@ export default async function ComicPage({ params }: Props) {
         </p>
         <h1 className="text-3xl sm:text-4xl font-serif font-semibold text-zinc-900 mb-3 tracking-tight">{comic.titulo}</h1>
         <p className="text-zinc-500 text-base leading-relaxed mb-4 max-w-2xl">{comic.descripcion}</p>
-        <div className="flex items-center gap-4 text-xs text-zinc-400">
+        <div className="flex items-center gap-4 text-xs text-zinc-500">
           <time>{formatFecha(comic.creadoAt)}</time>
           {!modoPdf && <span>{comic.paginas.length} páginas</span>}
         </div>

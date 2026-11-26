@@ -81,7 +81,7 @@ export default async function PrecioConConversion({
         <span aria-hidden>≈ </span>
         <span className="font-medium text-zinc-600">{convertidoFormateado}</span>
         {mostrarNotaReferencial && (
-          <span className="text-zinc-400">
+          <span className="text-zinc-500">
             {" "}
             · referencial
           </span>

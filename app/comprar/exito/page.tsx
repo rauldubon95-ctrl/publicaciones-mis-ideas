@@ -92,7 +92,7 @@ export default async function ComprarExitoPage({ searchParams }: Props) {
       <div className="max-w-lg mx-auto px-4 py-24 text-center">
         <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg
-            className="w-8 h-8 text-zinc-400"
+            className="w-8 h-8 text-zinc-500"
             fill="none"
             stroke="currentColor"
             strokeWidth={1.5}

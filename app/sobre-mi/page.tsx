@@ -201,10 +201,10 @@ export default function SobreMiPage() {
   ]);
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
       <JsonLd data={[personJsonLd, breadcrumb]} />
 
-      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-sm text-zinc-600 mb-8 flex flex-wrap items-center gap-1.5">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <span className="text-zinc-600">Sobre mí</span>
@@ -221,7 +221,7 @@ export default function SobreMiPage() {
         <p className="text-lg text-zinc-600 leading-relaxed">
           Sociólogo · Investigador social · Monitoreo y evaluación
         </p>
-        <p className="text-sm text-zinc-400 mt-2">San Salvador, El Salvador</p>
+        <p className="text-sm text-zinc-500 mt-2">San Salvador, El Salvador</p>
       </header>
 
       {/* Perfil profesional */}
@@ -279,7 +279,7 @@ export default function SobreMiPage() {
             </div>
           ))}
         </div>
-        <p className="text-sm text-zinc-400 mt-6">
+        <p className="text-sm text-zinc-500 mt-6">
           Cartas de referencia disponibles a solicitud.
         </p>
       </section>
@@ -355,6 +355,6 @@ export default function SobreMiPage() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

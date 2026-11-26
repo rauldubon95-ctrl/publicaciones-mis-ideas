@@ -27,7 +27,7 @@ export default function ComicReader({ paginas }: { paginas: Pagina[] }) {
 
   if (paginas.length === 0) {
     return (
-      <div className="text-center py-20 text-zinc-300 border border-dashed border-zinc-200">
+      <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-200">
         <p className="text-sm">Este cómic no tiene páginas aún.</p>
       </div>
     );
@@ -39,16 +39,16 @@ export default function ComicReader({ paginas }: { paginas: Pagina[] }) {
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setModoScroll((v) => !v)}
-          className="text-xs text-zinc-400 hover:text-zinc-700 border border-zinc-200 px-3 py-1.5 rounded-sm transition-colors"
+          className="text-xs text-zinc-500 hover:text-zinc-700 border border-zinc-200 px-3 py-1.5 rounded-sm transition-colors"
         >
           {modoScroll ? "Modo página" : "Modo scroll"}
         </button>
         {!modoScroll && (
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-zinc-500">
             {actual + 1} / {paginas.length}
           </span>
         )}
-        <span className="text-xs text-zinc-300 hidden sm:block">
+        <span className="text-xs text-zinc-500 hidden sm:block">
           ← → para navegar
         </span>
       </div>

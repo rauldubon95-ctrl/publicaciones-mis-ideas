@@ -38,7 +38,7 @@ export default async function ServiciosPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
       {/* Hero */}
       <section className="mb-16 border-b border-zinc-200 pb-12">
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">
           Consultoría profesional
         </p>
         <h1 className="text-4xl font-serif font-semibold text-zinc-900 mb-4 leading-tight">
@@ -52,10 +52,10 @@ export default async function ServiciosPage() {
       </section>
 
       {servicios.length === 0 ? (
-        <div className="text-center py-20 text-zinc-400 border border-dashed border-zinc-200 rounded-xl">
+        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
           <p className="text-2xl mb-3">🔧</p>
           <p className="text-sm font-medium">Catálogo en preparación.</p>
-          <p className="text-xs mt-1 text-zinc-300">
+          <p className="text-xs mt-1 text-zinc-500">
             Los servicios estarán disponibles próximamente.
           </p>
         </div>

@@ -62,9 +62,9 @@ export default async function PdfPage({ params }: Props) {
         </header>
 
         {/* Cuerpo del artículo */}
-        <main className="pdf-body prose-pdf">
+        <div className="pdf-body prose-pdf">
           <ReactMarkdown urlTransform={urlTransformArticulo}>{publicacion.contenido}</ReactMarkdown>
-        </main>
+        </div>
 
         {/* Pie de página */}
         <footer className="pdf-footer">

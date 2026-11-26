@@ -23,6 +23,10 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  // Next 16.4 agrega por defecto un bloque de instrucciones al AGENTS.md del
+  // repo cada vez que corre `next dev`. Ese archivo es el plan maestro de
+  // agentes del proyecto (sesión 41): no se toca automáticamente.
+  agentRules: false,
   async headers() {
     return [
       {

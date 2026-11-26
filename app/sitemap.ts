@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { MetadataRoute } from "next";
 import { BASE_URL } from "@/lib/seo";
+import { SERIES } from "@/lib/series";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE_URL, lastModified: fechaSitio, changeFrequency: "daily", priority: 1 },
     { url: `${BASE_URL}/sobre-mi`, lastModified: fechaSitio, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/publicaciones`, lastModified: fechaPub, changeFrequency: "daily", priority: 0.9 },
+    { url: `${BASE_URL}/series`, lastModified: fechaPub, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/libros`, lastModified: fechaLib, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/recursos`, lastModified: fechaRec, changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE_URL}/comics`, lastModified: fechaCom, changeFrequency: "weekly", priority: 0.7 },
@@ -106,8 +108,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  const paginasSeries: MetadataRoute.Sitemap = SERIES.map((s) => ({
+    url: `${BASE_URL}/series/${s.slug}`,
+    lastModified: fechaPub,
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
+
   return [
     ...paginasEstaticas,
+    ...paginasSeries,
     ...paginasPublicaciones,
     ...paginasLibros,
     ...paginasComics,

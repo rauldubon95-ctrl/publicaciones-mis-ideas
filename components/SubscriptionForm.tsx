@@ -68,10 +68,10 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
   const inputBase = "flex-[1_1_12rem] min-w-0 rounded-full px-4 py-2.5 text-sm focus:outline-hidden focus:ring-2 transition";
   const inputStyles = esDark
     ? `${inputBase} bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:ring-amber-500/60 focus:border-transparent`
-    : `${inputBase} bg-white border border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:ring-amber-500/60 focus:border-transparent`;
+    : `${inputBase} bg-white border border-zinc-200 text-zinc-800 placeholder-zinc-500 focus:ring-amber-500/60 focus:border-transparent`;
 
   const btnStyles = esDark
-    ? "shrink-0 inline-flex items-center bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors disabled:opacity-50"
+    ? "shrink-0 inline-flex items-center bg-amber-700 hover:bg-amber-800 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors disabled:opacity-50"
     : "shrink-0 inline-flex items-center bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors disabled:opacity-50";
 
   const helperStyles = esDark ? "text-xs text-zinc-400 mt-2" : "text-xs text-zinc-500 mt-2";
@@ -170,7 +170,7 @@ export default function SubscriptionForm({ variant = "default" }: { variant?: Va
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           maxLength={100}
-          className="w-full border border-zinc-200 rounded-full px-4 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-amber-500/60 focus:border-transparent transition"
+          className="w-full border border-zinc-200 rounded-full px-4 py-2 text-sm text-zinc-800 placeholder-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-amber-500/60 focus:border-transparent transition"
         />
       )}
 

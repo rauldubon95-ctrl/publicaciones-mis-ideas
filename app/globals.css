@@ -106,6 +106,40 @@
   }
 }
 
+/* Lectura larga (guía improve-text-layout-and-legibility): sin palabras
+   huérfanas al final de los párrafos y títulos equilibrados. Los títulos dejan
+   espacio para el encabezado fijo al saltar desde el índice. */
+.prose :where(p, li, blockquote) {
+  text-wrap: pretty;
+}
+/* URLs y DOI largos de las referencias: se cortan en vez de ensanchar la
+   página (en celular desbordaban más de 200 px). Guía typography. */
+.prose {
+  overflow-wrap: break-word;
+}
+.prose a {
+  overflow-wrap: anywhere;
+}
+.prose :where(h2, h3, h4) {
+  text-wrap: balance;
+  scroll-margin-top: 6rem;
+}
+
+/* Índice del artículo (components/IndiceArticulo.tsx), guía scrollspy.
+   scroll-target-group hace que el navegador (Chrome 140+) sepa qué enlace
+   apunta a la sección visible (:target-current); el script lo lee y pone la
+   clase .target-current. En Safari/Firefox la pone IntersectionObserver.
+   El estilo usa SOLO la clase: el compilador de CSS de Next todavía no
+   reconoce :target-current y descartaba la regla entera (aviso en next dev). */
+.indice-articulo {
+  scroll-target-group: auto;
+}
+.indice-articulo a.target-current {
+  color: var(--color-zinc-900);
+  border-left-color: var(--color-amber-700);
+  font-weight: 500;
+}
+
 /* Oculta visualmente pero deja el texto para lectores de pantalla. Si el
    elemento recibe foco (p. ej. el enlace "Saltar al contenido") se muestra. */
 .visually-hidden:where(:not(:focus-within, :active)) {

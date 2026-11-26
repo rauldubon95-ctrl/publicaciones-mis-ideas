@@ -29,7 +29,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-      <nav className="text-xs text-zinc-400 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
+      <nav className="text-xs text-zinc-500 mb-8 flex items-center gap-1.5 uppercase tracking-wider">
         <Link href="/" className="hover:text-zinc-600 transition-colors">Inicio</Link>
         <span>/</span>
         <span className="text-zinc-600">Dashboard</span>
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
       </header>
 
       {tableros.length === 0 ? (
-        <div className="text-center py-20 text-zinc-300">
+        <div className="text-center py-20 text-zinc-500">
           <p className="text-lg">Próximamente</p>
           <p className="text-sm mt-1">Aún no hay tableros publicados.</p>
         </div>
@@ -69,18 +69,18 @@ export default async function DashboardPage() {
                     <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{t.descripcion}</p>
                   )}
                   <div className="flex items-center gap-3 mt-3">
-                    <span className="flex items-center gap-1 text-xs text-zinc-400">
+                    <span className="flex items-center gap-1 text-xs text-zinc-500">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       {t.archivoNombre}
                     </span>
-                    <time className="text-xs text-zinc-300">
+                    <time className="text-xs text-zinc-500">
                       {new Date(t.creadoAt).toLocaleDateString("es", { year: "numeric", month: "long" })}
                     </time>
                   </div>
                 </div>
-                <svg className="w-4 h-4 text-zinc-300 group-hover:text-brand-500 transition-colors mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-zinc-500 group-hover:text-brand-500 transition-colors mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>

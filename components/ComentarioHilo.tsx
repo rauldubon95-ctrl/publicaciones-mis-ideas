@@ -87,7 +87,7 @@ function FormRespuesta({
         <button
           type="button"
           onClick={onCancelar}
-          className="text-xs text-zinc-400 hover:text-zinc-700 px-2 py-1.5 transition-colors"
+          className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1.5 transition-colors"
         >
           Cancelar
         </button>
@@ -204,7 +204,7 @@ function NodoComentario({
               {comentario.autorNombre}
             </span>
           </div>
-          <span className="text-[11px] text-zinc-400">{tiempoRelativo(comentario.creadoAt)}</span>
+          <span className="text-[11px] text-zinc-500">{tiempoRelativo(comentario.creadoAt)}</span>
         </div>
 
         {/* Contenido */}
@@ -217,7 +217,7 @@ function NodoComentario({
           {puedeResponder && (
             <button
               onClick={() => { setRespondiendo(!respondiendo); setRespondiendoAdmin(false); }}
-              className="text-xs text-zinc-400 hover:text-brand-700 transition-colors font-medium"
+              className="text-xs text-zinc-500 hover:text-brand-700 transition-colors font-medium"
             >
               Responder
             </button>
@@ -225,7 +225,7 @@ function NodoComentario({
           {tieneRespuestas && (
             <button
               onClick={() => setExpandido(!expandido)}
-              className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+              className="text-xs text-zinc-500 hover:text-zinc-600 transition-colors"
             >
               {expandido ? `▾ Ocultar ${respuestas.length} respuesta${respuestas.length > 1 ? "s" : ""}` : `▸ Ver ${respuestas.length} respuesta${respuestas.length > 1 ? "s" : ""}`}
             </button>
@@ -243,13 +243,13 @@ function NodoComentario({
               )}
               <button
                 onClick={() => moderarEstado("OCULTO")}
-                className="text-[11px] text-zinc-400 hover:text-amber-600 transition-colors"
+                className="text-[11px] text-zinc-500 hover:text-amber-600 transition-colors"
               >
                 Ocultar
               </button>
               <button
                 onClick={eliminarComentario}
-                className="text-[11px] text-zinc-400 hover:text-red-600 transition-colors"
+                className="text-[11px] text-zinc-500 hover:text-red-600 transition-colors"
               >
                 Eliminar
               </button>
@@ -290,7 +290,7 @@ function NodoComentario({
               <button
                 type="button"
                 onClick={() => setRespondiendoAdmin(false)}
-                className="text-xs text-zinc-400 hover:text-zinc-700 px-2 py-1.5"
+                className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1.5"
               >
                 Cancelar
               </button>
@@ -341,7 +341,7 @@ export default function ComentarioHilo({
 
   if (comentarios.length === 0) {
     return (
-      <p className="text-zinc-400 text-sm text-center py-6 border border-dashed border-zinc-100 rounded-sm">
+      <p className="text-zinc-500 text-sm text-center py-6 border border-dashed border-zinc-100 rounded-sm">
         Sé el primero en comentar.
       </p>
     );

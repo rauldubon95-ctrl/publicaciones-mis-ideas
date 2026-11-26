@@ -4,15 +4,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import SelectorMoneda from "./SelectorMoneda";
 
+// "Inicio" no va en el menú: el nombre del sitio ya lleva a la portada.
 const nav = [
-  { href: "/", label: "Inicio" },
-  { href: "/sobre-mi", label: "Sobre mí" },
   { href: "/publicaciones", label: "Publicaciones" },
+  { href: "/series", label: "Series" },
   { href: "/libros", label: "Libros" },
   { href: "/recursos", label: "Recursos" },
   { href: "/comics", label: "Cómics" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/servicios", label: "Consultoría" },
+  { href: "/sobre-mi", label: "Sobre mí" },
 ];
 
 export default function Header() {
@@ -73,7 +74,7 @@ export default function Header() {
                 key={href}
                 href={href}
                 aria-current={activo ? "page" : undefined}
-                className={`relative px-3 py-2 text-sm font-medium transition-colors ${
+                className={`relative whitespace-nowrap px-2.5 xl:px-3 py-2 text-sm font-medium transition-colors ${
                   activo
                     ? "text-zinc-900"
                     : "text-zinc-500 hover:text-zinc-900"

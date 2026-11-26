@@ -178,7 +178,7 @@ export default function MuroPagoBase({
         <button
           type="submit"
           disabled={cargando}
-          className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-2"
+          className="w-full py-3 rounded-xl bg-amber-700 hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-2"
         >
           {cargando ? (
             <>

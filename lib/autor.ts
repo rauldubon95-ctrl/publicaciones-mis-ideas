@@ -9,7 +9,7 @@ export const AUTOR = {
     "Más de siete años en investigación social aplicada, monitoreo y evaluación y trabajo con niñez y juventudes en El Salvador.",
   formacion: [
     "Licenciatura en Sociología — UES (Cum Honorífico)",
-    "MBA en Gestión de Proyectos (en curso)",
+    // MBA retirado en sesión 45, coherente con /sobre-mi (sesión 42).
   ],
   especialidades: [
     "Investigación social aplicada",
