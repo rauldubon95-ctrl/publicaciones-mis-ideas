@@ -3,6 +3,11 @@
    por @import desde fonts.googleapis.com, lo que penalizaba el TTFB. */
 @import 'tailwindcss';
 
+/* Tailwind 4 escanea todo el repo buscando clases. `.agents/` guarda las guías
+   de la skill modern-web-guidance (Markdown con ejemplos HTML/CSS): sin esta
+   exclusión metían ~23 clases sin uso (+3 KB) al CSS del sitio. */
+@source not "../.agents";
+
 /* En v4 los plugins se cargan desde el CSS. El migrador eliminó
    tailwind.config.ts (donde estaba), así que se reinstaura aquí para que
    las clases `prose` (artículos, recursos, dashboard, privacidad, PDF)

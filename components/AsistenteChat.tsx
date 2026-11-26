@@ -118,6 +118,10 @@ export default function AsistenteChat() {
   function manejarTecla(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      // Con teclados IME (japonés, chino, coreano) el Enter confirma el
+      // carácter que se está componiendo: no debe enviar el mensaje.
+      // keyCode 229 cubre a Safari, que resetea isComposing antes de tiempo.
+      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
       enviar();
     }
   }
@@ -244,6 +248,7 @@ export default function AsistenteChat() {
                 value={pregunta}
                 onChange={(e) => setPregunta(e.target.value)}
                 onKeyDown={manejarTecla}
+                aria-label="Escribe tu pregunta al asistente"
                 placeholder="Escribe tu pregunta…"
                 rows={1}
                 maxLength={LIMITE_CHARS}
